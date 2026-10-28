@@ -1,0 +1,7 @@
+# compilazione Rust / Tauri
+src-tauri/target/
+# file di lavoro e modelli (grandi, si riscaricano)
+*.onnx
+*.stm
+*.stems
+*.log

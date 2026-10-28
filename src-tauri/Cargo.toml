@@ -1,0 +1,46 @@
+[package]
+name = "spinlab"
+version = "0.1.0"
+edition = "2021"
+description = "SpinLab DJ"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+cpal = { version = "0.15", features = ["asio"] }
+# solo per leggere i nomi dei driver ASIO: elencare i dispositivi con cpal carica ogni driver e ferma quello in uso
+asio-sys = "0.2"
+symphonia = { version = "0.5", features = ["all"] }
+rustfft = "6"
+signalsmith-stretch = "0.1"
+parking_lot = "0.12"
+rusqlite = { version = "0.32", features = ["bundled"] }
+lofty = "0.22"
+walkdir = "2"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+base64 = "0.22"
+midir = "0.10"
+hound = "3.5"
+mp3lame-encoder = "0.2"
+ort = { version = "=2.0.0-rc.15", features = ["directml"] }
+flacenc = "0.5.1"
+claxon = "0.4.3"
+
+# `cargo tauri dev` compila in profilo dev: senza ottimizzazioni decodifica e analisi sono 30-40 volte piu' lente
+[profile.dev]
+opt-level = 3
+# con opt-level 3 la cache incrementale si corrompe e il linker non trova piu' simboli: meglio senza
+incremental = false
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16

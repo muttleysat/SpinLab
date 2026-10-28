@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpinLab DJ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+<header id="top">
+  <div class="brand"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="10" fill="none" stroke="#18b6ff" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="#18b6ff"/><path d="M12 2a10 10 0 0 1 8 4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg><span>SpinLab</span></div>
+  <nav id="nav">
+    <button data-nav="lib">LIBRARY</button><button data-nav="mixer" class="on">MIXER</button><button data-nav="rec">RECORD</button><button data-nav="settings">SETTINGS</button>
+  </nav>
+  <div class="topr">
+    <div id="recInd" hidden title="Registrazione in corso: clic per fermarla"><i></i><b>REC</b><span id="recTime">00:00</span></div>
+    <div class="cpu" title="Carico del thread audio"><span>CPU</span><i id="cpuBar"><b></b></i></div>
+    <div class="clock" id="clock">--:--</div>
+    <div class="hp" title="Cuffie: accendi il preascolto (PFL) dei canali e dosa fra un lato e l'altro con CUE MIX">
+      <svg viewBox="0 0 24 24" width="18" height="18" class="hpic"><path d="M4 15v-3a8 8 0 0 1 16 0v3M4 15h3v5H5a1 1 0 0 1-1-1zM20 15h-3v5h2a1 1 0 0 0 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      <div class="hpb" id="hpBtns">
+        <button data-pfl="0">1</button><button data-pfl="1">2</button>
+      </div>
+      <div class="knobwrap sm"><div class="knob" id="cueMix" title="CUE MIX: da un lato all'altro (deck 1/3 &larr; &rarr; deck 2/4). Doppio clic per centrare"></div><span>CUE MIX</span></div>
+      <div class="knobwrap sm"><div class="knob" id="hpVol" title="Volume cuffie"></div><span>PHONES</span></div>
+    </div>
+    <div class="mst"><div class="knobwrap sm"><div class="knob" id="masterKnob" title="Volume master"></div><span>MASTER</span></div>
+      <div class="meter horiz" id="masterMeter"><i></i><i></i></div></div>
+    <button id="audioBtn" class="ico" title="Impostazioni audio"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.5 4.5-.1-1 1.9-1.5-1.9-3.3-2.3.9a7 7 0 0 0-1.7-1l-.4-2.4h-3.8l-.4 2.4a7 7 0 0 0-1.7 1l-2.3-.9-1.9 3.3L5.8 12l-.1 1 .1 1-1.9 1.5 1.9 3.3 2.3-.9a7 7 0 0 0 1.7 1l.4 2.4h3.8l.4-2.4a7 7 0 0 0 1.7-1l2.3.9 1.9-3.3L20.4 14z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+  </div>
+</header>
+
+<main id="stage" class="two">
+  <section class="side" id="sideL"></section>
+  <aside id="mixer">
+    <div class="mtop">
+      <button id="autoGain" class="mbtn on" title="AUTO GAIN: un brano caricato prende la stessa loudness di quello che sta suonando"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 12h3l2-6 4 12 2-6h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="mfx">FX</div>
+      <button id="autoStem" class="mbtn on" title="AUTO STEM: separa in anticipo gli stem di ogni brano che carichi su un deck, così voce e strumentale rispondono subito"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M5 18V8m5 10V4m5 14V10m5 8V6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+    </div>
+    <div id="strips"></div>
+    <div class="xfade"><span class="xa">A</span><div class="fader h" id="crossfader" title="Crossfader · doppio clic per centrarlo"></div><span class="xb">B</span></div>
+  </aside>
+  <section class="side" id="sideR"></section>
+</main>
+
+<section id="lower">
+  <aside id="side">
+    <div class="side-title">ESPLORA</div>
+    <div id="tree"></div>
+    <div class="side-title">PLAYLIST <button id="newPl" title="Nuova playlist">+</button></div>
+    <div id="plList"></div>
+    <div id="scanStatus"></div>
+  </aside>
+
+  <div id="browser">
+    <div class="searchbar">
+      <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="search" type="search" placeholder="Cerca brani, artisti, tag, chiave, BPM…" autocomplete="off">
+      <span id="resCount"></span>
+      <button id="brUp" class="ico" title="Brano precedente (freccia su)">&#9650;</button><button id="brDown" class="ico" title="Brano successivo (freccia giù). Invio: carica sul deck in uso">&#9660;</button>
+      <button id="inspBtn" class="ico" title="Tag e informazioni del brano selezionato"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <div class="tablewrap">
+      <table id="tracks">
+        <thead><tr>
+          <th style="width:34px"></th><th style="width:36px"></th><th data-s="title">Title</th><th data-s="artist">Artist</th>
+          <th data-s="bpm" style="width:58px">BPM</th><th data-s="key" style="width:50px">Key</th>
+          <th data-s="genre">Genre</th><th data-s="duration" style="width:56px">Time</th>
+          <th style="width:112px">Load</th><th data-s="rating" style="width:92px">Rating</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="empty">Scegli una cartella dall'esplora risorse a sinistra per vedere i suoi brani.</div>
+    </div>
+    <aside id="inspector" hidden>
+      <div class="side-title">TAG &amp; INFO <button id="inspClose">×</button></div>
+      <div id="insp-empty">Seleziona un brano</div>
+      <form id="insp" hidden>
+        <label>Titolo<input name="title"></label>
+        <label>Artista<input name="artist"></label>
+        <label>Album<input name="album"></label>
+        <label>Genere<input name="genre"></label>
+        <label>Tag (separati da virgola)<input name="tags" placeholder="peak, vocal, opener"></label>
+        <label>Valutazione<div id="stars"></div></label>
+        <label>Commento<textarea name="comment" rows="2"></textarea></label>
+      </form>
+    </aside>
+  </div>
+
+  <aside id="rpanel">
+    <nav class="ptabs">
+      <button data-pn="automix">AUTOMIX</button><button data-pn="sampler">SAMPLER</button><button data-pn="drums">DRUMS</button><button data-pn="stems" class="on">STEMS</button>
+    </nav>
+    <div class="tgtrow"><span>DECK</span><div id="tgt"></div><span class="stm" id="stemStatus"></span></div>
+
+    <div class="pn" id="pn-automix">
+      <div class="soon">AUTOMIX<br><small>Mix automatico fra i brani: in arrivo.</small></div>
+    </div>
+    <div class="pn" id="pn-sampler">
+      <div class="sampler-head"><span>VOL</span><input type="range" id="samplerVol" min="0" max="1.5" step="0.01" value="0.8">
+        <button id="padSync" class="syncbtn" title="SYNC: i campioni partono sul battito del deck che suona e ne seguono tempo e fase (anche se cambia il tempo)">SYNC</button></div>
+      <div id="pads" title="Trascina un file (o un brano della libreria) su un pad · clic: parte, altro clic: si ferma · tasto destro: loop, BPM, sostituisci · tasti 1–8"></div>
+    </div>
+    <div class="pn" id="pn-drums">
+      <div class="sampler-head"><span>VOL</span><input type="range" id="drumVol" min="0" max="1.5" step="0.01" value="0.9"><span class="midi" id="midiStat" title="Controller MIDI collegati">MIDI: —</span></div>
+      <div id="drumPads"></div>
+      <small class="hint">Mouse, tastiera (ZXCV · ASDF · QWER · 1234) o pad MIDI (note 36–51) · trascina un campione su un pad · tasto destro: MIDI learn, gate, intonazione, choke</small>
+    </div>
+    <div class="pn on" id="pn-stems">
+      <div class="stemrow" id="stemCols"></div>
+      <div class="presets"><button data-preset="acap">ACAPELLA</button><button data-preset="inst">INSTRUMENTAL</button><button data-preset="all">ALL</button></div>
+    </div>
+    <div class="fxbox" id="fxbox">
+      <div class="fxhead"><span>FX</span><select id="fxKind"><option value="echo">ECHO</option><option value="pingpong">PING-PONG</option><option value="reverb">REVERB</option><option value="flanger">FLANGER</option><option value="phaser">PHASER</option><option value="crush">BITCRUSH</option><option value="gater">GATER</option><option value="scatter">SCATTER</option><option value="noise">NOISE SWEEP</option><option value="bjump">BEAT JUMP</option><option value="brake">BRAKE</option><option value="spin">SPINBACK</option><option value="rev">REVERSE</option></select>
+        <button id="fxOn" class="pwr" title="Accende l'effetto sul deck selezionato"><i></i></button></div>
+      <div class="fxtime" id="fxTime"><span>TIME</span><select id="fxDiv" title="Durata del passo in battiti"><option value="0">1/16</option><option value="1">1/8</option><option value="2">1/4</option><option value="3">1/2</option><option value="4">1</option><option value="5">2</option><option value="6">4</option></select>
+        <span>FEEL</span><select id="fxFeel" title="Dritto, terzina o puntato"><option value="0">Dritto</option><option value="1">Terzina</option><option value="2">Puntato</option></select></div>
+      <div class="fxknobs">
+        <div class="knobwrap"><div class="knob" id="fxDepth"></div><span id="fxL1">DEPTH</span></div>
+        <div class="knobwrap"><div class="knob" id="fxFb"></div><span id="fxL2">FEEDBACK</span></div>
+        <div class="knobwrap"><div class="knob" id="fxMix"></div><span id="fxL3">MIX</span></div>
+      </div>
+    </div>
+  </aside>
+</section>
+</div>
+
+<dialog id="recDlg">
+  <h2>Registrazione</h2>
+  <p class="hint" style="margin-top:0">Registra tutto quello che esce dal master: deck con effetti, campionatore e batteria.</p>
+  <label>Formato<select id="recFmt">
+    <option value="wav16">WAV 16 bit (qualità CD)</option><option value="wav24">WAV 24 bit</option>
+    <option value="mp3-320">MP3 320 kbps</option><option value="mp3-256">MP3 256 kbps</option><option value="mp3-192">MP3 192 kbps</option><option value="mp3-128">MP3 128 kbps</option></select></label>
+  <label>Salva in<div class="pathrow"><input id="recPath" readonly placeholder="Scegli dove salvare il file…"><button id="recPick">Scegli…</button></div></label>
+  <div id="recErr" class="warn"></div>
+  <div class="btns"><button id="recCancel">Annulla</button><button id="recGo" class="primary" disabled>● Avvia registrazione</button></div>
+</dialog>
+
+<dialog id="audioDlg">
+  <h2>Impostazioni</h2>
+  <div class="stabs"><button data-sp="audio" class="on">AUDIO</button><button data-sp="stem">STEM</button><button data-sp="midi">CONTROLLER MIDI</button></div>
+  <div class="spane" id="sp-audio">
+    <label>Driver audio<select id="aDrv"></select></label>
+    <label>Uscita audio principale (master) &mdash; scheda del PC o del controller<select id="aDev"></select></label>
+    <label>Frequenza di campionamento<select id="aRate"></select></label>
+    <label>Dimensione buffer<select id="aBuf"></select></label>
+    <label>Uscita cuffie (preascolto dei canali e anteprima dei brani)<select id="pDev"></select></label>
+    <p class="hint">Con un controller che ha la scheda audio integrata (per esempio Denon Prime GO): scegli la sua uscita come principale e, per le cuffie del controller, «Stesso dispositivo, canali 3-4». Oppure tieni il master sulla scheda del PC e metti le cuffie sul controller scegliendolo nell'elenco delle cuffie.</p>
+    <p class="hint">ASIO usa il driver della tua scheda (per esempio Focusrite) e permette latenze molto più basse di Windows (WASAPI): conviene per suonare i pad della batteria dal vivo. Con ASIO la scheda è dedicata a SpinLab.</p>
+    <p class="hint">Buffer piccolo = latenza minore, ma pi&ugrave; rischio di scatti. Se senti click o interruzioni, aumentalo.</p>
+    <div id="aStatus"></div>
+  </div>
+  <div class="spane" id="sp-stem" hidden>
+    <label>Come lavorano gli stem<select id="stMode">
+      <option value="auto">Automatico: in base alla velocità di questo PC</option>
+      <option value="realtime">Sempre in tempo reale</option>
+      <option value="prepared">Solo stem preparati prima (massima qualità, caricamento immediato)</option>
+    </select></label>
+    <div id="stInfo" class="stinfo"></div>
+    <div class="btns" style="justify-content:flex-start"><button id="stBench">Misura la velocità di questo PC</button></div>
+    <p class="hint">Tempo reale: gli stem si separano mentre il brano suona, con il processore. Se il PC non è abbastanza veloce conviene prepararli prima: clic destro su uno o più brani (o su una playlist) → «Crea stem». Vengono salvati in una cartella «stems» accanto ai brani, compressi senza perdita di qualità, e si caricano subito.</p>
+  </div>
+  <div class="spane" id="sp-midi" hidden>
+    <p class="hint" style="margin-top:0">Collega il controller, premi «Learn» accanto a una funzione e muovi o premi il controllo da assegnare. Funziona con qualsiasi controller MIDI. I tasti con SHIFT si assegnano con la casella SHIFT dopo aver assegnato il tasto SHIFT stesso.</p>
+    <div class="mmtop"><span>Collegati:</span> <b id="mmPorts">—</b></div>
+    <div class="mmtop"><span>Ultimo messaggio:</span> <code id="mmMon">— muovi un controllo —</code></div>
+    <div class="mmtop"><span>Uscita LED:</span> <select id="mmOut"></select>
+      <span title="Quanti messaggi manda il jog per un giro completo del piatto: regola la sensibilità dello scratch">Jog per giro:</span> <input type="number" id="mmJog" min="50" max="8000" value="800"> <button id="mmCal" title="Gira il piatto di un giro intero: l'app conta gli scatti e regola da sola la sensibilità dello scratch">Calibra il jog</button> <button id="mmAnalyze" title="Muovi un controllo per 8 secondi (per esempio il jog, un po' in un senso e un po' nell'altro): mostra i messaggi che manda">Analizza un controllo</button>
+      <input id="mmFilter" placeholder="Cerca una funzione…"></div>
+    <div class="mmtop"><button id="mmIgnore" title="Per i sensori di tocco (l'encoder che si sfiora prima di cliccarlo): premi qui e poi tocca il sensore. Quel messaggio non comanda più nulla e il Learn lo salta">Ignora un tasto…</button><span>Ignorati:</span> <span id="mmIgnList"></span></div>
+    <div id="mmList"></div>
+    <div class="mmtop"><button id="mmExport">Esporta mappatura</button><button id="mmImport">Importa…</button><button id="mmClear">Cancella tutto</button></div>
+    <div id="mmJsonBox" hidden><textarea id="mmJson" spellcheck="false"></textarea><div class="btns"><button id="mmJsonClose">Chiudi</button><button id="mmJsonApply" class="primary">Applica</button></div></div>
+  </div>
+  <div class="btns"><button id="aClose">Chiudi</button><button id="aApply" class="primary">Applica</button></div>
+</dialog>
+<div id="ctx" hidden></div>
+<div id="ghost" hidden></div>
+<script src="app.js"></script>
+<script src="midi.js"></script>
+</body>
+</html>
