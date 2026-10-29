@@ -8,6 +8,8 @@ SpinLab DJ è un programma per DJ con due deck, mixer, effetti, separazione in s
 
 ## Primo avvio
 
+All'avvio compare la schermata di SpinLab con una barra di avanzamento: sparisce da sola quando il motore audio e la libreria sono pronti.
+
 1. **Scegli la scheda audio.** Apri **SETTINGS** (o l'ingranaggio in alto a destra) → scheda **AUDIO**. Se hai una scheda con driver ASIO (per esempio Focusrite) scegli driver **ASIO®**: la latenza è molto più bassa e i pad della batteria rispondono subito. Altrimenti lascia **Windows (WASAPI)**. Premi **Applica**.
 2. **Scegli le cuffie.** Nello stesso pannello, «Uscita cuffie». Vedi [Impostazioni audio](#impostazioni-audio).
 3. **Aggiungi la musica.** Nella colonna **ESPLORA** a sinistra scegli una cartella: i brani compaiono nella tabella. Vengono analizzati (BPM, tonalità, griglia dei battiti) in sottofondo.
@@ -17,7 +19,7 @@ SpinLab DJ è un programma per DJ con due deck, mixer, effetti, separazione in s
 
 ## La schermata
 
-- **Barra in alto.** Navigazione (**LIBRARY**, **MIXER**, **RECORD**, **SETTINGS**), indicatore **REC** quando registri, carico del processore (**CPU**), orologio, comandi delle cuffie (pulsanti 1 e 2, **CUE MIX**, **PHONES**) e volume **MASTER**.
+- **Barra in alto.** Navigazione (**LIBRARY**, **MIXER**, **RECORD**, **SETTINGS**), indicatore **REC** quando registri, carico del processore (**CPU**), orologio, comandi delle cuffie (pulsanti 1 e 2, **CUE MIX**, **PHONES**) e volume **MASTER**. A destra del volume ci sono la **i** (informazioni su SpinLab, versione e crediti) e il **?** (questa guida).
 - **Centro.** I due deck con le waveform e, in mezzo, il mixer a due canali con il crossfader.
 - **In basso a sinistra.** Esplora cartelle e playlist.
 - **In basso al centro.** La libreria: ricerca, tabella dei brani, scheda **TAG & INFO**.

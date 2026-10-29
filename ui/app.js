@@ -8,6 +8,41 @@ function toast(msg) {
 window.addEventListener("error", (e) => toast("Errore: " + e.message + " (" + (e.filename || "").split("/").pop() + ":" + e.lineno + ")"));
 window.addEventListener("unhandledrejection", (e) => toast("Errore: " + (e.reason?.message || e.reason)));
 const T = window.__TAURI__;
+
+/* ============================================================ SPLASH: la schermata d'avvio resta finche' interfaccia, motore audio e libreria sono pronti */
+const splash = { t0: performance.now(), ok: { ui: false, audio: false, lib: false }, shown: true };
+(function buildSplashWaves() {
+  // due forme d'onda ai lati del disco: alte vicino al disco, basse in lontananza; ogni barra pulsa con un ritardo diverso
+  const mk = (id, left) => {
+    const box = document.getElementById(id); if (!box) return;
+    const n = 54; let html = "";
+    for (let k = 0; k < n; k++) {
+      const x = left ? 1 - k / n : k / n;                     // 0 = vicino al disco, 1 = lontano
+      const env = Math.pow(1 - x, 1.25), r = 0.35 + 0.65 * Math.abs((Math.sin(k * 12.9898 + (left ? 1 : 7)) * 43758.5453) % 1);
+      const hgt = Math.max(3, Math.round(env * r * 88)), delay = ((k * 0.137) % 1.3).toFixed(2);
+      html += `<i style="height:${hgt}%;animation-delay:-${delay}s"></i>`;
+    }
+    box.innerHTML = html;
+  };
+  mk("spWaveL", true); mk("spWaveR", false);
+})();
+function splashStep(what) {
+  if (!splash.shown) return;
+  if (what) splash.ok[what] = true;
+  const o = splash.ok, bar = document.getElementById("spBar"), txt = document.getElementById("spStatus");
+  if (!bar) return;
+  if (o.ui && o.audio && o.lib) { bar.style.width = "100%"; txt.textContent = "PRONTO"; return splashHide(); }
+  bar.style.width = (o.ui ? 38 : 12) + (o.audio ? 32 : 0) + (o.lib ? 20 : 0) + "%";
+  txt.textContent = !o.audio ? "AVVIO DEL MOTORE AUDIO…" : !o.lib ? "CARICAMENTO DELLA LIBRERIA…" : "PRONTO";
+}
+function splashHide() {
+  if (!splash.shown) return;
+  splash.shown = false;
+  // almeno un attimo di visibilita': senza, su un PC veloce la schermata lampeggerebbe
+  setTimeout(() => document.getElementById("splash")?.classList.add("done"), Math.max(0, 1400 - (performance.now() - splash.t0)));
+}
+setTimeout(splashHide, 12000); // rete di sicurezza: se qualcosa non risponde, l'app si mostra comunque
+
 const inv = (c, a = {}) => T.core.invoke(c, a);
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -721,6 +756,7 @@ document.addEventListener("keydown", (e) => {
 async function poll() {
   try {
     const s = await inv("get_state");
+    if (!splash.ok.audio) splashStep("audio");
     const now = performance.now();
     s.decks.slice(0, 2).forEach((ds, i) => { decks[i].snap = ds; decks[i].t = now; updateDeckUI(i, ds); });
     setMeter($("#masterMeter"), s.master_level);
@@ -1531,7 +1567,8 @@ function openHelp(section) {
 $("#helpBtn").onclick = () => openHelp();
 $("#helpClose").onclick = () => $("#helpDlg").close();
 // informazioni e crediti (con il logo e la dicitura di Steinberg per ASIO)
-$("#aboutBtn").onclick = async () => { try { $("#aboutVer").textContent = await T.app.getVersion(); } catch (e) { /* resta la versione scritta nella pagina */ } $("#aboutDlg").showModal(); };
+const openAbout = async () => { try { $("#aboutVer").textContent = await T.app.getVersion(); } catch (e) { /* resta la versione scritta nella pagina */ } $("#aboutDlg").showModal(); };
+$("#aboutBtn").onclick = openAbout; $("#aboutBtn2").onclick = openAbout;
 $("#aboutClose").onclick = () => $("#aboutDlg").close();
 document.addEventListener("click", (e) => { const a = e.target.closest?.("[data-help]"); if (a) { e.preventDefault(); openHelp(a.dataset.help); } });
 $("#helpDlg").addEventListener("click", (e) => { if (e.target === $("#helpDlg")) $("#helpDlg").close(); });
@@ -1554,7 +1591,8 @@ async function refreshLatency() { try { const c = await inv("audio_current"); au
 
 /* ================================================================== START */
 buildDecks(); buildPads(); buildDrums(); pollMidi(); decks.forEach((d) => d.sendFx()); resizeCanvases();
-refreshPlaylists().then(refreshLib);
+splashStep("ui");
+refreshPlaylists().then(refreshLib).catch(() => {}).finally(() => splashStep("lib"));
 poll(); requestAnimationFrame(frame);
 refreshLatency(); setTimeout(refreshLatency, 1500);
 inv("startup_files").then((fs) => fs.slice(0, 2).forEach((f, i) => loadTrack(i, f)));

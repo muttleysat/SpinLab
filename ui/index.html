@@ -7,9 +7,21 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="splash" role="status" aria-live="polite">
+  <div class="sp-stage">
+    <div class="sp-wave l" id="spWaveL"></div>
+    <div class="sp-disc"><div class="sp-ring"></div><div class="sp-ticks"></div>
+      <div class="sp-vinyl"><div class="sp-label"><img src="assets/spinlab-mark.svg" alt=""></div></div></div>
+    <div class="sp-wave r" id="spWaveR"></div>
+  </div>
+  <div class="sp-word"><span>Spin</span><b>Lab</b></div>
+  <div class="sp-status" id="spStatus">AVVIO DEL MOTORE AUDIO…</div>
+  <div class="sp-bar"><i id="spBar"></i></div>
+</div>
+
 <div id="app">
 <header id="top">
-  <div class="brand"><svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="10" fill="none" stroke="#18b6ff" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="#18b6ff"/><path d="M12 2a10 10 0 0 1 8 4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg><span>SpinLab</span></div>
+  <div class="brand"><img src="assets/spinlab-mark.svg" width="24" height="24" alt=""><span>SpinLab</span></div>
   <nav id="nav">
     <button data-nav="lib">LIBRARY</button><button data-nav="mixer" class="on">MIXER</button><button data-nav="rec">RECORD</button><button data-nav="settings">SETTINGS</button>
   </nav>
@@ -28,6 +40,7 @@
     <div class="mst"><div class="knobwrap sm"><div class="knob" id="masterKnob" title="Volume master"></div><span>MASTER</span></div>
       <div class="meter horiz" id="masterMeter"><i></i><i></i></div></div>
     <button id="audioBtn" class="ico" title="Impostazioni audio"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.5 4.5-.1-1 1.9-1.5-1.9-3.3-2.3.9a7 7 0 0 0-1.7-1l-.4-2.4h-3.8l-.4 2.4a7 7 0 0 0-1.7 1l-2.3-.9-1.9 3.3L5.8 12l-.1 1 .1 1-1.9 1.5 1.9 3.3 2.3-.9a7 7 0 0 0 1.7 1l.4 2.4h3.8l.4-2.4a7 7 0 0 0 1.7-1l2.3.9 1.9-3.3L20.4 14z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+    <button id="aboutBtn2" class="ico" title="Informazioni su SpinLab DJ" aria-label="Informazioni"><b style="font-size:15px;font-family:Georgia,serif">i</b></button>
     <button id="helpBtn" class="ico" title="Guida: il manuale del programma" aria-label="Guida"><b style="font-size:15px">?</b></button>
   </div>
 </header>
@@ -130,11 +143,20 @@
 </div>
 
 <dialog id="aboutDlg">
-  <h2>SpinLab DJ</h2>
-  <p class="hint" style="margin-top:0">Versione <span id="aboutVer">0.1.0</span></p>
-  <div class="asiobox"><img src="assets/asio-logo-white.png" alt="ASIO Compatible" height="46"><span>ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</span></div>
-  <p class="hint">Il supporto ASIO usa i driver installati dal produttore della tua scheda audio.</p>
-  <div class="btns"><button id="aboutClose" class="primary">Chiudi</button></div>
+  <div class="ab-arc l"></div><div class="ab-arc r"></div>
+  <div class="ab-card">
+    <img class="ab-mark" src="assets/spinlab-mark.svg" alt="">
+    <div class="sp-word small"><span>Spin</span><b>Lab</b></div>
+    <div class="ab-line"></div>
+    <div class="ab-name">SpinLab DJ</div>
+    <div class="ab-by">Developed by Vinz Trombetta</div>
+    <div class="ab-sec"><span>MOTORE AUDIO</span></div>
+    <img class="ab-asio" src="assets/asio-logo-white.png" alt="ASIO Compatible">
+    <div class="ab-note">ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</div>
+    <div class="ab-line"></div>
+    <div class="ab-ver">Versione <span id="aboutVer">0.1.0</span></div>
+    <button id="aboutClose" class="ab-close">CHIUDI</button>
+  </div>
 </dialog>
 
 <dialog id="helpDlg">
