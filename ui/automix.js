@@ -81,6 +81,18 @@ const amNext = () => {
   return AM.queue[AM.idx] || null;
 };
 
+// un brano che hai caricato tu sull'altro deck non va sostituito: diventa il prossimo della coda
+function amAdoptManual() {
+  const s = amSnap(AM.nxt), d = decks[AM.nxt];
+  if (!s.loaded || s.playing || d.loading || !s.path) return;
+  const next = AM.queue[AM.idx];
+  if (next && next.path === s.path) return;
+  const known = (typeof lib !== "undefined" && lib.rows.find((t) => t.path === s.path)) || { id: -1, path: s.path, title: s.name, artist: "", bpm: s.bpm_orig };
+  const at = AM.queue.findIndex((t, k) => k >= AM.idx && t.path === s.path);
+  if (at >= 0) AM.queue.splice(at, 1);
+  AM.queue.splice(AM.idx, 0, known);
+}
+
 /* ---------------------------------------------------------------- calcoli sul brano che suona */
 function amMixLen(a, b) {
   // durata della transizione in secondi di brano (la linea del tempo del file) e se si puo' sincronizzare
@@ -103,6 +115,7 @@ async function amTick() {
     if (A.duration > 0 && A.pos >= A.duration - 0.6) return amPlayFresh();
     return;
   }
+  amAdoptManual();
   const next = amNext();
   if (!next) { if (A.duration - A.pos < 1.5 || !A.playing) return amStop("Automix terminato: la coda e' finita."); amMsg("Ultimo brano: la coda e' finita"); return; }
   const remaining = A.duration - A.pos, plan = amMixLen(A, next);
