@@ -12,9 +12,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-cpal = { version = "0.15", features = ["asio"] }
-# solo per leggere i nomi dei driver ASIO: elencare i dispositivi con cpal carica ogni driver e ferma quello in uso
-asio-sys = "0.2"
+cpal = "0.15"
 symphonia = { version = "0.5", features = ["all"] }
 rustfft = "6"
 signalsmith-stretch = "0.1"
@@ -27,9 +25,20 @@ base64 = "0.22"
 midir = "0.10"
 hound = "3.5"
 mp3lame-encoder = "0.2"
-ort = { version = "=2.0.0-rc.15", features = ["directml"] }
+ort = { version = "=2.0.0-rc.15" }
 flacenc = "0.5.1"
 claxon = "0.4.3"
+
+# ASIO e DirectML esistono solo su Windows
+[target.'cfg(windows)'.dependencies]
+cpal = { version = "0.15", features = ["asio"] }
+# solo per leggere i nomi dei driver ASIO: elencare i dispositivi con cpal carica ogni driver e ferma quello in uso
+asio-sys = "0.2"
+ort = { version = "=2.0.0-rc.15", features = ["directml"] }
+
+# su macOS la GPU va' via CoreML
+[target.'cfg(target_os = "macos")'.dependencies]
+ort = { version = "=2.0.0-rc.15", features = ["coreml"] }
 
 # `cargo tauri dev` compila in profilo dev: senza ottimizzazioni decodifica e analisi sono 30-40 volte piu' lente
 [profile.dev]

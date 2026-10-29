@@ -1,7 +1,11 @@
-//! Separazione degli stem (batteria, basso, altro, voce) con HT-Demucs via ONNX Runtime (CPU).
+//! Separazione degli stem (batteria, basso, altro, voce) con HT-Demucs via ONNX Runtime.
 //! Il modello lavora su segmenti da 7,8 s a 44,1 kHz stereo; i brani lunghi si dividono in segmenti
 //! sovrapposti e si ricompongono con una finestra triangolare. Il risultato resta su disco (16 bit):
 //! il deck lo rilegge e ne mescola gli stem scelti.
+//!
+//! Acceleratori: su Windows DirectML; su macOS di default la CPU (AMX/Accelerate) perche' il
+//! CoreML EP di ORT su questo modello e' molto piu' lento — vedi `open` per i dettagli e per
+//! forzare i tentativi GPU con SPIN_STEM_EP.
 
 use ort::session::Session;
 use ort::value::Tensor;
@@ -76,7 +80,7 @@ pub fn delete_for(dir: &Path, track: &str) {
 
 const MODEL_URL: &str = "https://huggingface.co/adowu/htdemucs-onnx/resolve/main/htdemucs_fp16weights.onnx";
 
-/// Scarica il modello (circa 166 MB, licenza MIT) la prima volta che serve, con il curl incluso in Windows.
+/// Scarica il modello (circa 166 MB, licenza MIT) la prima volta che serve, con il curl incluso nel sistema.
 pub fn ensure_model(model: &Path) -> Result<(), String> {
     if model.exists() {
         return Ok(());
@@ -85,7 +89,9 @@ pub fn ensure_model(model: &Path) -> Result<(), String> {
         std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
     }
     let tmp = model.with_extension("part");
-    let st = std::process::Command::new("curl.exe")
+    // su Windows il curl incluso si chiama curl.exe, su macOS/Linux semplicemente curl
+    let curl = if cfg!(windows) { "curl.exe" } else { "curl" };
+    let st = std::process::Command::new(curl)
         .args(["-L", "--fail", "-s", "-o"])
         .arg(&tmp)
         .arg(MODEL_URL)
@@ -98,8 +104,9 @@ pub fn ensure_model(model: &Path) -> Result<(), String> {
     std::fs::rename(&tmp, model).map_err(|e| e.to_string())
 }
 
-/// Sessione del modello condivisa da tutti: prova la GPU (DirectML) e se non parte (memoria video occupata, driver)
-/// ripiega sulla CPU. `gpu_in_use()` dice quale e' stata scelta.
+/// Sessione del modello condivisa da tutti: prova gli acceleratori (DirectML su Windows, CoreML su macOS)
+/// e se non partono (memoria occupata, operazioni non supportate) ripiega sulla CPU.
+/// `gpu_in_use()` dice quale e' stata scelta.
 static SESSION: parking_lot::Mutex<Option<Session>> = parking_lot::Mutex::new(None);
 static GPU: AtomicU8 = AtomicU8::new(0); // 0 non ancora provata, 1 GPU, 2 CPU
 
@@ -107,28 +114,64 @@ pub fn gpu_in_use() -> bool {
     GPU.load(Ordering::SeqCst) == 1
 }
 
+/// Tentativi di accelerazione in ordine di preferenza: Windows un adattatore (DirectML),
+/// macOS due (Neural Engine + GPU, poi sola GPU in caso il primo tentativo fallisca).
+/// Su macOS i tentativi partono solo con SPIN_STEM_EP=gpu: vedi `open`.
+#[cfg(windows)]
+const GPU_ATTEMPTS: usize = 1;
+#[cfg(target_os = "macos")]
+const GPU_ATTEMPTS: usize = 2;
+#[cfg(not(any(windows, target_os = "macos")))]
+const GPU_ATTEMPTS: usize = 0;
+
+/// Nome del tentativo `i` (solo per i log).
+#[cfg(windows)]
+fn gpu_label(_attempt: usize) -> &'static str {
+    "DirectML"
+}
+#[cfg(target_os = "macos")]
+fn gpu_label(attempt: usize) -> &'static str {
+    if attempt == 0 { "CoreML ANE+GPU" } else { "CoreML GPU" }
+}
+
 fn open(model: &Path) -> Result<Session, String> {
-    if GPU.load(Ordering::SeqCst) != 2 {
+    // Su macOS il CoreML EP di ONNX Runtime con htdemucs fp16 e' ~70x piu' lento della CPU
+    // (85 s contro 1,2 s per segmento: la CPU Apple usa AMX/Accelerate, il CoreML EP fa
+    // continui trasferimenti e compilazioni). Default quindi: CPU esplicita su macOS.
+    // SPIN_STEM_EP=gpu prova comunque gli acceleratori (diagnostica), SPIN_STEM_EP=cpu li evita ovunque.
+    let ep = std::env::var("SPIN_STEM_EP").map(|v| v.to_ascii_lowercase()).unwrap_or_default();
+    let default_cpu = cfg!(target_os = "macos") && ep != "gpu";
+    let force_cpu = ep == "cpu" || default_cpu;
+    if !force_cpu && GPU.load(Ordering::SeqCst) != 2 {
         let t = std::time::Instant::now();
-        let try_gpu = || -> Result<Session, String> {
-            let mut s = open_with(model, Some(None))?;
-            // il primo passaggio compila il grafo sulla scheda: e' li' che fallisce se manca memoria
-            run_segment(&mut s, vec![0f32; 2 * SEG])?;
-            Ok(s)
-        };
-        match try_gpu() {
-            Ok(s) => {
-                GPU.store(1, Ordering::SeqCst);
-                eprintln!("stem: GPU pronta in {:?}", t.elapsed());
-                return Ok(s);
-            }
-            Err(e) => {
-                eprintln!("stem: GPU non utilizzabile ({e}), uso la CPU");
-                GPU.store(2, Ordering::SeqCst);
+        let mut last_err = String::new();
+        for attempt in 0..GPU_ATTEMPTS {
+            let try_gpu = || -> Result<Session, String> {
+                let t_open = std::time::Instant::now();
+                let mut s = open_with(model, Some(attempt as u8))?;
+                eprintln!("stem: sessione {} aperta in {:?}", gpu_label(attempt), t_open.elapsed());
+                // il primo passaggio compila il grafo sul dispositivo: e' li' che fallisce se manca memoria
+                let t_run = std::time::Instant::now();
+                run_segment(&mut s, vec![0f32; 2 * SEG])?;
+                eprintln!("stem: prima inferenza {} in {:?}", gpu_label(attempt), t_run.elapsed());
+                Ok(s)
+            };
+            match try_gpu() {
+                Ok(s) => {
+                    GPU.store(1, Ordering::SeqCst);
+                    eprintln!("stem: GPU pronta ({}) in {:?}", gpu_label(attempt), t.elapsed());
+                    return Ok(s);
+                }
+                Err(e) => {
+                    eprintln!("stem: tentativo GPU {} non riuscito ({e})", gpu_label(attempt));
+                    last_err = e;
+                }
             }
         }
+        eprintln!("stem: GPU non utilizzabile ({last_err}), uso la CPU");
+        GPU.store(2, Ordering::SeqCst);
     }
-    open_with(model, None)
+    open_with(model, None).inspect(|_| eprintln!("stem: sessione CPU pronta"))
 }
 
 /// Apre il modello in anticipo (se il file c'e' gia').
@@ -147,25 +190,50 @@ fn with_session<R>(model: &Path, f: impl FnOnce(&mut Session) -> Result<R, Strin
     f(g.as_mut().unwrap())
 }
 
-/// `gpu`: None = CPU; Some(None) = scheda ad alte prestazioni; Some(Some(n)) = adattatore n.
-fn open_with(model: &Path, gpu: Option<Option<i32>>) -> Result<Session, String> {
+/// `gpu`: None = CPU; Some(i) = tentativo i-esimo di accelerazione (vedi `gpu_label`).
+fn open_with(model: &Path, gpu: Option<u8>) -> Result<Session, String> {
     static ENV: std::sync::OnceLock<Result<ort::environment::Environment, String>> = std::sync::OnceLock::new();
     let env = ENV.get_or_init(|| ort::init().build().map_err(|e| e.to_string())).as_ref().map_err(|e| e.clone())?;
     let threads = std::thread::available_parallelism().map_or(4, |n| n.get()).clamp(2, 12);
     let mut b = Session::builder(env).map_err(|e| e.to_string())?.with_intra_threads(threads).map_err(|e| e.to_string())?;
-    if let Some(dev) = gpu {
-        let mut ep = ort::ep::DirectML::default();
-        ep = match dev {
-            Some(n) => ep.with_device_id(n),
-            None => ep.with_performance_preference(ort::ep::directml::PerformancePreference::HighPerformance),
-        };
+    if let Some(attempt) = gpu {
         b = b
             .with_memory_pattern(false)
             .map_err(|e| e.to_string())?
             .with_parallel_execution(false)
-            .map_err(|e| e.to_string())?
-            .with_execution_providers([ep.build()])
             .map_err(|e| e.to_string())?;
+        #[cfg(windows)]
+        {
+            let ep = ort::ep::DirectML::default()
+                .with_performance_preference(ort::ep::directml::PerformancePreference::HighPerformance);
+            b = b.with_execution_providers([ep.build()]).map_err(|e| e.to_string())?;
+        }
+        // su macOS la GPU e' CoreML. Con SPIN_COREML=plain si prova la configurazione semplice (diagnostica).
+        #[cfg(target_os = "macos")]
+        {
+            let plain = std::env::var("SPIN_COREML").map(|v| v == "plain").unwrap_or(false);
+            let mut ep = ort::ep::CoreML::default().with_compute_units(if attempt == 0 {
+                ort::ep::coreml::ComputeUnits::All
+            } else {
+                ort::ep::coreml::ComputeUnits::CPUAndGPU
+            });
+            if !plain {
+                ep = ep
+                    .with_model_format(ort::ep::coreml::ModelFormat::MLProgram)
+                    .with_static_input_shapes(true)
+                    .with_specialization_strategy(ort::ep::coreml::SpecializationStrategy::FastPrediction);
+                if let Some(cache) = model.parent().map(|p| p.join("coreml-cache")) {
+                    let _ = std::fs::create_dir_all(&cache);
+                    ep = ep.with_model_cache_dir(cache.to_string_lossy().into_owned());
+                }
+            }
+            b = b.with_execution_providers([ep.build()]).map_err(|e| e.to_string())?;
+        }
+    } else {
+        // IMPORTANTISSIMO: ort imposta di default la politica di selezione automatica "MaxEfficiency",
+        // che su macOS sceglie CoreML/ANE anche senza EP espliciti (per questo modello e' lentissimo).
+        // PreferCPU forza la CPU vera.
+        b = b.with_auto_device(ort::session::builder::AutoDevicePolicy::PreferCPU).map_err(|e| e.to_string())?;
     }
     b.commit_from_file(model).map_err(|e| e.to_string())
 }
@@ -777,14 +845,14 @@ mod tests {
     }
 
     /// la finestra non lascia buchi ne' amplifica: un segnale costante passa invariato a ogni numero di segmenti
-    /// prova della GPU: SPIN_DML = "hp" (alte prestazioni) oppure il numero dell'adattatore
+    /// prova della GPU: SPIN_GPU = "cpu" oppure numero del tentativo (0 = acceleratore preferito)
     #[test]
     #[ignore]
     fn gpu_spike() {
-        let dev = match std::env::var("SPIN_DML").unwrap_or("hp".into()).as_str() { "hp" => None, n => Some(n.parse::<i32>().unwrap()) };
+        let dev = match std::env::var("SPIN_GPU").unwrap_or("0".into()).as_str() { "cpu" => None, n => Some(n.parse::<u8>().unwrap_or(0)) };
         let model = std::env::var("SPIN_MODEL").map(PathBuf::from).unwrap_or(model_path(&dir()));
         let t0 = std::time::Instant::now();
-        let mut s = open_with(&model, Some(dev)).expect("apri");
+        let mut s = open_with(&model, dev).expect("apri");
         println!("apertura {:?}", t0.elapsed());
         let mix: Vec<f32> = (0..2 * SEG).map(|i| 0.3 * ((i % SEG) as f32 * 0.05).sin()).collect();
         for k in 0..4 {

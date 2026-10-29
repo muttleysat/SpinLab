@@ -1303,7 +1303,9 @@ fn main() {
                     stems::warm(&model);
                     // prima misura della velocita' (poi si rifa solo su richiesta dalle impostazioni)
                     if stem_speed() <= 0.0 && model.exists() {
-                        let _ = stem_bench(&d4);
+                        if let Err(e) = stem_bench(&d4) {
+                            eprintln!("stem: bench non riuscito: {e}");
+                        }
                     }
                 });
             }
