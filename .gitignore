@@ -5,3 +5,8 @@ src-tauri/target/
 *.stm
 *.stems
 *.log
+
+# SDK ASIO di Steinberg: non va mai caricato nel repository (licenza)
+asio-sdk/
+ASIO-SDK*
+asiosdk*

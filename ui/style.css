@@ -362,3 +362,5 @@ dialog .btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1
 
 .asiobox { display: flex; align-items: center; gap: 12px; padding: 8px 12px; margin-bottom: 4px; border: 1px solid #25324d; border-radius: 8px; background: #0b111d; color: var(--dim); font-size: 11px; } .asiobox img { height: 46px; width: auto; }
 dialog .hint a { color: var(--accent); }
+#aboutDlg { width: min(520px, 94vw); }
+#helpDlg .helphead .chip2 { margin-left: auto; margin-right: 10px; }

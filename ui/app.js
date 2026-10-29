@@ -1530,6 +1530,9 @@ function openHelp(section) {
 }
 $("#helpBtn").onclick = () => openHelp();
 $("#helpClose").onclick = () => $("#helpDlg").close();
+// informazioni e crediti (con il logo e la dicitura di Steinberg per ASIO)
+$("#aboutBtn").onclick = async () => { try { $("#aboutVer").textContent = await T.app.getVersion(); } catch (e) { /* resta la versione scritta nella pagina */ } $("#aboutDlg").showModal(); };
+$("#aboutClose").onclick = () => $("#aboutDlg").close();
 document.addEventListener("click", (e) => { const a = e.target.closest?.("[data-help]"); if (a) { e.preventDefault(); openHelp(a.dataset.help); } });
 $("#helpDlg").addEventListener("click", (e) => { if (e.target === $("#helpDlg")) $("#helpDlg").close(); });
 $("#aClose").onclick = () => $("#audioDlg").close();

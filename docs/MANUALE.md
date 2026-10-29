@@ -307,6 +307,6 @@ I dati dell'utente (impostazioni, libreria, mappatura MIDI, modello degli stem) 
 
 ## Crediti
 
-ASIO is a registered trademark of Steinberg Media Technologies GmbH.
+ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.
 
 ![ASIO Compatible](../ui/assets/asio-logo-bw.png)
