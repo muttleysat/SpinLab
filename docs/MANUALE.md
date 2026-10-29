@@ -178,8 +178,6 @@ Non si possono cambiare le impostazioni audio mentre si registra.
 - **La scheda integrata del PC o altre schede senza driver ASIO**: usa **Windows (WASAPI)**. Funziona sempre, con una latenza più alta. Se vuoi comunque ASIO su una scheda qualsiasi esistono driver universali di terze parti (per esempio ASIO4ALL o FlexASIO): se li installi, compaiono nell'elenco come gli altri.
 - **Con ASIO la scheda è dedicata a SpinLab**: altri programmi non possono usarla nello stesso momento.
 
-Per chi **compila** il programma (non per chi lo usa) serve l'SDK ASIO di Steinberg: contiene solo i file necessari a «parlare» con i driver e non è incluso nel progetto per la sua licenza. L'installer non contiene driver. Se un giorno SpinLab verrà distribuito pubblicamente con il supporto ASIO, bisognerà rispettare la licenza di Steinberg per l'SDK.
-
 **Dopo «Applica»**, l'area sotto mostra l'uscita realmente attiva e la latenza stimata. Se l'uscita scelta non parte, SpinLab torna a Windows (WASAPI) e ti dice il motivo.
 
 **Esempi di configurazione**
@@ -285,25 +283,9 @@ Leggi il messaggio sotto «Applica». Cause frequenti: un altro programma tiene 
 
 **Un encoder muove due cose.** Guarda gli avvisi «⚠ anche …» nella lista: una vecchia assegnazione sullo stesso messaggio muove altre funzioni. Cancellala con la ✕.
 
-**«Accesso negato (os error 5)» compilando.** Il programma è ancora aperto e Windows non lo lascia sostituire. Chiudi SpinLab (e le copie rimaste nel Gestore attività).
-
 **Gli stem sono lenti o non partono.** Vedi **Impostazioni → STEM**: con «Solo stem preparati» prepara prima i brani (tasto destro → Crea stem). Il primo uso scarica il modello e richiede internet.
 
 ---
-
-## Compilare il programma
-
-Serve: Git, Rust (rustup.rs) con gli strumenti C++ di Visual Studio, LLVM/clang e l'**SDK ASIO** di Steinberg (non incluso nel progetto per la sua licenza). Sul PC di sviluppo i percorsi dell'SDK e di LLVM sono in `src-tauri/.cargo/config.toml`: sul nuovo PC vanno modificati. Serve anche FFmpeg nel PATH (formati audio meno comuni).
-
-```
-cargo install tauri-cli --version "^2"
-git clone https://github.com/muttleysat/SpinLab.git
-cd SpinLab\src-tauri
-cargo tauri dev        (per provare)
-cargo tauri build      (per creare l'installer)
-```
-
-I dati dell'utente (impostazioni, libreria, mappatura MIDI, modello degli stem) stanno in `%APPDATA%\com.spinlab.dj` e non sono nel repository.
 
 ---
 

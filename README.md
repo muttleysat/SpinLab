@@ -28,6 +28,6 @@ cargo tauri dev        # per provare
 cargo tauri build      # per creare l'installer
 ```
 
-Dettagli e requisiti per macOS e Windows nel manuale, sezione «Compilare il programma».
+Dettagli per chi sviluppa in `docs/SVILUPPO.md`.
 
 ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.
