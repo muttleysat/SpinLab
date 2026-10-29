@@ -114,8 +114,8 @@ function deckHTML(i) {
     <div class="kv"><small>BPM</small><b data-r="bpm">--</b></div>
     <div class="clock2"><b data-r="remain">-00:00</b><span data-r="time">00:00 / 00:00</span></div>
   </div>
-  <canvas class="zoom"></canvas>
-  <canvas class="over"></canvas>
+  <div class="wv"><canvas class="zoom"></canvas></div>
+  <div class="wv"><canvas class="over"></canvas></div>
   <div class="dmain">
     <div class="lcol">
       <div class="card"><div class="ch"><button class="modebtn" data-r="mode" title="Cambia la funzione dei 4 pad: hot cue, beatjump, loop roll, freno/reverse">HOT CUE 1–4 ⌄</button></div>
@@ -1282,6 +1282,10 @@ document.addEventListener("pointerdown", (e) => { if (!e.target.closest("#ctx"))
 
 /* ---- drag & drop con il puntatore (funziona anche con il drop dei file di sistema attivo) */
 let drag = null;
+/* niente drag nativo di WebKit (immagini/canvas/testo): il trascinamento e' gestito qui con i pointer event */
+document.addEventListener("dragstart", (e) => e.preventDefault());
+/* durante il trascinamento WebKit selezionerebbe il testo come una pagina web: bloccato alla fonte */
+document.addEventListener("selectstart", (e) => { if (drag?.on) e.preventDefault(); });
 $("#tracks tbody").addEventListener("pointerdown", (e) => {
   const tr = e.target.closest("tr"); if (!tr || e.button !== 0 || e.target.closest("button,.stars,.chip")) return;
   if (tr.classList.contains("pvon")) return; // sulla riga in anteprima il trascinamento fa lo scrub, non sposta il brano
@@ -1295,6 +1299,7 @@ document.addEventListener("pointermove", (e) => {
   if (!drag) return;
   if (!drag.on && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6) {
     drag.on = true;
+    getSelection()?.removeAllRanges(); // azzera l'eventuale selezione partita col trascinamento
     const g = $("#ghost"); g.hidden = false;
     if (drag.folder) g.textContent = "📁 " + drag.label;
     else {
