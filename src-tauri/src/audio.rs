@@ -178,11 +178,14 @@ impl Audio {
         // ATTENZIONE: con ASIO elencare i dispositivi con cpal CARICA ogni driver installato, compreso quello in uso, e lo ferma
         // (l'audio muore). I nomi si leggono dal registro con asio-sys; le frequenze del dispositivo aperto sono quelle
         // memorizzate all'apertura e per gli altri non si chiede nulla.
-        if want.eq_ignore_ascii_case("asio") {
-            let devices = asio_sys::Asio::new().driver_names();
-            let default_device = if active_here && !cur.device.is_empty() { cur.device.clone() } else { devices.first().cloned().unwrap_or_default() };
-            let rates = if active_here { cur.rates.clone() } else { vec![] };
-            return AudioList { hosts, driver: "ASIO".into(), devices, default_device, rates, current: cur };
+        #[cfg(windows)]
+        {
+            if want.eq_ignore_ascii_case("asio") {
+                let devices = asio_sys::Asio::new().driver_names();
+                let default_device = if active_here && !cur.device.is_empty() { cur.device.clone() } else { devices.first().cloned().unwrap_or_default() };
+                let rates = if active_here { cur.rates.clone() } else { vec![] };
+                return AudioList { hosts, driver: "ASIO".into(), devices, default_device, rates, current: cur };
+            }
         }
         let host = pick_host(Some(&want));
         let devices: Vec<String> = host.output_devices().map(|d| d.filter_map(|x| x.name().ok()).collect()).unwrap_or_default();
@@ -364,7 +367,8 @@ fn build<T: SizedSample + FromSample<f32>>(
     .map_err(|e| e.to_string())
 }
 
-#[cfg(test)]
+// i test di questo modulo sono integrazione ASIO/WASAPI: solo su Windows
+#[cfg(all(test, windows))]
 mod tests {
     use super::*;
 
