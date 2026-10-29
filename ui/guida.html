@@ -42,13 +42,12 @@ section.hide { display: none; }
 <a href="#registrare-il-master">Registrare il master</a>
 <a href="#impostazioni-audio">Impostazioni audio</a>
 <a href="#controller-midi">Controller MIDI</a>
-<a href="#il-denon-prime-go">Il Denon Prime GO+</a>
 <a href="#soluzione-dei-problemi">Soluzione dei problemi</a>
 <a href="#compilare-il-programma">Compilare il programma</a>
 </nav>
 <main>
 <h1 id="spinlab-dj-manuale">SpinLab DJ — Manuale</h1>
-<p>SpinLab DJ è un programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, registrazione del master e supporto per qualsiasi controller MIDI. Questo manuale spiega come usarlo, come collegare un controller (con la mappatura del Denon Prime GO+ come esempio) e come risolvere i problemi più comuni.</p>
+<p>SpinLab DJ è un programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, registrazione del master e supporto per qualsiasi controller MIDI. Questo manuale spiega come usarlo, come collegare un controller e come risolvere i problemi più comuni.</p>
 <blockquote>I tasti e i comandi sono descritti come compaiono sullo schermo. Passando il mouse sopra quasi ogni pulsante compare un suggerimento.</blockquote>
 <section data-title="Primo avvio">
 <h2 id="primo-avvio">Primo avvio</h2>
@@ -119,9 +118,13 @@ section.hide { display: none; }
 <h2 id="impostazioni-audio">Impostazioni audio</h2>
 <p><b>SETTINGS</b> → scheda <b>AUDIO</b>.</p>
 <ul><li><b>Driver audio.</b> <b>Windows (WASAPI)</b> funziona con qualsiasi scheda. <b>ASIO</b> usa il driver della scheda e dà latenze molto più basse, ma la scheda diventa dedicata a SpinLab.</li><li><b>Uscita principale (master).</b> Con ASIO l'elenco mostra i driver ASIO installati. Per usare la scheda integrata del PC scegli il driver <b>Windows (WASAPI)</b>.</li><li><b>Frequenza e buffer.</b> Un buffer piccolo dà meno latenza ma più rischio di scatti: se senti click, aumentalo. 128 frame è un buon punto di partenza con ASIO.</li><li><b>Uscita cuffie.</b> È l'uscita del preascolto e dell'anteprima dei brani. L'elenco mostra i dispositivi Windows. In alternativa <b>Stesso dispositivo dell'uscita principale, canali 3-4</b>: master sui canali 1-2 e cuffie sui canali 3-4 della stessa scheda (serve un'uscita con almeno 4 canali).</li></ul>
+<h3 id="asio-da-dove-viene-il-driver">ASIO: da dove viene il driver</h3>
+<p><b>SpinLab non installa nessun driver ASIO.</b> ASIO è un sistema di driver a bassa latenza: il driver lo scrive e lo installa il <b>produttore della scheda audio</b> (per esempio Focusrite, Behringer, RME, MOTU, Denon DJ). Quando installi la scheda, il suo driver si registra in Windows, e SpinLab ne mostra l'elenco nel menu «Uscita audio principale». Ogni utente usa quindi il driver ASIO della <b>propria</b> scheda, già installato sul suo PC.</p>
+<ul><li><b>La scheda ha un driver ASIO</b> (di solito sì, nelle schede audio esterne e nelle interfacce per DJ e musica): scegli driver <b>ASIO</b> e la scheda dall'elenco.</li><li><b>La scheda integrata del PC o altre schede senza driver ASIO</b>: usa <b>Windows (WASAPI)</b>. Funziona sempre, con una latenza più alta. Se vuoi comunque ASIO su una scheda qualsiasi esistono driver universali di terze parti (per esempio ASIO4ALL o FlexASIO): se li installi, compaiono nell'elenco come gli altri.</li><li><b>Con ASIO la scheda è dedicata a SpinLab</b>: altri programmi non possono usarla nello stesso momento.</li></ul>
+<p>Per chi <b>compila</b> il programma (non per chi lo usa) serve l'SDK ASIO di Steinberg: contiene solo i file necessari a «parlare» con i driver e non è incluso nel progetto per la sua licenza. L'installer non contiene driver. Se un giorno SpinLab verrà distribuito pubblicamente con il supporto ASIO, bisognerà rispettare la licenza di Steinberg per l'SDK.</p>
 <p><b>Dopo «Applica»</b>, l'area sotto mostra l'uscita realmente attiva e la latenza stimata. Se l'uscita scelta non parte, SpinLab torna a Windows (WASAPI) e ti dice il motivo.</p>
 <p><b>Esempi di configurazione</b></p>
-<div class='tw'><table><thead><tr><th>Situazione</th><th>Master</th><th>Cuffie</th></tr></thead><tbody><tr><td>Scheda esterna con ASIO e controller</td><td>ASIO → la scheda</td><td>Dispositivo Windows delle cuffie del controller (per esempio «Line 3/4 (DENON DJ PRIME GO + Audio)»)</td></tr><tr><td>Tutto sul controller</td><td>ASIO o WASAPI del controller</td><td>Stesso dispositivo, canali 3-4</td></tr><tr><td>Solo PC</td><td>WASAPI</td><td>Un secondo dispositivo, o nessuno</td></tr></tbody></table></div>
+<div class='tw'><table><thead><tr><th>Situazione</th><th>Master</th><th>Cuffie</th></tr></thead><tbody><tr><td>Scheda esterna con ASIO e controller</td><td>ASIO → la scheda</td><td>Dispositivo Windows delle cuffie del controller (di solito compare con un nome tipo «Line 3/4 (nome del controller)»)</td></tr><tr><td>Tutto sul controller</td><td>ASIO o WASAPI del controller</td><td>Stesso dispositivo, canali 3-4</td></tr><tr><td>Solo PC</td><td>WASAPI</td><td>Un secondo dispositivo, o nessuno</td></tr></tbody></table></div>
 </section>
 <section data-title="Controller MIDI">
 <h2 id="controller-midi">Controller MIDI</h2>
@@ -150,19 +153,9 @@ section.hide { display: none; }
 <h3 id="led">LED</h3>
 <p>Scegli la porta in <b>Uscita LED</b>. Ogni assegnazione di un tasto ha due valori (acceso e spento) che SpinLab manda al controller quando la funzione cambia stato. Funziona solo se il controller accetta messaggi di LED via MIDI.</p>
 </section>
-<section data-title="Il Denon Prime GO+">
-<h2 id="il-denon-prime-go">Il Denon Prime GO+</h2>
-<h3 id="collegamento">Collegamento</h3>
-<ol><li>Collega il Prime GO+ via USB e mettilo in <b>modalità controller</b> (non standalone).</li><li>In <b>SETTINGS → AUDIO</b> vedi la sua scheda: <b>Denon DJ Prime GO+ ASIO</b> (driver ASIO) e dispositivi Windows come «Line 3/4 (DENON DJ PRIME GO + Audio)». Scegli la configurazione adatta, vedi gli esempi sopra.</li><li>In <b>CONTROLLER MIDI</b> devono comparire le porte «PRIME GO +».</li></ol>
-<h3 id="cosa-manda">Cosa manda</h3>
-<p>Non esiste una tabella MIDI ufficiale. Quello che segue è stato osservato su un esemplare, con il programma di analisi dei controlli. I numeri possono variare con il firmware: controlla sempre con <b>Ultimo messaggio</b> o <b>Analizza un controllo</b>.</p>
-<div class='tw'><table><thead><tr><th>Controllo</th><th>Messaggio osservato</th></tr></thead><tbody><tr><td>Jog (rotazione)</td><td>CC 77 sul canale del deck: <b>valore assoluto che gira</b> da 0 a 127. Modo: <i>Assoluto, usato come differenza</i>. Insieme manda un secondo CC (55) con valori quasi fissi: il Learn lo scarta da solo.</td></tr><tr><td>Jog (tocco del piatto)</td><td>Nota 33: premuta quando tocchi</td></tr><tr><td>Encoder effetti (rotazione)</td><td>CC 34 sul canale 5: <b>relativo</b>, 1 per scatto in avanti e 127 per scatto indietro. Modo: <i>Relativo (complemento a 2)</i></td></tr><tr><td>Encoder effetti (<b>sfioramento</b>)</td><td>Nota 10 sul canale 5</td></tr><tr><td>Encoder effetti (<b>clic</b>)</td><td>Nota 8 sul canale 5</td></tr><tr><td>Tasti FX 1 e 2</td><td>Note 11 e 12 sul canale 5</td></tr><tr><td>FX on/off</td><td>Nota 6 sul canale 5</td></tr><tr><td>Manopola dry/wet</td><td>CC 4 sul canale 5 (assoluto 7 bit)</td></tr><tr><td>Encoder di scelta effetto</td><td>CC 33 sul canale 5 (relativo, offset 64)</td></tr></tbody></table></div>
-<p>Alcuni tasti (FX Assign, Mic, Master, Booth, Aux) non escono come MIDI.</p>
-<p><b>Sensori di tocco.</b> I suoi encoder mandano un messaggio quando li sfiori e uno diverso quando li clicchi. Per assegnare il <b>clic</b> usa prima <b>Ignora un tasto…</b> sul tocco, poi il Learn.</p>
-</section>
 <section data-title="Soluzione dei problemi">
 <h2 id="soluzione-dei-problemi">Soluzione dei problemi</h2>
-<p><b>Il driver ASIO non parte e resto in Windows (WASAPI).</b> Leggi il messaggio sotto «Applica». Cause frequenti: un altro programma tiene il driver aperto (un'altra copia di SpinLab, il pannello della scheda, una DAW); con il Prime GO+ collegato, il suo driver ASIO era caricato e occupava il posto. Da una versione recente, SpinLab apre il driver scelto senza toccare gli altri. Chiudi le copie in più di SpinLab dal Gestore attività.</p>
+<p><b>Il driver ASIO non parte e resto in Windows (WASAPI).</b> Leggi il messaggio sotto «Applica». Cause frequenti: un altro programma tiene il driver aperto (un'altra copia di SpinLab, il pannello della scheda, una DAW); un controller con scheda audio collegato può avere il suo driver ASIO caricato; SpinLab apre solo il driver che scegli e non tocca gli altri. Chiudi le copie in più di SpinLab dal Gestore attività.</p>
 <p><b>Click o interruzioni nell'audio.</b> Aumenta il buffer. Con ASIO prova 256.</p>
 <p><b>Le cuffie non suonano.</b></p>
 <ul><li>L'uscita cuffie va scelta tra i dispositivi Windows. Il preascolto ha i suoi pulsanti PFL (1 e 2 in alto, o l'icona sul piatto) e il volume <b>PHONES</b>.</li><li>Per «Stesso dispositivo, canali 3-4» l'uscita principale deve avere almeno 4 canali.</li></ul>

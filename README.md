@@ -1,6 +1,6 @@
 # SpinLab DJ
 
-Programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, registrazione del master e supporto per qualsiasi controller MIDI (con la mappatura del Denon Prime GO+ come esempio).
+Programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, registrazione del master e supporto per qualsiasi controller MIDI.
 
 App Tauri 2: il motore audio è in Rust (`src-tauri/src`), l'interfaccia è web (`ui/`).
 
