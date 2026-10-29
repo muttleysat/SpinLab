@@ -246,7 +246,7 @@ function bindDeck(i) {
   D.pfl.onclick = pfl; D.pfl2.onclick = pfl;
   D.eject.onclick = () => ejectDeck(i);
   D.r("load").onclick = async () => {
-    const sel = lib.rows.find((t) => lib.sel.has(t.id));
+    const sel = (lib.last != null && lib.sel.has(lib.last) && trackById(lib.last)) || lib.rows.find((t) => lib.sel.has(t.id));
     if (sel) loadTrack(i, sel.path); else { const p = await pickFile(); if (p) loadTrack(i, p); }
   };
   // pitch: in alto meno, in basso piu' veloce (come sui lettori CDJ); doppio clic = zero
@@ -469,9 +469,11 @@ async function loadTrack(i, path) {
   D.title.textContent = "Caricamento…"; D.artist.textContent = "";
   D.art.style.backgroundImage = ""; D.art.textContent = i + 1;
   d.loading = path;
+  const my = (d.loadSeq = (d.loadSeq || 0) + 1);
   try {
     const t0 = performance.now();
     const info = await inv("load_track", { deck: i, path });
+    if (my !== d.loadSeq) return; // un'altra richiesta e' arrivata dopo: vale quella
     d.wave = info.wave; d.beats = info.beats; d.downbeat = info.downbeat; d.dur = info.duration; d.over = null; d.scrub = null;
     D.tempo._set(0.5);
     D.title.title = `Caricato in ${info.ms} ms (decodifica ${info.decode_ms} ms, analisi ${info.cached ? "dal database" : "calcolata ora"}, interfaccia ${Math.round(performance.now() - t0 - info.ms)} ms)`;
@@ -480,6 +482,7 @@ async function loadTrack(i, path) {
     D.title.textContent = d.title_; D.artist.textContent = d.meta?.artist || "";
     setDeckArt(i, path);
   } catch (e) {
+    if (my !== d.loadSeq) return;
     D.title.textContent = "Errore: " + e;
   }
   d.loading = null;

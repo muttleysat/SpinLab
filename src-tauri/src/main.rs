@@ -71,6 +71,9 @@ fn emit_progress(app: &tauri::AppHandle, path: &str, pct: u32) {
 /// numero di caricamenti sui deck in corso: l'analisi in background si ferma finche' non finiscono
 static LOADING: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
+/// Numero dell'ultima richiesta di caricamento per deck: se una richiesta lenta finisce dopo una piu' recente, viene scartata.
+static LOAD_SEQ: [std::sync::atomic::AtomicU64; NUM_DECKS] = [const { std::sync::atomic::AtomicU64::new(0) }; NUM_DECKS];
+
 struct LoadGuard;
 impl LoadGuard {
     fn new() -> Self {
@@ -116,6 +119,7 @@ async fn load_track(
         return Err("deck non valido".into());
     }
     let _guard = LoadGuard::new();
+    let my_seq = LOAD_SEQ[deck].fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
     let t_start = std::time::Instant::now();
     let sr = app.mixer.lock().sr;
     let p = path.clone();
@@ -144,6 +148,9 @@ async fn load_track(
     })
     .await
     .map_err(|e| e.to_string())??;
+    if LOAD_SEQ[deck].load(std::sync::atomic::Ordering::SeqCst) != my_seq {
+        return Err("superato".into()); // nel frattempo e' stato chiesto un altro brano per questo deck
+    }
     let saved = lib.load_grid(&path);
     let (key, key_name, name, duration) = (track.key.map(camelot::camelot_code), track.key.map(camelot::key_name), track.name.clone(), track.duration());
     let (beats, downbeat, bpm, fixed, norm_db) = {
