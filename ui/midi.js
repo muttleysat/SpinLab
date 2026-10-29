@@ -217,6 +217,8 @@ function buildActions() {
   act("fx.kindenc", FG, "Scelta dell'effetto (encoder)", "rel", (n) => fxKindStep(n > 0 ? 1 : -1));
 
   const G = "Mixer e libreria";
+  act("automix", G, "AUTOMIX avvia / ferma", "btn", (dn) => dn && (AM.on ? amStop() : amStart()), () => AM.on);
+  act("automixskip", G, "AUTOMIX: salta al prossimo brano", "btn", (dn) => dn && amSkip());
   act("shift", G, "SHIFT", "btn", (dn) => { MM.shift = dn; }, () => MM.shift);
   act("xfader", G, "Crossfader", "abs", (v) => $("#crossfader")._apply(v));
   act("master", G, "Volume master", "abs", (v) => $("#masterKnob")._apply(v));

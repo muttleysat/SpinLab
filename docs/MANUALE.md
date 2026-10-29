@@ -23,7 +23,7 @@ All'avvio compare la schermata di SpinLab con una barra di avanzamento: sparisce
 - **Centro.** I due deck con le waveform e, in mezzo, il mixer a due canali con il crossfader.
 - **In basso a sinistra.** Esplora cartelle e playlist.
 - **In basso al centro.** La libreria: ricerca, tabella dei brani, scheda **TAG & INFO**.
-- **In basso a destra.** Il pannello con **AUTOMIX** (in arrivo), **SAMPLER**, **DRUMS**, **STEMS** e, sotto, gli **FX**.
+- **In basso a destra.** Il pannello con **AUTOMIX**, **SAMPLER**, **DRUMS**, **STEMS** e, sotto, gli **FX**.
 
 La grafica si adatta alla finestra: se la riduci molto, si rimpicciolisce in blocco.
 
@@ -129,6 +129,34 @@ In **Impostazioni → STEM** scegli la modalità: **Automatico** (in base alla v
 **Preparare gli stem.** Tasto destro su un brano (anche più brani) o su una playlist → **Crea stem**. Si salvano in una cartella `stems` accanto ai brani, compressi senza perdita di qualità (circa il 45% della dimensione originale). **Elimina gli stem preparati** li cancella.
 
 Il modello di separazione è uno solo e viene scaricato da internet al primo uso (circa 460 MB). In «Solo stem preparati», un brano senza stem mostra un avviso che invita a prepararli.
+
+---
+
+## AUTOMIX
+
+AUTOMIX suona da solo i brani della libreria, uno dopo l'altro, con transizioni a tempo come farebbe un DJ. Si trova nella scheda **AUTOMIX** del pannello in basso a destra.
+
+**Come si usa**
+1. Scegli quali brani suonare: apri una playlist, una cartella o fai una ricerca. AUTOMIX usa i brani che vedi nella tabella, a partire da quello selezionato.
+2. Scegli **Ordine**, **Transizione** e **Stile** (sotto).
+3. Premi **AVVIA AUTOMIX**. Se un deck sta già suonando, quel brano continua e i successivi partono alla sua fine.
+4. **FERMA AUTOMIX** lo ferma: i deck restano come sono. **Salta** passa subito al brano successivo con una transizione.
+
+**Le impostazioni**
+- **Ordine.** *Come in elenco*, *Casuale*, oppure *Intelligente*: dopo ogni brano sceglie quello con tonalità (codice Camelot) e tempo più vicini, per mix più armonici.
+- **Transizione.** Quante battute dura il mix: 4, 8, 16 o 32. A 120 BPM, 16 battute sono circa 32 secondi.
+- **Stile.** *Scambio dei bassi*: il nuovo brano entra senza bassi e a metà transizione i bassi passano da un brano all'altro, così non si sommano due bassi. *Dissolvenza semplice*: solo il crossfader. *Taglio rapido*: due battute, senza allineare il tempo.
+- **Ripeti.** Quando la coda finisce, ricomincia da capo.
+
+**Cosa fa il programma**
+- Circa 75 secondi prima della fine del brano che suona, carica il successivo sull'altro deck.
+- Allinea tempo e battiti con **SYNC**. Se i due brani hanno tempi troppo diversi (oltre il 12%, dopo aver tenuto conto del raddoppio e del dimezzamento) non li sincronizza e fa una transizione rapida.
+- A transizione finita svuota il deck vecchio, e il nuovo brano torna con calma al suo tempo originale.
+
+**Cose da sapere**
+- I brani devono essere stati analizzati (tempo e tonalità). Senza analisi la transizione è una semplice dissolvenza senza sincronizzazione.
+- Se sposti a mano il crossfader o i bassi durante un mix, AUTOMIX li rimette a posto al passo successivo.
+- Dal controller MIDI si può assegnare **AUTOMIX avvia / ferma** e **AUTOMIX: salta**.
 
 ---
 

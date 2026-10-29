@@ -111,7 +111,14 @@
     <div class="tgtrow"><span>DECK</span><div id="tgt"></div><span class="stm" id="stemStatus"></span></div>
 
     <div class="pn" id="pn-automix">
-      <div class="soon">AUTOMIX<br><small>Mix automatico fra i brani: in arrivo.</small></div>
+      <div class="amtop"><button id="amGo" class="amgo">AVVIA AUTOMIX</button><button id="amSkip" disabled title="Passa subito al brano successivo con una transizione">Salta ▸▸</button><label class="amck"><input type="checkbox" id="amLoop"> Ripeti</label></div>
+      <div class="amopts">
+        <label>Ordine<select id="amOrder" title="Come si sceglie il brano successivo"><option value="list">Come in elenco</option><option value="smart">Intelligente (tonalità e tempo)</option><option value="shuffle">Casuale</option></select></label>
+        <label>Transizione<select id="amBars" title="Durata del mix in battute"><option value="4">4 battute</option><option value="8">8 battute</option><option value="16">16 battute</option><option value="32">32 battute</option></select></label>
+        <label>Stile<select id="amStyle" title="Come si passa da un brano all'altro"><option value="bass">Scambio dei bassi</option><option value="simple">Dissolvenza semplice</option><option value="cut">Taglio rapido</option></select></label>
+      </div>
+      <div id="amStatus" class="amstatus"></div>
+      <div id="amQueue" class="amqueue"></div>
     </div>
     <div class="pn" id="pn-sampler">
       <div class="sampler-head"><span>VOL</span><input type="range" id="samplerVol" min="0" max="1.5" step="0.01" value="0.8">
@@ -225,5 +232,6 @@
 <div id="ghost" hidden></div>
 <script src="app.js"></script>
 <script src="midi.js"></script>
+<script src="automix.js"></script>
 </body>
 </html>

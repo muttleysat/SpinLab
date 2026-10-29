@@ -38,6 +38,7 @@ section.hide { display: none; } img.logo { height: 120px; width: auto; display: 
 <a href="#il-mixer-le-cuffie-e-il-preascolto">Il mixer, le cuffie e il preascolto</a>
 <a href="#effetti">Effetti</a>
 <a href="#stem">Stem</a>
+<a href="#automix">AUTOMIX</a>
 <a href="#batteria-e-campionatore">Batteria e campionatore</a>
 <a href="#registrare-il-master">Registrare il master</a>
 <a href="#impostazioni-audio">Impostazioni audio</a>
@@ -57,7 +58,7 @@ section.hide { display: none; } img.logo { height: 120px; width: auto; display: 
 </section>
 <section data-title="La schermata">
 <h2 id="la-schermata">La schermata</h2>
-<ul><li><b>Barra in alto.</b> Navigazione (<b>LIBRARY</b>, <b>MIXER</b>, <b>RECORD</b>, <b>SETTINGS</b>), indicatore <b>REC</b> quando registri, carico del processore (<b>CPU</b>), orologio, comandi delle cuffie (pulsanti 1 e 2, <b>CUE MIX</b>, <b>PHONES</b>) e volume <b>MASTER</b>. A destra del volume ci sono la <b>i</b> (informazioni su SpinLab, versione e crediti) e il <b>?</b> (questa guida).</li><li><b>Centro.</b> I due deck con le waveform e, in mezzo, il mixer a due canali con il crossfader.</li><li><b>In basso a sinistra.</b> Esplora cartelle e playlist.</li><li><b>In basso al centro.</b> La libreria: ricerca, tabella dei brani, scheda <b>TAG &amp; INFO</b>.</li><li><b>In basso a destra.</b> Il pannello con <b>AUTOMIX</b> (in arrivo), <b>SAMPLER</b>, <b>DRUMS</b>, <b>STEMS</b> e, sotto, gli <b>FX</b>.</li></ul>
+<ul><li><b>Barra in alto.</b> Navigazione (<b>LIBRARY</b>, <b>MIXER</b>, <b>RECORD</b>, <b>SETTINGS</b>), indicatore <b>REC</b> quando registri, carico del processore (<b>CPU</b>), orologio, comandi delle cuffie (pulsanti 1 e 2, <b>CUE MIX</b>, <b>PHONES</b>) e volume <b>MASTER</b>. A destra del volume ci sono la <b>i</b> (informazioni su SpinLab, versione e crediti) e il <b>?</b> (questa guida).</li><li><b>Centro.</b> I due deck con le waveform e, in mezzo, il mixer a due canali con il crossfader.</li><li><b>In basso a sinistra.</b> Esplora cartelle e playlist.</li><li><b>In basso al centro.</b> La libreria: ricerca, tabella dei brani, scheda <b>TAG &amp; INFO</b>.</li><li><b>In basso a destra.</b> Il pannello con <b>AUTOMIX</b>, <b>SAMPLER</b>, <b>DRUMS</b>, <b>STEMS</b> e, sotto, gli <b>FX</b>.</li></ul>
 <p>La grafica si adatta alla finestra: se la riduci molto, si rimpicciolisce in blocco.</p>
 <p><b>Scorciatoie</b></p>
 <div class='tw'><table><thead><tr><th>Tasto</th><th>Cosa fa</th></tr></thead><tbody><tr><td>Barra spaziatrice</td><td>Play / pausa del deck sotto il mouse (altrimenti dell'ultimo usato)</td></tr><tr><td>Freccia su / giù</td><td>Sfoglia i brani della libreria</td></tr><tr><td>Invio</td><td>Carica il brano selezionato sul deck in uso</td></tr><tr><td>Canc</td><td>Toglie i brani selezionati dalla playlist aperta</td></tr><tr><td>Z X C V · A S D F · Q W E R · 1 2 3 4</td><td>Pad della batteria (con la scheda DRUMS aperta)</td></tr><tr><td>Maiusc + clic su un pad della batteria</td><td>Colpo più leggero</td></tr></tbody></table></div>
@@ -101,6 +102,18 @@ section.hide { display: none; } img.logo { height: 120px; width: auto; display: 
 <p>In <b>Impostazioni → STEM</b> scegli la modalità: <b>Automatico</b> (in base alla velocità misurata del PC), <b>Sempre in tempo reale</b> o <b>Solo stem preparati</b>. Il pulsante <b>Misura la velocità di questo PC</b> ripete la misura. Per il tempo reale serve almeno 2× la velocità di riproduzione, perché due deck separano insieme.</p>
 <p><b>Preparare gli stem.</b> Tasto destro su un brano (anche più brani) o su una playlist → <b>Crea stem</b>. Si salvano in una cartella <code>stems</code> accanto ai brani, compressi senza perdita di qualità (circa il 45% della dimensione originale). <b>Elimina gli stem preparati</b> li cancella.</p>
 <p>Il modello di separazione è uno solo e viene scaricato da internet al primo uso (circa 460 MB). In «Solo stem preparati», un brano senza stem mostra un avviso che invita a prepararli.</p>
+</section>
+<section data-title="AUTOMIX">
+<h2 id="automix">AUTOMIX</h2>
+<p>AUTOMIX suona da solo i brani della libreria, uno dopo l'altro, con transizioni a tempo come farebbe un DJ. Si trova nella scheda <b>AUTOMIX</b> del pannello in basso a destra.</p>
+<p><b>Come si usa</b></p>
+<ol><li>Scegli quali brani suonare: apri una playlist, una cartella o fai una ricerca. AUTOMIX usa i brani che vedi nella tabella, a partire da quello selezionato.</li><li>Scegli <b>Ordine</b>, <b>Transizione</b> e <b>Stile</b> (sotto).</li><li>Premi <b>AVVIA AUTOMIX</b>. Se un deck sta già suonando, quel brano continua e i successivi partono alla sua fine.</li><li><b>FERMA AUTOMIX</b> lo ferma: i deck restano come sono. <b>Salta</b> passa subito al brano successivo con una transizione.</li></ol>
+<p><b>Le impostazioni</b></p>
+<ul><li><b>Ordine.</b> <i>Come in elenco</i>, <i>Casuale</i>, oppure <i>Intelligente</i>: dopo ogni brano sceglie quello con tonalità (codice Camelot) e tempo più vicini, per mix più armonici.</li><li><b>Transizione.</b> Quante battute dura il mix: 4, 8, 16 o 32. A 120 BPM, 16 battute sono circa 32 secondi.</li><li><b>Stile.</b> <i>Scambio dei bassi</i>: il nuovo brano entra senza bassi e a metà transizione i bassi passano da un brano all'altro, così non si sommano due bassi. <i>Dissolvenza semplice</i>: solo il crossfader. <i>Taglio rapido</i>: due battute, senza allineare il tempo.</li><li><b>Ripeti.</b> Quando la coda finisce, ricomincia da capo.</li></ul>
+<p><b>Cosa fa il programma</b></p>
+<ul><li>Circa 75 secondi prima della fine del brano che suona, carica il successivo sull'altro deck.</li><li>Allinea tempo e battiti con <b>SYNC</b>. Se i due brani hanno tempi troppo diversi (oltre il 12%, dopo aver tenuto conto del raddoppio e del dimezzamento) non li sincronizza e fa una transizione rapida.</li><li>A transizione finita svuota il deck vecchio, e il nuovo brano torna con calma al suo tempo originale.</li></ul>
+<p><b>Cose da sapere</b></p>
+<ul><li>I brani devono essere stati analizzati (tempo e tonalità). Senza analisi la transizione è una semplice dissolvenza senza sincronizzazione.</li><li>Se sposti a mano il crossfader o i bassi durante un mix, AUTOMIX li rimette a posto al passo successivo.</li><li>Dal controller MIDI si può assegnare <b>AUTOMIX avvia / ferma</b> e <b>AUTOMIX: salta</b>.</li></ul>
 </section>
 <section data-title="Batteria e campionatore">
 <h2 id="batteria-e-campionatore">Batteria e campionatore</h2>
