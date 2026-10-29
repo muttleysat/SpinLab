@@ -1522,6 +1522,16 @@ function showAudioStatus(i, msg) {
   $("#aStatus").innerHTML = `Uscita attiva: <b>${esc(i.driver || "")} · ${esc(i.device)}</b> a <b>${i.sample_rate} Hz</b>, buffer ${i.buffer || "auto"}${i.actual_buffer ? ` (${i.actual_buffer} frame reali)` : ""}, latenza stimata <b>${i.latency_ms.toFixed(1)} ms</b>. Blocchi audio elaborati: ${i.rendered}${i.missed ? ` (saltati ${i.missed})` : ""}.` + (msg ? `<br>${esc(msg)}` : "") + (i.error ? `<br><span class="warn">${esc(i.error)}</span>` : "");
 }
 $("#audioBtn").onclick = openAudioSettings;
+// guida: il manuale (guida.html, generato da docs/MANUALE.md) in una finestra; i link «data-help» aprono la sezione giusta
+function openHelp(section) {
+  const f = $("#helpFrame"), url = "guida.html" + (section ? "#" + section : "");
+  if (!f.getAttribute("src")) f.src = url; else if (section) f.contentWindow.location.hash = section;
+  if (!$("#helpDlg").open) $("#helpDlg").showModal();
+}
+$("#helpBtn").onclick = () => openHelp();
+$("#helpClose").onclick = () => $("#helpDlg").close();
+document.addEventListener("click", (e) => { const a = e.target.closest?.("[data-help]"); if (a) { e.preventDefault(); openHelp(a.dataset.help); } });
+$("#helpDlg").addEventListener("click", (e) => { if (e.target === $("#helpDlg")) $("#helpDlg").close(); });
 $("#aClose").onclick = () => $("#audioDlg").close();
 $("#aApply").onclick = async () => {
   const btn = $("#aApply"); btn.disabled = true; btn.textContent = "Applico…";

@@ -28,6 +28,7 @@
     <div class="mst"><div class="knobwrap sm"><div class="knob" id="masterKnob" title="Volume master"></div><span>MASTER</span></div>
       <div class="meter horiz" id="masterMeter"><i></i><i></i></div></div>
     <button id="audioBtn" class="ico" title="Impostazioni audio"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.5 4.5-.1-1 1.9-1.5-1.9-3.3-2.3.9a7 7 0 0 0-1.7-1l-.4-2.4h-3.8l-.4 2.4a7 7 0 0 0-1.7 1l-2.3-.9-1.9 3.3L5.8 12l-.1 1 .1 1-1.9 1.5 1.9 3.3 2.3-.9a7 7 0 0 0 1.7 1l.4 2.4h3.8l.4-2.4a7 7 0 0 0 1.7-1l2.3.9 1.9-3.3L20.4 14z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+    <button id="helpBtn" class="ico" title="Guida: il manuale del programma" aria-label="Guida"><b style="font-size:15px">?</b></button>
   </div>
 </header>
 
@@ -128,6 +129,11 @@
 </section>
 </div>
 
+<dialog id="helpDlg">
+  <div class="helphead"><h2>Guida</h2><button id="helpClose" class="ico" title="Chiudi">×</button></div>
+  <iframe id="helpFrame" title="Guida di SpinLab DJ"></iframe>
+</dialog>
+
 <dialog id="recDlg">
   <h2>Registrazione</h2>
   <p class="hint" style="margin-top:0">Registra tutto quello che esce dal master: deck con effetti, campionatore e batteria.</p>
@@ -152,6 +158,7 @@
     <p class="hint">ASIO usa il driver della tua scheda (per esempio Focusrite) e permette latenze molto più basse di Windows (WASAPI): conviene per suonare i pad della batteria dal vivo. Con ASIO la scheda è dedicata a SpinLab.</p>
     <p class="hint">Buffer piccolo = latenza minore, ma pi&ugrave; rischio di scatti. Se senti click o interruzioni, aumentalo.</p>
     <div id="aStatus"></div>
+    <p class="hint"><a href="#" data-help="impostazioni-audio">Guida alle impostazioni audio</a></p>
   </div>
   <div class="spane" id="sp-stem" hidden>
     <label>Come lavorano gli stem<select id="stMode">
@@ -160,11 +167,12 @@
       <option value="prepared">Solo stem preparati prima (massima qualità, caricamento immediato)</option>
     </select></label>
     <div id="stInfo" class="stinfo"></div>
+    <p class="hint"><a href="#" data-help="stem">Guida agli stem</a></p>
     <div class="btns" style="justify-content:flex-start"><button id="stBench">Misura la velocità di questo PC</button></div>
     <p class="hint">Tempo reale: gli stem si separano mentre il brano suona, con il processore. Se il PC non è abbastanza veloce conviene prepararli prima: clic destro su uno o più brani (o su una playlist) → «Crea stem». Vengono salvati in una cartella «stems» accanto ai brani, compressi senza perdita di qualità, e si caricano subito.</p>
   </div>
   <div class="spane" id="sp-midi" hidden>
-    <p class="hint" style="margin-top:0">Collega il controller, premi «Learn» accanto a una funzione e muovi o premi il controllo da assegnare. Funziona con qualsiasi controller MIDI. I tasti con SHIFT si assegnano con la casella SHIFT dopo aver assegnato il tasto SHIFT stesso.</p>
+    <p class="hint" style="margin-top:0"><a href="#" data-help="controller-midi">Guida al controller MIDI</a> (SHIFT, livelli dei pad, encoder, Prime GO+). Collega il controller, premi «Learn» accanto a una funzione e muovi o premi il controllo da assegnare. Funziona con qualsiasi controller MIDI. I tasti con SHIFT si assegnano con la casella SHIFT dopo aver assegnato il tasto SHIFT stesso.</p>
     <div class="mmtop"><span>Collegati:</span> <b id="mmPorts">—</b></div>
     <div class="mmtop"><span>Ultimo messaggio:</span> <code id="mmMon">— muovi un controllo —</code></div>
     <div class="mmtop"><span>Uscita LED:</span> <select id="mmOut"></select>

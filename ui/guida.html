@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpinLab DJ - Guida</title>
+<style>
+:root { --bg: #0b0f18; --panel: #101726; --line: #25324d; --text: #dbe4f5; --dim: #8393b3; --accent: #18b6ff; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 system-ui, "Segoe UI", sans-serif; }
+#wrap { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 100vh; }
+nav { position: sticky; top: 0; align-self: start; height: 100vh; overflow: auto; padding: 16px 12px; border-right: 1px solid var(--line); background: var(--panel); }
+nav input { width: 100%; padding: 7px 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--text); margin-bottom: 10px; }
+nav a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--dim); text-decoration: none; font-size: 13px; }
+nav a:hover, nav a.on { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--text); }
+main { padding: 22px 38px 80px; max-width: 920px; }
+h1 { font-size: 26px; margin: 0 0 8px; } h2 { font-size: 20px; margin: 34px 0 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+h3 { font-size: 15px; margin: 22px 0 6px; color: var(--accent); letter-spacing: .3px; }
+p, li { max-width: 78ch; } li { margin: 3px 0; }
+code { background: color-mix(in srgb, var(--accent) 14%, transparent); padding: 1px 5px; border-radius: 4px; font: 12.5px ui-monospace, Consolas, monospace; }
+pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow: auto; } pre code { background: none; padding: 0; }
+blockquote { margin: 12px 0; padding: 8px 14px; border-left: 3px solid var(--accent); background: var(--panel); color: var(--dim); border-radius: 0 8px 8px 0; }
+.tw { overflow-x: auto; margin: 10px 0; } table { border-collapse: collapse; font-size: 13px; min-width: 60%; }
+th, td { text-align: left; padding: 6px 10px; border: 1px solid var(--line); vertical-align: top; } th { background: var(--panel); }
+a { color: var(--accent); } mark { background: #ffd34d66; color: inherit; border-radius: 3px; }
+section.hide { display: none; }
+@media (max-width: 820px) { #wrap { grid-template-columns: 1fr; } nav { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); } main { padding: 16px; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+<nav><input id="q" type="search" placeholder="Cerca nella guida…" autocomplete="off">
+<a href="#primo-avvio">Primo avvio</a>
+<a href="#la-schermata">La schermata</a>
+<a href="#libreria-e-playlist">Libreria e playlist</a>
+<a href="#i-deck">I deck</a>
+<a href="#il-mixer-le-cuffie-e-il-preascolto">Il mixer, le cuffie e il preascolto</a>
+<a href="#effetti">Effetti</a>
+<a href="#stem">Stem</a>
+<a href="#batteria-e-campionatore">Batteria e campionatore</a>
+<a href="#registrare-il-master">Registrare il master</a>
+<a href="#impostazioni-audio">Impostazioni audio</a>
+<a href="#controller-midi">Controller MIDI</a>
+<a href="#il-denon-prime-go">Il Denon Prime GO+</a>
+<a href="#soluzione-dei-problemi">Soluzione dei problemi</a>
+<a href="#compilare-il-programma">Compilare il programma</a>
+</nav>
+<main>
+<h1 id="spinlab-dj-manuale">SpinLab DJ — Manuale</h1>
+<p>SpinLab DJ è un programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, registrazione del master e supporto per qualsiasi controller MIDI. Questo manuale spiega come usarlo, come collegare un controller (con la mappatura del Denon Prime GO+ come esempio) e come risolvere i problemi più comuni.</p>
+<blockquote>I tasti e i comandi sono descritti come compaiono sullo schermo. Passando il mouse sopra quasi ogni pulsante compare un suggerimento.</blockquote>
+<section data-title="Primo avvio">
+<h2 id="primo-avvio">Primo avvio</h2>
+<ol><li><b>Scegli la scheda audio.</b> Apri <b>SETTINGS</b> (o l'ingranaggio in alto a destra) → scheda <b>AUDIO</b>. Se hai una scheda con driver ASIO (per esempio Focusrite) scegli driver <b>ASIO</b>: la latenza è molto più bassa e i pad della batteria rispondono subito. Altrimenti lascia <b>Windows (WASAPI)</b>. Premi <b>Applica</b>.</li><li><b>Scegli le cuffie.</b> Nello stesso pannello, «Uscita cuffie». Vedi <a href="#impostazioni-audio">Impostazioni audio</a>.</li><li><b>Aggiungi la musica.</b> Nella colonna <b>ESPLORA</b> a sinistra scegli una cartella: i brani compaiono nella tabella. Vengono analizzati (BPM, tonalità, griglia dei battiti) in sottofondo.</li><li><b>Carica un brano.</b> Seleziona un brano e premi <b>LOAD</b> nella sua riga, oppure trascinalo su un deck.</li></ol>
+</section>
+<section data-title="La schermata">
+<h2 id="la-schermata">La schermata</h2>
+<ul><li><b>Barra in alto.</b> Navigazione (<b>LIBRARY</b>, <b>MIXER</b>, <b>RECORD</b>, <b>SETTINGS</b>), indicatore <b>REC</b> quando registri, carico del processore (<b>CPU</b>), orologio, comandi delle cuffie (pulsanti 1 e 2, <b>CUE MIX</b>, <b>PHONES</b>) e volume <b>MASTER</b>.</li><li><b>Centro.</b> I due deck con le waveform e, in mezzo, il mixer a due canali con il crossfader.</li><li><b>In basso a sinistra.</b> Esplora cartelle e playlist.</li><li><b>In basso al centro.</b> La libreria: ricerca, tabella dei brani, scheda <b>TAG &amp; INFO</b>.</li><li><b>In basso a destra.</b> Il pannello con <b>AUTOMIX</b> (in arrivo), <b>SAMPLER</b>, <b>DRUMS</b>, <b>STEMS</b> e, sotto, gli <b>FX</b>.</li></ul>
+<p>La grafica si adatta alla finestra: se la riduci molto, si rimpicciolisce in blocco.</p>
+<p><b>Scorciatoie</b></p>
+<div class='tw'><table><thead><tr><th>Tasto</th><th>Cosa fa</th></tr></thead><tbody><tr><td>Barra spaziatrice</td><td>Play / pausa del deck sotto il mouse (altrimenti dell'ultimo usato)</td></tr><tr><td>Freccia su / giù</td><td>Sfoglia i brani della libreria</td></tr><tr><td>Invio</td><td>Carica il brano selezionato sul deck in uso</td></tr><tr><td>Canc</td><td>Toglie i brani selezionati dalla playlist aperta</td></tr><tr><td>Z X C V · A S D F · Q W E R · 1 2 3 4</td><td>Pad della batteria (con la scheda DRUMS aperta)</td></tr><tr><td>Maiusc + clic su un pad della batteria</td><td>Colpo più leggero</td></tr></tbody></table></div>
+</section>
+<section data-title="Libreria e playlist">
+<h2 id="libreria-e-playlist">Libreria e playlist</h2>
+<ul><li><b>Esplora cartelle.</b> Scegli una cartella: SpinLab ne legge i brani e li analizza. La sottocartella <code>stems</code> (vedi <a href="#stem">Stem</a>) viene ignorata.</li><li><b>Ricerca.</b> Il campo in alto cerca per titolo, artista, tag, tonalità e BPM. Le colonne si ordinano con un clic sull'intestazione.</li><li><b>Anteprima in cuffia.</b> Il pulsante a forma di triangolo accanto al brano lo ascolta nelle cuffie senza passare dal master. Maiusc + clic parte da metà brano. Clic o trascinamento sulla riga per spostarsi.</li><li><b>Playlist.</b> <b>+</b> accanto a PLAYLIST ne crea una. Trascina i brani su una playlist per aggiungerli. Tasto destro su una playlist: rinomina, elimina, <b>Crea stem di tutta la playlist</b>. Aggiungere un brano a una playlist ne avvia l'analisi completa.</li><li><b>TAG &amp; INFO.</b> Il pulsante con la «i» accanto alla ricerca apre il pannello per titolo, artista, album, genere, tag, valutazione a stelle e commento.</li><li><b>Doppio clic su un brano</b> lo carica sul primo deck libero.</li><li><b>Tasto destro su un brano.</b> Carica sul deck 1 o 2, aggiungi a una playlist (esistente o nuova con la selezione), analizza (BPM, tonalità, griglia), crea o elimina gli stem preparati, rimuovi dalla playlist (se ne hai una aperta).</li></ul>
+</section>
+<section data-title="I deck">
+<h2 id="i-deck">I deck</h2>
+<p>Ogni deck mostra due waveform: quella grande (zoom, scorre) e quella piccola (panoramica dell'intero brano), il piatto, i pulsanti e il fader del pitch.</p>
+<h3 id="trasporto">Trasporto</h3>
+<ul><li><b>PLAY</b> e <b>CUE</b>. CUE tenuto premuto fa partire il brano dal punto di cue finché non rilasci.</li><li><b>LOAD</b> carica il brano selezionato nella libreria; il tasto accanto svuota il deck.</li><li><b>Il pitch</b> si regola con il fader a destra. <b>±8</b> (o il valore indicato) cambia l'escursione: 4, 8, 16, 50, 100%. Doppio clic sul fader lo riporta a zero.</li><li><b>SYNC</b> allinea tempo e fase al deck che fa da guida. Resta attivo anche dopo aver caricato un altro brano.</li></ul>
+<h3 id="scrub">Scrub</h3>
+<p>Tieni premuto il mouse sulla waveform grande e trascina: il brano segue come un disco (un trascinamento a sinistra avanza). Anche il piatto si può girare con il mouse. Sulla waveform piccola un clic porta la testina in quel punto.</p>
+<h3 id="griglia-e-tonalità">Griglia e tonalità</h3>
+<ul><li><b>GRID</b> apre la correzione della griglia: spostamento fine (Maiusc = 1 ms), dimezza o raddoppia il BPM, «1» sulla testina, ancora sul marker, azzeramento. <b>FLUIDA</b> segue le variazioni di tempo del brano, <b>FISSA</b> usa un BPM costante.</li><li><b>QUANT</b> fa agganciare cue, loop, roll e hot cue ai battiti della griglia.</li><li><b>KEY</b> apre la tonalità: <b>KEY LOCK</b> tiene la tonalità quando cambi il pitch, il passo Camelot ±1 e le correzioni di mezzo tono.</li></ul>
+<h3 id="i-quattro-pad">I quattro pad</h3>
+<p>Il pulsante sopra i pad cambia la loro funzione:</p>
+<div class='tw'><table><thead><tr><th>Modalità</th><th>Cosa fanno i 4 pad</th></tr></thead><tbody><tr><td><b>HOT CUE 1–4</b> e <b>5–8</b></td><td>Un clic salva il punto o ci salta. Maiusc + clic, oppure tasto destro, lo cancella.</td></tr><tr><td><b>BEAT JUMP</b></td><td>Salta di −2, −1, +1, +2 volte la misura scelta con ‹ ›.</td></tr><tr><td><b>LOOP ROLL</b></td><td>Ripete un tratto finché tieni premuto. I pad fanno 1×, 2×, 4× e 8× la lunghezza base (da 1/16 a 1 battito, con ‹ ›).</td></tr><tr><td><b>FRENO · SPIN · REV · SLIP</b></td><td><b>BRAKE</b>: il disco si ferma finché tieni premuto. <b>SPIN</b>: spinback. <b>REV</b>: reverse finché premi. <b>SLIP</b>: acceso/spento.</td></tr></tbody></table></div>
+<p><b>SLIP</b>: durante roll, freno e reverse il brano continua «in silenzio» e al rilascio ti ritrovi dove sarebbe arrivato. <b>Q</b> attiva la quantizzazione.</p>
+<h3 id="loop">Loop</h3>
+<ul><li><b>‹ ›</b> dimezza e raddoppia il loop, il numero al centro lo accende o spegne.</li><li><b>IN</b> e <b>OUT</b> impostano inizio e fine; OUT lo attiva.</li></ul>
+</section>
+<section data-title="Il mixer, le cuffie e il preascolto">
+<h2 id="il-mixer-le-cuffie-e-il-preascolto">Il mixer, le cuffie e il preascolto</h2>
+<p>Ogni canale ha fader, EQ a tre bande, filtro e un indicatore di livello dopo il fader. Il <b>crossfader</b> è in basso; doppio clic lo centra.</p>
+<p><b>AUTO GAIN</b> porta un brano appena caricato alla stessa sonorità di quello che sta suonando. <b>AUTO STEM</b> separa in anticipo gli stem di ogni brano caricato.</p>
+<p><b>Cuffie.</b> I pulsanti <b>1</b> e <b>2</b> in alto accendono il preascolto (PFL) dei canali. <b>CUE MIX</b> dosa tra i due lati, <b>PHONES</b> è il volume. Il PFL si accende anche dall'icona delle cuffie sul piatto.</p>
+</section>
+<section data-title="Effetti">
+<h2 id="effetti">Effetti</h2>
+<p>Il pannello <b>FX</b> lavora sul deck scelto con i pulsanti <b>DECK</b> (1 / 2) sopra i pad; resta allineato alla striscia del canale.</p>
+<ul><li><b>Effetti sul segnale:</b> ECHO, PING-PONG, REVERB, FLANGER, PHASER, BITCRUSH, GATER, SCATTER, NOISE.</li><li><b>Effetti sul brano:</b> BEAT JUMP, BRAKE, SPINBACK, REVERSE. Agiscono sul disco e non sul segnale.</li><li><b>TIME</b> e <b>FEEL</b> (dritto, terzina, puntato) fissano il passo degli effetti a tempo.</li><li><b>I tre pomelli</b> cambiano nome a seconda dell'effetto. Per esempio nell'echo sono <b>TONE</b>, <b>FEEDBACK</b> e <b>MIX</b>.</li><li>Il pulsante accanto al nome dell'effetto lo accende. Per freno e reverse, tenendo premuto più di 0,35 secondi l'effetto dura quanto la pressione.</li></ul>
+</section>
+<section data-title="Stem">
+<h2 id="stem">Stem</h2>
+<p>Gli stem separano un brano in <b>voce</b>, <b>batteria</b>, <b>basso</b> e <b>altro</b>. Nel pannello <b>STEMS</b> ogni stem ha un fader, un pulsante muto (<b>M</b>) e un solo (<b>S</b>). I preset <b>ACAPELLA</b>, <b>INSTRUMENTAL</b> e <b>ALL</b> sistemano tutto con un clic.</p>
+<p>SpinLab funziona in due modi:</p>
+<ul><li><b>Tempo reale.</b> Gli stem si separano mentre il brano suona, con il processore. Non serve preparare niente.</li><li><b>Preparati.</b> Gli stem si calcolano prima e si salvano. Il caricamento è praticamente immediato e la qualità è massima. Sono la scelta per i PC più lenti.</li></ul>
+<p>In <b>Impostazioni → STEM</b> scegli la modalità: <b>Automatico</b> (in base alla velocità misurata del PC), <b>Sempre in tempo reale</b> o <b>Solo stem preparati</b>. Il pulsante <b>Misura la velocità di questo PC</b> ripete la misura. Per il tempo reale serve almeno 2× la velocità di riproduzione, perché due deck separano insieme.</p>
+<p><b>Preparare gli stem.</b> Tasto destro su un brano (anche più brani) o su una playlist → <b>Crea stem</b>. Si salvano in una cartella <code>stems</code> accanto ai brani, compressi senza perdita di qualità (circa il 45% della dimensione originale). <b>Elimina gli stem preparati</b> li cancella.</p>
+<p>Il modello di separazione è uno solo e viene scaricato da internet al primo uso (circa 460 MB). In «Solo stem preparati», un brano senza stem mostra un avviso che invita a prepararli.</p>
+</section>
+<section data-title="Batteria e campionatore">
+<h2 id="batteria-e-campionatore">Batteria e campionatore</h2>
+<h3 id="batteria-drums">Batteria (DRUMS)</h3>
+<p>16 pad con campioni singoli, da suonare con il mouse, con la tastiera (Z X C V · A S D F · Q W E R · 1 2 3 4) o con un controller. La batteria parte vuota a ogni avvio; si ricordano solo le note MIDI dei pad.</p>
+<ul><li><b>Carica un campione:</b> clic su un pad vuoto, oppure trascina un file sul pad. Massimo 30 secondi.</li><li><b>Tasto destro su un pad:</b> MIDI learn, modo <b>gate</b> (suona finché tieni premuto), <b>aftertouch</b>, intonazione (±12 semitoni), <b>gruppo choke</b> (per esempio hi-hat chiuso e aperto che si zittiscono a vicenda), volume, nota MIDI, svuota.</li><li><b>Aftertouch.</b> Premendo il pad dopo il colpo, il suono cresce. La destinazione è per pad: spento, volume (fino a +60%), intonazione (fino a +7 semitoni) o entrambi. Funziona con l'aftertouch per singolo pad e con quello di canale. Una barra colorata sul pad mostra la pressione.</li><li><b>Note MIDI di default:</b> i 16 pad rispondono alle note 36–51.</li></ul>
+<h3 id="campionatore-sampler">Campionatore (SAMPLER)</h3>
+<p>8 pad per suoni più lunghi. Trascina un file (o un brano della libreria) su un pad. Clic: parte, altro clic: si ferma. Tasto destro: loop, BPM, sostituisci. Tasti <b>1–8</b> della tastiera. Con <b>SYNC</b> i campioni partono sul battito del deck che suona e seguono tempo e fase.</p>
+</section>
+<section data-title="Registrare il master">
+<h2 id="registrare-il-master">Registrare il master</h2>
+<p><b>RECORD</b> in alto apre la finestra di registrazione. Registra tutto ciò che esce dal master: deck con effetti, campionatore e batteria.</p>
+<ol><li>Scegli il formato: WAV 16 o 24 bit, oppure MP3 a 128, 192, 256 o 320 kbps.</li><li>Scegli dove salvare il file.</li><li><b>Avvia registrazione.</b> Compare l'indicatore <b>REC</b> con il tempo. Un clic sull'indicatore, o su <b>STOP REC</b>, ferma la registrazione.</li></ol>
+<p>Non si possono cambiare le impostazioni audio mentre si registra.</p>
+</section>
+<section data-title="Impostazioni audio">
+<h2 id="impostazioni-audio">Impostazioni audio</h2>
+<p><b>SETTINGS</b> → scheda <b>AUDIO</b>.</p>
+<ul><li><b>Driver audio.</b> <b>Windows (WASAPI)</b> funziona con qualsiasi scheda. <b>ASIO</b> usa il driver della scheda e dà latenze molto più basse, ma la scheda diventa dedicata a SpinLab.</li><li><b>Uscita principale (master).</b> Con ASIO l'elenco mostra i driver ASIO installati. Per usare la scheda integrata del PC scegli il driver <b>Windows (WASAPI)</b>.</li><li><b>Frequenza e buffer.</b> Un buffer piccolo dà meno latenza ma più rischio di scatti: se senti click, aumentalo. 128 frame è un buon punto di partenza con ASIO.</li><li><b>Uscita cuffie.</b> È l'uscita del preascolto e dell'anteprima dei brani. L'elenco mostra i dispositivi Windows. In alternativa <b>Stesso dispositivo dell'uscita principale, canali 3-4</b>: master sui canali 1-2 e cuffie sui canali 3-4 della stessa scheda (serve un'uscita con almeno 4 canali).</li></ul>
+<p><b>Dopo «Applica»</b>, l'area sotto mostra l'uscita realmente attiva e la latenza stimata. Se l'uscita scelta non parte, SpinLab torna a Windows (WASAPI) e ti dice il motivo.</p>
+<p><b>Esempi di configurazione</b></p>
+<div class='tw'><table><thead><tr><th>Situazione</th><th>Master</th><th>Cuffie</th></tr></thead><tbody><tr><td>Scheda esterna con ASIO e controller</td><td>ASIO → la scheda</td><td>Dispositivo Windows delle cuffie del controller (per esempio «Line 3/4 (DENON DJ PRIME GO + Audio)»)</td></tr><tr><td>Tutto sul controller</td><td>ASIO o WASAPI del controller</td><td>Stesso dispositivo, canali 3-4</td></tr><tr><td>Solo PC</td><td>WASAPI</td><td>Un secondo dispositivo, o nessuno</td></tr></tbody></table></div>
+</section>
+<section data-title="Controller MIDI">
+<h2 id="controller-midi">Controller MIDI</h2>
+<p>SpinLab funziona con qualsiasi controller MIDI. Le funzioni si assegnano nel pannello <b>SETTINGS → CONTROLLER MIDI</b> con il MIDI learn. La mappatura si salva da sola e si esporta e importa come testo.</p>
+<h3 id="il-pannello">Il pannello</h3>
+<ul><li><b>Collegati</b> elenca i controller trovati. <b>Ultimo messaggio</b> mostra in tempo reale quello che arriva: serve a capire cosa manda un controllo.</li><li><b>Uscita LED</b> è la porta per accendere i LED del controller.</li><li><b>Jog per giro</b>: quanti messaggi manda il jog per un giro completo del piatto. <b>Calibra il jog</b> lo misura da solo: premi, gira il piatto di un giro, premi di nuovo.</li><li><b>Analizza un controllo</b>: per 8 secondi registra tutti i messaggi. Gira un controllo in un senso e poi nell'altro; il riepilogo mostra quale messaggio manda e con che valori. Utile per capire un encoder o la jog.</li><li><b>Ignora un tasto…</b>: per i sensori di tocco (per esempio un encoder che manda un messaggio quando lo sfiori). Premi, tocca il sensore: quel messaggio non comanda più nulla e il learn lo salta.</li><li><b>Cerca una funzione</b> filtra l'elenco. Le funzioni sono raggruppate per deck e per mixer, libreria ed effetti.</li><li><b>Esporta / Importa / Cancella tutto</b> per copiare o azzerare la mappatura.</li></ul>
+<h3 id="assegnare-una-funzione">Assegnare una funzione</h3>
+<ol><li>Premi <b>Learn</b> sulla riga della funzione.</li><li>Premi il tasto, gira la manopola o muovi il fader sul controller.</li><li>Il Learn riconosce da solo il tipo di controllo: pulsante, fader a 7 bit, encoder relativo (complemento a 2, offset 64, bit di segno) o valore assoluto che gira (tipico di una jog). Se sbaglia, cambia il <b>Modo</b> nel menu della riga.</li><li>Per <b>togliere</b> un'assegnazione usa la ✕ della riga. Esc annulla un Learn in corso.</li></ol>
+<p>Per i controlli continui (fader, manopole, encoder) il Learn aspetta un movimento vero: il rumore o i sensori che mandano sempre lo stesso valore non vengono assegnati.</p>
+<h3 id="più-assegnazioni">Più assegnazioni</h3>
+<ul><li>Una funzione può avere <b>più assegnazioni</b>: premi <b>+ Altro</b> per aggiungerne un'altra (per esempio due tasti che fanno la stessa cosa).</li><li>Un <b>messaggio</b> può comandare <b>più funzioni</b> (per esempio un solo clic che fa scattare due cose). Se capita, la riga mostra un avviso «⚠ anche …» che elenca le altre funzioni: serve a scoprire assegnazioni vecchie dimenticate.</li></ul>
+<h3 id="shift">SHIFT</h3>
+<p>Assegna prima il tasto <b>SHIFT</b> del controller. Per fare una combinazione:</p>
+<ol><li>Premi <b>Learn</b> su una funzione.</li><li><b>Tieni premuto SHIFT</b> sul controller.</li><li>Premi il tasto da combinare (per esempio un pad) e rilascia.</li></ol>
+<p>La funzione risulta «SHIFT + pad». Lo stesso pad, senza SHIFT, può comandare un'altra funzione. Se non hai ancora assegnato SHIFT, tieni premuto il tasto e premi l'altro: SpinLab capisce da solo che il primo è SHIFT. Puoi assegnare anche due tasti SHIFT (uno per deck).</p>
+<h3 id="livelli-dei-pad">Livelli dei pad</h3>
+<p>Se il controller ha tasti di modalità per i pad (per esempio HOT CUE, LOOP, ROLL, BANK), SpinLab li usa come <b>livelli</b>:</p>
+<ol><li>Nel gruppo del deck assegna <b>Livello dei pad: Hot cue / Loop / Roll / Bank</b> ai quattro tasti di modalità.</li><li>Premi <b>Learn</b> su una funzione, premi il tasto di modalità (per esempio LOOP), poi il pad.</li><li>L'assegnazione vale solo in quel livello. Il menu <b>Livello</b> sulla riga permette di correggere.</li></ol>
+<p>Se in un livello non ci sono assegnazioni per un pad, vale quella «Ogni livello». I livelli sono indipendenti per deck, e all'avvio i pad sono in Hot cue.</p>
+<h3 id="jog-encoder-e-tasti-speciali">Jog, encoder e tasti speciali</h3>
+<ul><li><b>Jog.</b> Con il piatto toccato fa scratch; a brano in play e piatto non toccato, fa un piccolo pitch bend. Assegna la rotazione a <b>Jog (scratch e pitch bend)</b> e il tocco a <b>Jog: tocco del piatto</b>.</li><li><b>Encoder come pulsante.</b> Su una funzione a pulsante (per esempio <b>Loop × 2</b>) puoi usare la rotazione di un encoder: il Learn la riconosce e imposta «Encoder: solo rotazione oraria». Per l'altra direzione usa il menu Modo.</li><li><b>Loop IN / OUT con un solo tasto:</b> primo clic = IN, secondo = OUT, terzo = esce dal loop.</li><li><b>Roll:</b> lunghezza più lunga / più corta / encoder.</li><li><b>Libreria:</b> scorri i brani (un encoder per ogni deck, anche a 10 brani per scatto) e carica il brano scelto.</li></ul>
+<h3 id="effetti-dal-controller">Effetti dal controller</h3>
+<p>Il gruppo <b>Effetti del controller</b> pensa a controller con un solo set di comandi effetti:</p>
+<ul><li><b>Assegna l'effetto al deck 1 / 2.</b> Premuti insieme (entro 0,4 secondi) valgono per entrambi i deck.</li><li><b>Effetto acceso / spento</b> sui deck assegnati.</li><li><b>Parametro (encoder)</b> con <b>clic dell'encoder</b> che alterna tra il primo e il secondo parametro (per esempio TONE e FEEDBACK). Il nome sottolineato nel pannello FX mostra quale è attivo.</li><li><b>MIX dry / wet</b> (manopola).</li><li><b>Effetto successivo / precedente</b> o encoder di scelta dell'effetto.</li></ul>
+<p>Gli scatti dell'encoder hanno un'accelerazione e una piccola rampa per non sentire a gradini. Gli scatti subito prima di un clic vengono scartati, perché sono solo lo spostamento causato dalla pressione.</p>
+<h3 id="led">LED</h3>
+<p>Scegli la porta in <b>Uscita LED</b>. Ogni assegnazione di un tasto ha due valori (acceso e spento) che SpinLab manda al controller quando la funzione cambia stato. Funziona solo se il controller accetta messaggi di LED via MIDI.</p>
+</section>
+<section data-title="Il Denon Prime GO+">
+<h2 id="il-denon-prime-go">Il Denon Prime GO+</h2>
+<h3 id="collegamento">Collegamento</h3>
+<ol><li>Collega il Prime GO+ via USB e mettilo in <b>modalità controller</b> (non standalone).</li><li>In <b>SETTINGS → AUDIO</b> vedi la sua scheda: <b>Denon DJ Prime GO+ ASIO</b> (driver ASIO) e dispositivi Windows come «Line 3/4 (DENON DJ PRIME GO + Audio)». Scegli la configurazione adatta, vedi gli esempi sopra.</li><li>In <b>CONTROLLER MIDI</b> devono comparire le porte «PRIME GO +».</li></ol>
+<h3 id="cosa-manda">Cosa manda</h3>
+<p>Non esiste una tabella MIDI ufficiale. Quello che segue è stato osservato su un esemplare, con il programma di analisi dei controlli. I numeri possono variare con il firmware: controlla sempre con <b>Ultimo messaggio</b> o <b>Analizza un controllo</b>.</p>
+<div class='tw'><table><thead><tr><th>Controllo</th><th>Messaggio osservato</th></tr></thead><tbody><tr><td>Jog (rotazione)</td><td>CC 77 sul canale del deck: <b>valore assoluto che gira</b> da 0 a 127. Modo: <i>Assoluto, usato come differenza</i>. Insieme manda un secondo CC (55) con valori quasi fissi: il Learn lo scarta da solo.</td></tr><tr><td>Jog (tocco del piatto)</td><td>Nota 33: premuta quando tocchi</td></tr><tr><td>Encoder effetti (rotazione)</td><td>CC 34 sul canale 5: <b>relativo</b>, 1 per scatto in avanti e 127 per scatto indietro. Modo: <i>Relativo (complemento a 2)</i></td></tr><tr><td>Encoder effetti (<b>sfioramento</b>)</td><td>Nota 10 sul canale 5</td></tr><tr><td>Encoder effetti (<b>clic</b>)</td><td>Nota 8 sul canale 5</td></tr><tr><td>Tasti FX 1 e 2</td><td>Note 11 e 12 sul canale 5</td></tr><tr><td>FX on/off</td><td>Nota 6 sul canale 5</td></tr><tr><td>Manopola dry/wet</td><td>CC 4 sul canale 5 (assoluto 7 bit)</td></tr><tr><td>Encoder di scelta effetto</td><td>CC 33 sul canale 5 (relativo, offset 64)</td></tr></tbody></table></div>
+<p>Alcuni tasti (FX Assign, Mic, Master, Booth, Aux) non escono come MIDI.</p>
+<p><b>Sensori di tocco.</b> I suoi encoder mandano un messaggio quando li sfiori e uno diverso quando li clicchi. Per assegnare il <b>clic</b> usa prima <b>Ignora un tasto…</b> sul tocco, poi il Learn.</p>
+</section>
+<section data-title="Soluzione dei problemi">
+<h2 id="soluzione-dei-problemi">Soluzione dei problemi</h2>
+<p><b>Il driver ASIO non parte e resto in Windows (WASAPI).</b> Leggi il messaggio sotto «Applica». Cause frequenti: un altro programma tiene il driver aperto (un'altra copia di SpinLab, il pannello della scheda, una DAW); con il Prime GO+ collegato, il suo driver ASIO era caricato e occupava il posto. Da una versione recente, SpinLab apre il driver scelto senza toccare gli altri. Chiudi le copie in più di SpinLab dal Gestore attività.</p>
+<p><b>Click o interruzioni nell'audio.</b> Aumenta il buffer. Con ASIO prova 256.</p>
+<p><b>Le cuffie non suonano.</b></p>
+<ul><li>L'uscita cuffie va scelta tra i dispositivi Windows. Il preascolto ha i suoi pulsanti PFL (1 e 2 in alto, o l'icona sul piatto) e il volume <b>PHONES</b>.</li><li>Per «Stesso dispositivo, canali 3-4» l'uscita principale deve avere almeno 4 canali.</li></ul>
+<p><b>Il jog va in una sola direzione o a scatti.</b> Il modo è sbagliato. Rifai il Learn girando il piatto per un secondo, oppure scegli <i>Assoluto, usato come differenza</i> nel menu Modo. Se è troppo veloce, usa <b>Calibra il jog</b>.</p>
+<p><b>Lo scratch è distorto.</b> Ricalibra «Jog per giro». Un valore troppo basso fa correre il disco.</p>
+<p><b>Il Learn assegna da solo.</b> Il controller sta mandando messaggi senza che tu tocchi niente (rumore, sensori). Il Learn dei controlli continui aspetta un movimento vero. Se continua, usa <b>Ignora un tasto…</b>.</p>
+<p><b>Un encoder muove due cose.</b> Guarda gli avvisi «⚠ anche …» nella lista: una vecchia assegnazione sullo stesso messaggio muove altre funzioni. Cancellala con la ✕.</p>
+<p><b>«Accesso negato (os error 5)» compilando.</b> Il programma è ancora aperto e Windows non lo lascia sostituire. Chiudi SpinLab (e le copie rimaste nel Gestore attività).</p>
+<p><b>Gli stem sono lenti o non partono.</b> Vedi <b>Impostazioni → STEM</b>: con «Solo stem preparati» prepara prima i brani (tasto destro → Crea stem). Il primo uso scarica il modello e richiede internet.</p>
+</section>
+<section data-title="Compilare il programma">
+<h2 id="compilare-il-programma">Compilare il programma</h2>
+<p>Serve: Git, Rust (rustup.rs) con gli strumenti C++ di Visual Studio, LLVM/clang e l'<b>SDK ASIO</b> di Steinberg (non incluso nel progetto per la sua licenza). Sul PC di sviluppo i percorsi dell'SDK e di LLVM sono in <code>src-tauri/.cargo/config.toml</code>: sul nuovo PC vanno modificati. Serve anche FFmpeg nel PATH (formati audio meno comuni).</p>
+<pre><code>cargo install tauri-cli --version &quot;^2&quot;
+git clone https://github.com/muttleysat/SpinLab.git
+cd SpinLab\src-tauri
+cargo tauri dev        (per provare)
+cargo tauri build      (per creare l&#x27;installer)</code></pre>
+<p>I dati dell'utente (impostazioni, libreria, mappatura MIDI, modello degli stem) stanno in <code>%APPDATA%\com.spinlab.dj</code> e non sono nel repository.</p>
+</section>
+</main>
+</div>
+<script>
+(function () {
+  const secs = [...document.querySelectorAll("main section")], links = [...document.querySelectorAll("nav a")];
+  const q = document.getElementById("q"), strip = () => document.querySelectorAll("mark").forEach((m) => m.replaceWith(m.textContent));
+  function mark(node, re) {
+    for (const c of [...node.childNodes]) {
+      if (c.nodeType === 3) {
+        const t = c.nodeValue; if (!re.test(t)) continue; re.lastIndex = 0;
+        const f = document.createDocumentFragment(); let last = 0, m;
+        while ((m = re.exec(t))) { f.append(t.slice(last, m.index)); const k = document.createElement("mark"); k.textContent = m[0]; f.append(k); last = m.index + m[0].length; }
+        f.append(t.slice(last)); c.replaceWith(f);
+      } else if (c.nodeType === 1 && c.tagName !== "MARK") mark(c, re);
+    }
+  }
+  q.addEventListener("input", () => {
+    strip(); const v = q.value.trim().toLowerCase();
+    secs.forEach((s, i) => { const hit = !v || s.textContent.toLowerCase().includes(v); s.classList.toggle("hide", !hit); links[i].style.display = hit ? "" : "none"; });
+    if (v.length > 1) { const re = new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"); secs.forEach((s) => !s.classList.contains("hide") && mark(s, re)); }
+  });
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { links.forEach((l) => l.classList.toggle("on", l.getAttribute("href") === "#" + e.target.querySelector("h2").id)); } }), { rootMargin: "-10% 0px -80% 0px" });
+  secs.forEach((s) => io.observe(s));
+})();
+</script>
+</body>
+</html>
