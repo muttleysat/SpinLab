@@ -63,15 +63,20 @@ function amOrderTracks(rows, first) {
 }
 
 /* ---------------------------------------------------------------- avvio e arresto */
-function amStart() {
+// la coda parte dal brano che suona (o da quello selezionato) e segue l'elenco com'e' ordinato in tabella
+function amBuildQueue() {
   const rows = (typeof lib !== "undefined" && lib.rows) || [];
-  if (!rows.length) { toast("AUTOMIX: scegli prima una cartella o una playlist con dei brani"); return; }
   const playing = [0, 1].find((i) => amSnap(i).playing && amSnap(i).loaded);
-  // la coda parte dal brano che suona (o da quello selezionato) e segue l'elenco com'e' ordinato in tabella
   const pth = playing != null ? amSnap(playing).path : null;
   const here = pth ? rows.find((t) => t.path === pth) : null;
-  AM.queue = amOrderTracks(rows, here ? here.id : playing == null ? lib.last : null);
-  if (pth) AM.queue = AM.queue.filter((t) => t.path !== pth);
+  let q = amOrderTracks(rows, here ? here.id : playing == null ? lib.last : null);
+  if (pth) q = q.filter((t) => t.path !== pth);
+  return { q, playing };
+}
+function amStart() {
+  if (!((typeof lib !== "undefined" && lib.rows) || []).length) { toast("AUTOMIX: scegli prima una cartella o una playlist con dei brani"); return; }
+  const { q, playing } = amBuildQueue();
+  AM.queue = q;
   AM.idx = 0; AM.mix = null; AM.ramp = null; AM.on = true; AM.busy = false;
   AM.cur = playing ?? [0, 1].find((i) => !amSnap(i).loaded) ?? 0; AM.nxt = 1 - AM.cur;
   amMsg(playing != null ? "In corso: il prossimo brano parte alla fine di quello che suona" : "Avvio…");
@@ -257,14 +262,28 @@ function amRender() {
   const go = $("#amGo"); if (!go) return;
   go.textContent = AM.on ? "FERMA AUTOMIX" : "AVVIA AUTOMIX"; go.classList.toggle("on", AM.on);
   $("#amSkip").disabled = !AM.on;
-  $("#amStatus").textContent = AM.on ? AM.msg : AM.msg || "Suona da solo i brani della libreria visibile, uno dopo l'altro, con transizioni a tempo.";
-  const cur = amSnap(AM.cur), list = [];
-  if (AM.on && cur.loaded) list.push(`<div class="amq now">▶ ${esc(cur.name || "")}</div>`);
-  const upcoming = AM.queue.slice(AM.idx, AM.idx + 1);                    // il pannello e' basso: solo il brano che suona e il prossimo; la coda intera e' nel suggerimento
-  if (AM.on) upcoming.forEach((t, k) => list.push(`<div class="amq${k === 0 ? " next" : ""}">${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}<span>${t.bpm ? Math.round(t.bpm) : ""} ${esc(t.key || "")}</span></div>`));
-  const html = list.join("") || (AM.on ? "" : "");
+  $("#amStatus").textContent = AM.on ? AM.msg : AM.msg || "";
+  const cur = amSnap(AM.cur), list = [], row = (t, cls, n) => `<div class="amq${cls}">${n ? n + ". " : ""}${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}<span>${t.bpm ? Math.round(t.bpm) : ""} ${esc(t.key || "")}</span></div>`;
+  if (AM.on) {
+    if (cur.loaded) list.push(`<div class="amq now">▶ ${esc(cur.name || "")}</div>`);
+    const left = AM.queue.length - AM.idx;
+    list.push(`<div class="amh">PROSSIMI${AM.opt.loop ? " (poi ricomincia)" : ""}${left > 0 ? ` · ${left} in coda` : ""}</div>`);
+    AM.queue.slice(AM.idx, AM.idx + 10).forEach((t, k) => list.push(row(t, k === 0 ? " next" : "", k + 1)));
+    if (left > 10) list.push(`<div class="amh">… altri ${left - 10}</div>`);
+  } else {
+    // da fermo si vede cosa suonerebbe: l'elenco della tabella, dal brano che suona o selezionato
+    const rows = (typeof lib !== "undefined" && lib.rows) || [], { q: pre, playing } = amBuildQueue();
+    list.push(`<div class="amhelp">AUTOMIX suona i brani che vedi nella tabella della libreria (playlist, cartella o ricerca), nell'ordine scelto. Parte dal brano che sta suonando; se nessuno suona, da quello selezionato; se non ce n'è, dal primo.</div>`);
+    if (!rows.length) list.push(`<div class="amh">Apri una playlist o una cartella per avere dei brani</div>`);
+    else if (AM.opt.order === "shuffle") list.push(`<div class="amh">CASUALE · ${rows.length} brani: l'ordine si decide all'avvio</div>`);
+    else {
+      list.push(`<div class="amh">${playing != null ? "SUONERANNO DOPO QUELLO IN CORSO" : "SUONERANNO"} · ${pre.length} brani</div>`);
+      pre.slice(0, 10).forEach((t, k) => list.push(row(t, k === 0 ? " next" : "", k + 1)));
+      if (pre.length > 10) list.push(`<div class="amh">… altri ${pre.length - 10}</div>`);
+    }
+  }
+  const html = list.join("");
   const q = $("#amQueue"); if (q._h !== html) { q._h = html; q.innerHTML = html; }
-  q.title = AM.on ? AM.queue.slice(AM.idx, AM.idx + 12).map((t, k) => `${k + 1}. ${t.title || t.path}`).join("\n") : "";
 }
 
 function bindAutomix() {

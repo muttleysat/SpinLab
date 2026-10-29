@@ -925,7 +925,7 @@ function setTarget(i) {
 function setPanel(name) {
   $$(".ptabs button").forEach((b) => b.classList.toggle("on", b.dataset.pn === name));
   $$(".pn").forEach((p) => p.classList.toggle("on", p.id === "pn-" + name));
-  $("#rpanel").classList.toggle("full", name === "drums"); // i pad della batteria usano tutto lo spazio: via FX e selettore deck
+  $("#rpanel").classList.toggle("full", name === "drums" || name === "automix"); // i pad della batteria e la coda dell'automix usano tutto lo spazio: via FX e selettore deck
   requestAnimationFrame(resizeCanvases);
 }
 $$(".ptabs button").forEach((b) => (b.onclick = () => setPanel(b.dataset.pn)));

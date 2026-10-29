@@ -427,13 +427,16 @@ dialog .hint a { color: var(--accent); }
 #updBanner[hidden] { display: none; } #updBanner button { padding: 4px 10px; font-size: 12px; }
 
 /* AUTOMIX */
-#pn-automix.on { gap: 8px; overflow: hidden; }
+#pn-automix.on { gap: 8px; overflow-y: auto; }
+.amh { font-size: 9px; letter-spacing: .12em; color: var(--dim); padding: 6px 2px 2px; }
+.amhelp { font-size: 10.5px; color: var(--dim); line-height: 1.35; margin: 0; }
 .amtop { display: flex; gap: 8px; align-items: stretch; } .amgo { flex: 1; padding: 9px; font-size: 12px; letter-spacing: .12em; border-radius: 8px; border: 1px solid #1a82b8; background: #0b1a2c; color: #4fd3ff; cursor: pointer; }
 .amgo.on { background: #3a1216; border-color: #c4414f; color: #ff8a96; } #amSkip { padding: 0 12px; }
 .amck { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--dim); margin: 0; white-space: nowrap; }
 .amopts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; } .amopts label { display: grid; gap: 2px; font-size: 9px; letter-spacing: .1em; color: var(--dim); margin: 0; min-width: 0; }
 .amopts select { padding: 4px 2px; font-size: 11px; min-width: 0; }
 .amstatus { font-size: 11px; color: #9fb4d2; line-height: 1.3; max-height: 2.7em; overflow: hidden; }
-.amqueue { display: grid; gap: 3px; flex: 1; min-height: 0; overflow: auto; align-content: start; }
+.amqueue { display: flex; flex-direction: column; gap: 3px; flex: none; }
+.amqueue > * { flex: none; }
 .amq { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 6px; background: #0b111d; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .amq span { color: var(--dim); font-size: 10px; flex: none; } .amq.now { background: #0d2a1e; color: #7df0b6; } .amq.next { border: 1px solid #1a5878; }
