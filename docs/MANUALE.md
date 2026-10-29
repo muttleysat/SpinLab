@@ -1,12 +1,14 @@
 # SpinLab DJ — Manuale
 
+![ASIO Compatible - ASIO is a registered trademark of Steinberg Media Technologies GmbH](../ui/assets/asio-logo-bw.png)
+
 SpinLab DJ è un programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, registrazione del master e supporto per qualsiasi controller MIDI. Questo manuale spiega come usarlo, come collegare un controller e come risolvere i problemi più comuni.
 
 > I tasti e i comandi sono descritti come compaiono sullo schermo. Passando il mouse sopra quasi ogni pulsante compare un suggerimento.
 
 ## Primo avvio
 
-1. **Scegli la scheda audio.** Apri **SETTINGS** (o l'ingranaggio in alto a destra) → scheda **AUDIO**. Se hai una scheda con driver ASIO (per esempio Focusrite) scegli driver **ASIO**: la latenza è molto più bassa e i pad della batteria rispondono subito. Altrimenti lascia **Windows (WASAPI)**. Premi **Applica**.
+1. **Scegli la scheda audio.** Apri **SETTINGS** (o l'ingranaggio in alto a destra) → scheda **AUDIO**. Se hai una scheda con driver ASIO (per esempio Focusrite) scegli driver **ASIO®**: la latenza è molto più bassa e i pad della batteria rispondono subito. Altrimenti lascia **Windows (WASAPI)**. Premi **Applica**.
 2. **Scegli le cuffie.** Nello stesso pannello, «Uscita cuffie». Vedi [Impostazioni audio](#impostazioni-audio).
 3. **Aggiungi la musica.** Nella colonna **ESPLORA** a sinistra scegli una cartella: i brani compaiono nella tabella. Vengono analizzati (BPM, tonalità, griglia dei battiti) in sottofondo.
 4. **Carica un brano.** Seleziona un brano e premi **LOAD** nella sua riga, oppure trascinalo su un deck.
@@ -300,3 +302,11 @@ cargo tauri build      (per creare l'installer)
 ```
 
 I dati dell'utente (impostazioni, libreria, mappatura MIDI, modello degli stem) stanno in `%APPDATA%\com.spinlab.dj` e non sono nel repository.
+
+---
+
+## Crediti
+
+ASIO is a registered trademark of Steinberg Media Technologies GmbH.
+
+![ASIO Compatible](../ui/assets/asio-logo-bw.png)

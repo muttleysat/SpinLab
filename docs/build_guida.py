@@ -26,7 +26,8 @@ def inline(t: str) -> str:
     t = re.sub(r"`([^`]+)`", r"<code>\1</code>", t)
     t = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", t)
     t = re.sub(r"(?<![*\w])\*([^*\n]+)\*(?![*\w])", r"<i>\1</i>", t)
-    t = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", lambda m: f'<a href="{m.group(2)}">{m.group(1)}</a>', t)
+    t = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", lambda m: f'<img src="{m.group(2).replace("../ui/", "")}" alt="{m.group(1)}" class="logo">', t)
+    t = re.sub(r"(?<!!)\[([^\]]+)\]\(([^)]+)\)", lambda m: f'<a href="{m.group(2)}">{m.group(1)}</a>', t)
     return t
 
 
@@ -149,7 +150,7 @@ blockquote { margin: 12px 0; padding: 8px 14px; border-left: 3px solid var(--acc
 .tw { overflow-x: auto; margin: 10px 0; } table { border-collapse: collapse; font-size: 13px; min-width: 60%; }
 th, td { text-align: left; padding: 6px 10px; border: 1px solid var(--line); vertical-align: top; } th { background: var(--panel); }
 a { color: var(--accent); } mark { background: #ffd34d66; color: inherit; border-radius: 3px; }
-section.hide { display: none; }
+section.hide { display: none; } img.logo { height: 120px; width: auto; display: block; margin: 8px 0; border-radius: 4px; }
 @media (max-width: 820px) { #wrap { grid-template-columns: 1fr; } nav { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); } main { padding: 16px; } }
 </style>
 </head>

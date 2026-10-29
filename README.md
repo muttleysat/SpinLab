@@ -1,5 +1,7 @@
 # SpinLab DJ
 
+<img src="ui/assets/asio-logo-bw.png" alt="ASIO Compatible - ASIO is a registered trademark of Steinberg Media Technologies GmbH" width="110" align="right">
+
 Programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, registrazione del master e supporto per qualsiasi controller MIDI.
 
 App Tauri 2: il motore audio è in Rust (`src-tauri/src`), l'interfaccia è web (`ui/`).
@@ -27,3 +29,5 @@ cargo tauri build      # per creare l'installer
 ```
 
 Dettagli e requisiti per macOS e Windows nel manuale, sezione «Compilare il programma».
+
+ASIO is a registered trademark of Steinberg Media Technologies GmbH.

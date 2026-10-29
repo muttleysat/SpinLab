@@ -359,3 +359,6 @@ dialog .btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1
 #helpDlg[open] { display: flex; flex-direction: column; }
 #helpDlg .helphead { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 8px 18px; border-bottom: 1px solid #25324d; } #helpDlg h2 { margin: 0; }
 #helpFrame { flex: 1; width: 100%; border: 0; background: #0b0f18; }
+
+.asiobox { display: flex; align-items: center; gap: 12px; padding: 8px 12px; margin-bottom: 4px; border: 1px solid #25324d; border-radius: 8px; background: #0b111d; color: var(--dim); font-size: 11px; } .asiobox img { height: 46px; width: auto; }
+dialog .hint a { color: var(--accent); }
