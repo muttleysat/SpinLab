@@ -121,7 +121,8 @@ async function amTick() {
   const remaining = A.duration - A.pos, plan = amMixLen(A, next);
   const lead = Math.max(75, plan.sec + 45);
   if (remaining <= lead && !amReady(AM.nxt, next.path) && !decks[AM.nxt].loading) return amPreload(next);
-  if (remaining <= plan.sec + 0.05 && amReady(AM.nxt, next.path)) return amStartMix(next, plan);
+  const barSec = A.bpm_now > 0 ? 240 / A.bpm_now : 3;    // il mix aspetta al massimo un «uno» di battuta: si parte una battuta prima
+  if (remaining <= plan.sec + barSec + 0.3 && amReady(AM.nxt, next.path)) return amStartMix(next, plan);
   amMsg(`Sta suonando «${A.name}» · mix tra ${fmt(Math.max(0, remaining - plan.sec))}`);
 }
 
@@ -157,13 +158,46 @@ async function amPreload(next) {
 async function amStartMix(next, plan) {
   AM.busy = true;
   try {
-    const A = amSnap(AM.cur);
-    AM.mix = { t0: A.pos, sec: plan.sec, from: AM.cur, to: AM.nxt, path: next.path, started: performance.now() };
+    // il nuovo brano parte dal suo primo «uno» di battuta, nel momento in cui il deck che suona arriva a un «uno»:
+    // cosi' cassa con cassa e rullante con rullante (il sync da solo allinea i battiti, non le battute)
+    const barOk = plan.sync && amBarSeek(AM.nxt);
     if (plan.sync) await dc(AM.nxt, "sync");               // tempo e battiti del nuovo brano sul deck che suona
+    if (barOk) await amWaitBarStart(AM.cur);
+    if (!AM.on) return;
     await dc(AM.nxt, "play");
+    AM.mix = { t0: amSnap(AM.cur).pos, sec: plan.sec, from: AM.cur, to: AM.nxt, path: next.path, started: performance.now() };
     AM.idx++;
     amMsg(`Mix in corso verso «${next.title || next.path}»`);
   } finally { AM.busy = false; amRender(); }
+}
+
+// indice del battito (nella griglia del deck) a cui si trova la posizione t, e posizione dentro la battuta (0..3) con la fase 0..1
+function amBeatAt(deck, t) {
+  const d = decks[deck], b = d.beats || [];
+  if (b.length < 8) return null;
+  let lo = 0, hi = b.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (b[m] <= t) lo = m + 1; else hi = m; }
+  const i = lo - 1;
+  if (i < 0 || i >= b.length - 1) return null;
+  return { i, bar: (((i - d.downbeat) % 4) + 4) % 4, ph: (t - b[i]) / (b[i + 1] - b[i]) };
+}
+// porta il deck sul primo «uno» di battuta della griglia; false se la griglia non c'e'
+function amBarSeek(deck) {
+  const d = decks[deck], b = d.beats || [];
+  if (b.length < 8) return false;
+  const k = [0, 1, 2, 3].map((x) => x).find((x) => (((x - d.downbeat) % 4) + 4) % 4 === 0);
+  if (k == null || b[k] == null) return false;
+  dc(deck, "seek", b[k]);
+  return true;
+}
+// aspetta che il deck che suona sia sull'ultimo battito prima dell'«uno»: il play dato ora parte sul battito successivo, cioe' all'«uno»
+async function amWaitBarStart(deck) {
+  for (let k = 0; k < 400 && AM.on; k++) {
+    const s = amSnap(deck), p = amBeatAt(deck, s.pos);
+    if (!p) return;
+    if (p.bar === 3 && p.ph > 0.1 && p.ph < 0.65) return;
+    await amSleep(15);
+  }
 }
 
 function amMixStep() {
