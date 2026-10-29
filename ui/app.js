@@ -21,11 +21,12 @@ const dc = (i, cmd, a = 0, b = 0) => inv("deck_cmd", { deck: i, cmd, a, b });
 /* =================================================================== COMPONENTI */
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
 
-/* adattamento alla finestra: sotto le misure minime (finestra piccola o zoom di Windows alto) la grafica si rimpicciolisce in blocco */
-const MIN_W = 1240, MIN_H = 940;
+/* adattamento alla finestra: la grafica e' disegnata per BASE_W x BASE_H e si scala in blocco per riempire la finestra,
+   rimpicciolendosi se e' piu' piccola (o lo zoom di Windows e' alto) e ingrandendosi se e' piu' grande (schermo pieno, 1440p, 4K) */
+const BASE_W = 1240, BASE_H = 940, MAX_K = 3;
 let uiK = 1;
 function fitUI() {
-  uiK = Math.min(1, innerHeight / MIN_H, innerWidth / MIN_W);
+  uiK = Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
   document.documentElement.style.setProperty("--k", uiK.toFixed(4));
   requestAnimationFrame(resizeCanvases);
 }
@@ -460,7 +461,8 @@ async function pickFile(opts = {}) {
 
 /* ---- canvas */
 function resizeCanvases() {
-  const dpr = window.devicePixelRatio || 1;
+  // con #app scalato da --k i canvas appaiono uiK volte piu' grandi: la risoluzione interna segue, cosi' restano nitidi
+  const dpr = (window.devicePixelRatio || 1) * uiK;
   $$("canvas").forEach((c) => { const w = Math.round(c.clientWidth * dpr), h = Math.round(c.clientHeight * dpr); if (w && (c.width !== w || c.height !== h)) { c.width = w; c.height = h; } });
   decks.forEach((d) => (d.over = null));
 }
@@ -976,11 +978,22 @@ T.event.listen("stems-progress", (e) => {
   decks.forEach((d, i) => {
     if (d.snap?.path === path) { d.stText = pct >= 100 ? "" : `stem ${pct}% ${gpu ? "GPU" : "CPU"}`; if (i === target) $("#stemStatus").textContent = d.stText; }
   });
-  const row = lib.rows.find((t) => t.path === path); if (row) $("#scanStatus").textContent = pct >= 100 ? "" : `Stem: ${row.title || path.split("\\").pop()} ${pct}%`;
+  showStemBar(path, pct);
 });
+/* barra di avanzamento della separazione, sotto le playlist */
+function showStemBar(path, pct) {
+  const bar = $("#stemBar");
+  if (pct >= 100) { if (bar.dataset.path === path) bar.hidden = true; return; }
+  const row = lib.rows.find((t) => t.path === path);
+  bar.dataset.path = path;
+  $(".sbn", bar).textContent = `Stem: ${row?.title || path.split("\\").pop()}`;
+  $(".sbp", bar).textContent = `${pct}%`;
+  bar.style.setProperty("--v", `${pct}%`);
+  bar.hidden = false;
+}
 T.event.listen("stems-ready", (e) => {
   const [path, ok] = e.payload;
-  $("#scanStatus").textContent = "";
+  showStemBar(path, 100);
   decks.forEach((d, i) => { if (d.snap?.path === path) { d.stText = ok ? "" : "errore stem"; if (i === target) $("#stemStatus").textContent = d.stText; } });
 });
 T.event.listen("stems-error", (e) => toast("Stem: " + e.payload[1]));
@@ -1198,7 +1211,7 @@ $("#tracks tbody").addEventListener("dblclick", (e) => {
   const t = trackById(+tr.dataset.id); const free = [...Array(activeDecks).keys()].find((k) => !decks[k].snap?.loaded && !decks[k].snap?.playing) ?? 0;
   loadTrack(free, t.path);
 });
-$("#tracks tbody").addEventListener("contextmenu", (e) => {
+$("#tracks tbody").addEventListener("contextmenu", async (e) => {
   const tr = e.target.closest("tr"); if (!tr) return; e.preventDefault();
   const id = +tr.dataset.id; if (!lib.sel.has(id)) { lib.sel = new Set([id]); renderRows(); showInspector(); }
   const ids = [...lib.sel];
@@ -1209,7 +1222,9 @@ $("#tracks tbody").addEventListener("contextmenu", (e) => {
   items.push("-");
   items.push(["Analizza (bpm, chiave, beatgrid)", () => inv("analyze_tracks", { ids })]);
   items.push(["Crea stem (salvati nella cartella «stems»)", () => inv("stems_queue", { ids, front: false })]);
-  items.push(["Elimina gli stem preparati", () => inv("stems_delete", { ids })]);
+  // l'eliminazione compare solo se almeno un brano selezionato ha gli stem pronti
+  const have = await inv("stems_have", { paths: ids.map((k) => trackById(k)?.path).filter(Boolean) }).catch(() => []);
+  if (have.some(Boolean)) items.push(["Elimina gli stem preparati", () => inv("stems_delete", { ids })]);
   if (lib.playlist !== null) items.push(["Rimuovi dalla playlist", () => removeFromPlaylist(ids)]);
   menu(e, items);
 });

@@ -216,6 +216,8 @@ pub struct Fx {
     pub div: usize,
     pub feel: u8,
     pp_lp: [f32; 2],
+    /// stato del passa-alto del TONE delle eco
+    pp_hp: [f32; 2],
     ph_z: [[f32; 4]; 2],
     ph_fb: [f32; 2],
     cr_hold: [f32; 2],
@@ -254,7 +256,7 @@ impl Fx {
         Fx {
             kind: FxKind::Filter, on: false, wet: 0.5, param: 0.5, sr,
             param2: 0.5, cf: ColorFilter::new(), fl_last: [0.0; 2],
-            div: 3, feel: 0, pp_lp: [0.0; 2], ph_z: [[0.0; 4]; 2], ph_fb: [0.0; 2], cr_hold: [0.0; 2], cr_cnt: 0.0, gate_g: 1.0,
+            div: 3, feel: 0, pp_lp: [0.0; 2], pp_hp: [0.0; 2], ph_z: [[0.0; 4]; 2], ph_fb: [0.0; 2], cr_hold: [0.0; 2], cr_cnt: 0.0, gate_g: 1.0,
             sc: [vec![0.0; (sr * 4.0) as usize], vec![0.0; (sr * 4.0) as usize]], sc_w: 0, sc_idx: i64::MIN, sc_mode: 0, sc_start: 0, sc_len: 0,
             rng: 0x1234_5678, nz: [Svf::default(); 2],
             delay: [vec![0.0; (sr * 2.0) as usize], vec![0.0; (sr * 2.0) as usize]],
@@ -305,6 +307,7 @@ impl Fx {
             self.delay[c].iter_mut().for_each(|v| *v = 0.0);
             self.sc[c].iter_mut().for_each(|v| *v = 0.0);
             self.pp_lp[c] = 0.0;
+            self.pp_hp[c] = 0.0;
             self.ph_z[c] = [0.0; 4];
             self.ph_fb[c] = 0.0;
             self.cr_hold[c] = 0.0;
@@ -315,20 +318,41 @@ impl Fx {
         self.gate_g = 1.0;
     }
 
-    /// Eco con tempo sincronizzato (TIME e FEEL): DEPTH = tono delle ripetizioni, FEEDBACK = quante ne restano.
+    /// TONE delle eco (`param`), bipolare come il filtro: 0,5 neutro, verso 0 passa-basso fino a 250 Hz (ripetizioni piu'
+    /// scure), verso 1 passa-alto fino a 3 kHz (piu' sottili). Scala logaritmica: tutta la corsa si sente.
+    /// Ritorna i coefficienti a un polo (passa-basso, passa-alto): 1 = passa-basso aperto, 0 = passa-alto spento.
+    fn tone_coefs(&self) -> (f32, f32) {
+        let pole = |fc: f32| 1.0 - (-2.0 * PI * fc / self.sr).exp();
+        let t = self.param - 0.5;
+        if t < -0.012 {
+            (pole(18_000.0 * (250.0f32 / 18_000.0).powf(-t * 2.0)), 0.0)
+        } else if t > 0.012 {
+            (1.0, pole(20.0 * (3_000.0f32 / 20.0).powf(t * 2.0)))
+        } else {
+            (1.0, 0.0)
+        }
+    }
+
+    /// Una ripetizione attraverso il TONE: e' quella che si sente e che torna nel feedback, cosi' ogni giro si colora di piu'.
+    fn tone(&mut self, c: usize, x: f32, a_lp: f32, a_hp: f32) -> f32 {
+        self.pp_lp[c] += (x - self.pp_lp[c]) * a_lp;
+        self.pp_hp[c] += (self.pp_lp[c] - self.pp_hp[c]) * a_hp;
+        self.pp_lp[c] - self.pp_hp[c]
+    }
+
+    /// Eco con tempo sincronizzato (TIME e FEEL): TONE = colore delle ripetizioni, FEEDBACK = quante ne restano.
     fn echo(&mut self, buf: &mut [f32], beat_len: f32) {
         let n = self.delay[0].len();
         let len = (self.step_beats() * beat_len as f64 * self.sr as f64) as usize;
         let len = len.clamp(64, n - 1);
         let fb = 0.1 + 0.8 * self.param2;
-        let a = 0.08 + 0.92 * self.param;
+        let (a_lp, a_hp) = self.tone_coefs();
         for f in buf.chunks_exact_mut(2) {
             let rp = (self.dpos + n - len) % n;
             for c in 0..2 {
-                let d = self.delay[c][rp];
-                self.pp_lp[c] += (d - self.pp_lp[c]) * a;
-                self.delay[c][self.dpos] = f[c] + self.pp_lp[c] * fb;
-                f[c] += d * self.wet;
+                let y = self.tone(c, self.delay[c][rp], a_lp, a_hp);
+                self.delay[c][self.dpos] = f[c] + y * fb;
+                f[c] += y * self.wet;
             }
             self.dpos = (self.dpos + 1) % n;
         }
@@ -339,17 +363,16 @@ impl Fx {
         let n = self.delay[0].len();
         let len = ((self.step_beats() * beat_len as f64 * self.sr as f64) as usize).clamp(64, n - 1);
         let fb = 0.1 + 0.8 * self.param2;
-        let a = 0.08 + 0.92 * self.param;
+        let (a_lp, a_hp) = self.tone_coefs();
         for f in buf.chunks_exact_mut(2) {
             let rp = (self.dpos + n - len) % n;
             let (dl, dr) = (self.delay[0][rp], self.delay[1][rp]);
-            self.pp_lp[0] += (dr - self.pp_lp[0]) * a;
-            self.pp_lp[1] += (dl - self.pp_lp[1]) * a;
+            let (yl, yr) = (self.tone(0, dl, a_lp, a_hp), self.tone(1, dr, a_lp, a_hp));
             let m = 0.5 * (f[0] + f[1]);
-            self.delay[0][self.dpos] = m + self.pp_lp[0] * fb;
-            self.delay[1][self.dpos] = self.pp_lp[1] * fb;
-            f[0] += dl * self.wet;
-            f[1] += dr * self.wet;
+            self.delay[0][self.dpos] = m + yr * fb;
+            self.delay[1][self.dpos] = yl * fb;
+            f[0] += yl * self.wet;
+            f[1] += yr * self.wet;
             self.dpos = (self.dpos + 1) % n;
         }
     }
@@ -612,7 +635,7 @@ mod timed_fx_tests {
     fn echo_time_follows_time_and_feel() {
         for (div, feel, expect) in [(3usize, 0u8, 0.25f64), (3, 1, 0.25 * 2.0 / 3.0), (3, 2, 0.375), (4, 0, 0.5), (2, 0, 0.125)] {
             let mut f = fx(FxKind::Echo);
-            f.div = div; f.feel = feel; f.wet = 1.0; f.param = 1.0; f.param2 = 0.0;
+            f.div = div; f.feel = feel; f.wet = 1.0; f.param = 0.5; f.param2 = 0.0;
             let mut x = vec![0f32; 44100 * 2];
             x[0] = 1.0; x[1] = 1.0;
             let y = run(&mut f, &x);
@@ -625,7 +648,7 @@ mod timed_fx_tests {
     #[test]
     fn pingpong_bounces_between_channels() {
         let mut f = fx(FxKind::PingPong);
-        f.div = 3; f.wet = 1.0; f.param = 1.0; f.param2 = 0.6;
+        f.div = 3; f.wet = 1.0; f.param = 0.5; f.param2 = 0.6;
         let mut x = vec![0f32; 44100 * 2];
         x[0] = 1.0; x[1] = 1.0;
         let y = run(&mut f, &x);
@@ -633,6 +656,29 @@ mod timed_fx_tests {
         let at = |n: usize, c: usize| y[(n * step) * 2 + c].abs();
         assert!(at(1, 0) > 0.3 && at(1, 1) < 0.05, "1a ripetizione a sinistra: L {} R {}", at(1, 0), at(1, 1));
         assert!(at(2, 1) > 0.1 && at(2, 0) < 0.05, "2a ripetizione a destra: L {} R {}", at(2, 0), at(2, 1));
+    }
+
+    /// TONE: gia' la prima ripetizione cambia colore. Verso 0 si spengono gli acuti, verso 1 i bassi, al centro passa tutto.
+    #[test]
+    fn echo_tone_colors_the_first_repeat() {
+        // livello della prima ripetizione (tra 0,25 e 0,5 s) di un'eco 1/2 a 120 bpm, senza feedback
+        let first_repeat = |kind: FxKind, tone: f32, hz: f32| {
+            let mut f = fx(kind);
+            f.div = 3; f.wet = 1.0; f.param = tone; f.param2 = 0.0;
+            let mut x = sine(44100, hz, 0.5);
+            x[(0.25 * SR) as usize * 2..].iter_mut().for_each(|v| *v = 0.0); // 0,25 s di suono e poi silenzio
+            let y = run(&mut f, &x);
+            rms(&y[(0.3 * SR) as usize * 2..(0.45 * SR) as usize * 2])
+        };
+        for kind in [FxKind::Echo, FxKind::PingPong] {
+            let (hi, lo) = (8000.0, 80.0);
+            let (hi_open, lo_open) = (first_repeat(kind, 0.5, hi), first_repeat(kind, 0.5, lo));
+            assert!(hi_open > 0.15 && lo_open > 0.15, "{kind:?} al centro passa tutto: acuti {hi_open} bassi {lo_open}");
+            let hi_dark = first_repeat(kind, 0.0, hi);
+            assert!(hi_dark < hi_open * 0.1, "{kind:?} TONE a 0 deve spegnere gli acuti: {hi_dark} contro {hi_open}");
+            let lo_thin = first_repeat(kind, 1.0, lo);
+            assert!(lo_thin < lo_open * 0.1, "{kind:?} TONE a 1 deve spegnere i bassi: {lo_thin} contro {lo_open}");
+        }
     }
 
     /// gater: aperto per la prima parte del passo e chiuso dopo, agganciato ai battiti
