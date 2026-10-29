@@ -1,4 +1,5 @@
-//! Decodifica di qualsiasi formato audio: Symphonia (nativo) con fallback su FFmpeg.
+//! Decodifica audio: Symphonia (nativo, MP3/AAC/FLAC/WAV/AIFF/OGG/ALAC/MKV) con FFmpeg facoltativo per i formati rari,
+//! usato solo se l'utente lo ha gia' installato (non viene distribuito con SpinLab).
 
 use std::fs::File;
 use std::io::Read;
@@ -19,8 +20,14 @@ pub fn decode_file(path: &str, target_sr: u32) -> Result<Vec<f32>, String> {
         Ok((data, sr)) if !data.is_empty() => Ok(resample_stereo(&data, sr, target_sr)),
         native => {
             let why = native.err().unwrap_or_else(|| "file vuoto".into());
-            decode_ffmpeg(path, target_sr)
-                .map_err(|e| format!("Formato non leggibile ({why}); FFmpeg: {e}"))
+            // FFmpeg non e' incluso in SpinLab (la sua licenza lo impedirebbe nelle versioni piu' complete): se l'utente lo ha installato
+            // si usa per i formati rari, altrimenti si spiega cosa fare
+            decode_ffmpeg(path, target_sr).map_err(|e| {
+                let ext = Path::new(path).extension().and_then(|e| e.to_str()).unwrap_or("?").to_uppercase();
+                format!(
+                    "Formato non supportato ({ext}): {why}. SpinLab legge MP3, AAC/M4A, FLAC, WAV, AIFF, OGG, ALAC e MKV. Per altri formati (WMA, Opus, AC3…)                      installa FFmpeg oppure converti il file. Dettaglio FFmpeg: {e}"
+                )
+            })
         }
     }
 }

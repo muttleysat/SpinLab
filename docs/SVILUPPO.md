@@ -18,6 +18,36 @@ I dati dell'utente (impostazioni, libreria, mappatura MIDI, modello degli stem) 
 
 **«Accesso negato (os error 5)» compilando.** Il programma è ancora aperto e Windows non lo lascia sostituire. Chiudi SpinLab (e le copie rimaste nel Gestore attività).
 
+## Creare l'installer e pubblicare un aggiornamento
+
+Prima volta sul PC: `python tools/fetch_model.py` (mette il modello degli stem in `src-tauri/models`, da dove l'installer lo include).
+La DLL dell'encoder MP3 e' gia' in `src-tauri/libs` (si ricostruisce con `tools/build_lame_dll.py`).
+
+Per ogni versione:
+
+1. Cambia il numero di versione in `src-tauri/tauri.conf.json` e in `src-tauri/Cargo.toml`.
+2. Se sono cambiate le dipendenze: `python tools/gen_third_party.py` (aggiorna `THIRD-PARTY-LICENSES.md`, che finisce nell'installer).
+3. Imposta la chiave di firma (vedi sotto) e crea l'installer: dalla cartella `src-tauri`
+   ```
+   set TAURI_SIGNING_PRIVATE_KEY=C:\percorso\della\chiave.key
+   cargo tauri build --config tauri.release.conf.json
+   ```
+   Risultato in `src-tauri/target/release/bundle/` (`nsis` e `msi`). Con `tauri.release.conf.json` l'installer include modello, DLL e licenze e crea i file firmati degli aggiornamenti.
+4. Crea il file che descrive la versione: `python tools/make_update_manifest.py 0.2.0 https://tuo.sito/spinlab "Cosa c'e' di nuovo"`.
+5. Pubblica `latest.json` e `SpinLab_0.2.0_x64-setup.exe` all'indirizzo scelto. Il programma controlla l'indirizzo scritto in `src-tauri/tauri.conf.json` (`plugins.updater.endpoints`).
+
+### Chiave di firma degli aggiornamenti
+
+Gli aggiornamenti sono firmati: il programma accetta solo file firmati con la chiave giusta. La chiave attuale (`%USERPROFILE%\.tauri\spinlab-dev-updater.key`) e' **solo per sviluppo, senza password**. **Prima della prima versione pubblica**:
+
+```
+cargo tauri signer generate -w %USERPROFILE%\.tauri\spinlab.key
+```
+
+(scegli una password), copia la chiave pubblica stampata in `plugins.updater.pubkey` di `tauri.conf.json` e **fai una copia di sicurezza della chiave privata e della password**: se le perdi, i programmi gia' installati non potranno piu' ricevere aggiornamenti. La chiave privata non va mai nel repository.
+
+L'indirizzo degli aggiornamenti e' ora quello di GitHub Releases del repository: funziona solo se il repository (o la release) e' pubblico. Per un prodotto commerciale conviene un server o uno spazio tuo (per esempio un bucket) e cambiare `endpoints`.
+
 ## Icone
 
 Le icone dell'app si generano da un'unica immagine quadrata 1024 x 1024 (con trasparenza):

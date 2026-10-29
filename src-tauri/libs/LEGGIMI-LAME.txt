@@ -1,0 +1,9 @@
+libmp3lame.dll - encoder MP3 LAME 3.100
+======================================
+Licenza: GNU LGPL (testo in LICENSE-LAME.txt). Sito e sorgenti ufficiali: https://lame.sourceforge.io
+
+Questa DLL e' costruita dai sorgenti ufficiali di LAME 3.100 senza modifiche, con lo script tools/build_lame_dll.py del progetto SpinLab.
+SpinLab la carica a richiesta, solo per registrare in MP3. Potete sostituirla con una vostra versione compatibile
+(stesse funzioni: lame_init, lame_set_*, lame_encode_buffer_interleaved_ieee_float, lame_encode_flush_nogap, lame_close).
+
+This DLL is LAME 3.100 built unmodified from the official sources (https://lame.sourceforge.io). You may replace it with your own build.

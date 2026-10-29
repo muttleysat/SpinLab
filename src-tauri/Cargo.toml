@@ -24,10 +24,14 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png"]
 base64 = "0.22"
 midir = "0.10"
 hound = "3.5"
-mp3lame-encoder = "0.2"
+libloading = "0.8"
 ort = { version = "=2.0.0-rc.15" }
 flacenc = "0.5.1"
 claxon = "0.4.3"
+
+# aggiornamenti automatici (solo desktop)
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
 
 # ASIO e DirectML esistono solo su Windows
 [target.'cfg(windows)'.dependencies]

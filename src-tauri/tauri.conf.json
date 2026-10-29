@@ -3,18 +3,48 @@
   "productName": "SpinLab",
   "version": "0.1.0",
   "identifier": "com.spinlab.dj",
-  "build": { "frontendDist": "../ui" },
+  "build": {
+    "frontendDist": "../ui"
+  },
   "app": {
     "withGlobalTauri": true,
     "windows": [
-      { "title": "SpinLab DJ", "width": 1500, "height": 900, "minWidth": 1100, "minHeight": 700, "dragDropEnabled": true }
+      {
+        "title": "SpinLab DJ",
+        "width": 1500,
+        "height": 900,
+        "minWidth": 1100,
+        "minHeight": 700,
+        "dragDropEnabled": true
+      }
     ],
-    "security": { "csp": null }
+    "security": {
+      "csp": null
+    }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "windows": { "nsis": { "installerHooks": "./windows/hooks.nsh" } },
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.ico"]
+    "windows": {
+      "nsis": {
+        "installerHooks": "./windows/hooks.nsh"
+      }
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5RjQ1MUMwMUI4RkEzMDMKUldRRG80OGJ3RkgweVhvWHZXMW52bWZLZStzSUkwQTdWditjeitxUklsSkdJN1BnSmhuMXFnUm0K",
+      "endpoints": [
+        "https://github.com/muttleysat/SpinLab/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

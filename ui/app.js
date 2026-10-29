@@ -1569,6 +1569,53 @@ $("#helpClose").onclick = () => $("#helpDlg").close();
 // informazioni e crediti (con il logo e la dicitura di Steinberg per ASIO)
 const openAbout = async () => { try { $("#aboutVer").textContent = await T.app.getVersion(); } catch (e) { /* resta la versione scritta nella pagina */ } $("#aboutDlg").showModal(); };
 $("#aboutBtn").onclick = openAbout; $("#aboutBtn2").onclick = openAbout;
+
+/* ============================================================ AGGIORNAMENTI
+   Il programma chiede a un indirizzo fisso (impostato in tauri.conf.json) se esiste una versione piu' nuova; il file scaricato e' firmato
+   e il programma lo accetta solo se la firma corrisponde alla chiave pubblica che porta dentro. */
+const upd = { update: null, busy: false };
+const autoUpd = { get: () => { try { return localStorage.getItem("spinlab.autoupd") !== "0"; } catch (e) { return true; } }, set: (v) => { try { localStorage.setItem("spinlab.autoupd", v ? "1" : "0"); } catch (e) { /* senza memoria locale resta acceso */ } } };
+function updMsg(t) { const m = $("#abUpdMsg"); if (m) m.textContent = t || ""; }
+async function checkUpdates(silent) {
+  const U = T.updater;
+  if (!U) { if (!silent) updMsg("Gli aggiornamenti non sono disponibili in questa versione."); return null; }
+  if (upd.busy) return upd.update;
+  if (!silent) { $("#abUpd").disabled = true; updMsg("Controllo in corso…"); }
+  try {
+    const u = await U.check();
+    upd.update = u || null;
+    if (u) {
+      $("#abUpd").textContent = `INSTALLA LA VERSIONE ${u.version}`;
+      updMsg(`Disponibile la versione ${u.version}` + (u.body ? ` — ${String(u.body).slice(0, 200)}` : ""));
+      $("#updBannerTxt").textContent = `Aggiornamento disponibile: SpinLab ${u.version}`; $("#updBanner").hidden = false;
+    } else if (!silent) { updMsg("SpinLab è già aggiornato."); $("#abUpd").textContent = "CONTROLLA AGGIORNAMENTI"; }
+    return upd.update;
+  } catch (e) {
+    if (!silent) updMsg("Controllo non riuscito (serve la connessione a internet): " + (e?.message || e));
+    return null;
+  } finally { if (!silent) $("#abUpd").disabled = false; }
+}
+async function installUpdate() {
+  const u = upd.update; if (!u || upd.busy) return;
+  const playing = decks.some((d) => d.snap?.playing), rec = !!$("#recInd") && !$("#recInd").hidden;
+  if ((playing || rec) && !confirm((rec ? "La registrazione è in corso. " : "Un brano sta suonando. ") + "L'installazione chiude SpinLab e interrompe l'audio. Continuare?")) return;
+  upd.busy = true; $("#abUpd").disabled = true;
+  let tot = 0, got = 0;
+  try {
+    await u.downloadAndInstall((ev) => {
+      if (ev.event === "Started") { tot = ev.data?.contentLength || 0; updMsg("Scarico l'aggiornamento…"); }
+      else if (ev.event === "Progress") { got += ev.data?.chunkLength || 0; updMsg(tot ? `Scarico l'aggiornamento… ${Math.round((got / tot) * 100)}%` : "Scarico l'aggiornamento…"); }
+      else if (ev.event === "Finished") updMsg("Installazione in corso: SpinLab si riaprirà da solo.");
+    });
+  } catch (e) { updMsg("Aggiornamento non riuscito: " + (e?.message || e)); upd.busy = false; $("#abUpd").disabled = false; }
+}
+$("#abUpd").onclick = () => (upd.update ? installUpdate() : checkUpdates(false));
+$("#abAuto").checked = autoUpd.get();
+$("#abAuto").onchange = () => autoUpd.set($("#abAuto").checked);
+$("#updBannerX").onclick = () => ($("#updBanner").hidden = true);
+$("#updBannerGo").onclick = () => { $("#updBanner").hidden = true; openAbout(); };
+// controllo silenzioso a qualche secondo dall'avvio, a schermata d'avvio chiusa
+setTimeout(() => { if (autoUpd.get()) checkUpdates(true); }, 9000);
 $("#aboutClose").onclick = () => $("#aboutDlg").close();
 document.addEventListener("click", (e) => { const a = e.target.closest?.("[data-help]"); if (a) { e.preventDefault(); openHelp(a.dataset.help); } });
 $("#helpDlg").addEventListener("click", (e) => { if (e.target === $("#helpDlg")) $("#helpDlg").close(); });

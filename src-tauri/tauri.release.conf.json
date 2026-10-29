@@ -1,0 +1,11 @@
+{
+  "bundle": {
+    "createUpdaterArtifacts": true,
+    "resources": {
+      "models/htdemucs.onnx": "models/htdemucs.onnx",
+      "libs/libmp3lame.dll": "libmp3lame.dll",
+      "libs/LICENSE-LAME.txt": "licenses/LICENSE-LAME.txt",
+      "../THIRD-PARTY-LICENSES.md": "licenses/THIRD-PARTY-LICENSES.md"
+    }
+  }
+}

@@ -142,6 +142,8 @@
 </section>
 </div>
 
+<div id="updBanner" hidden><span id="updBannerTxt"></span><button id="updBannerGo">Dettagli</button><button id="updBannerX" title="Più tardi">×</button></div>
+
 <dialog id="aboutDlg">
   <div class="ab-arc l"></div><div class="ab-arc r"></div>
   <div class="ab-card">
@@ -155,6 +157,9 @@
     <div class="ab-note">ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</div>
     <div class="ab-line"></div>
     <div class="ab-ver">Versione <span id="aboutVer">0.1.0</span></div>
+    <div class="ab-upd"><button id="abUpd" class="ab-small">CONTROLLA AGGIORNAMENTI</button>
+      <div id="abUpdMsg" class="ab-note"></div>
+      <label class="ab-auto"><input type="checkbox" id="abAuto" checked> Controlla automaticamente all'avvio</label></div>
     <button id="aboutClose" class="ab-close">CHIUDI</button>
   </div>
 </dialog>

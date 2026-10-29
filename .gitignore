@@ -10,3 +10,6 @@ src-tauri/target/
 asio-sdk/
 ASIO-SDK*
 asiosdk*
+
+# modello degli stem (166 MB): lo scarica tools/fetch_model.py
+src-tauri/models/

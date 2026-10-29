@@ -7,6 +7,7 @@ mod camelot;
 mod decode;
 mod engine;
 mod fx;
+mod lame;
 mod library;
 mod midi;
 mod recorder;
@@ -1249,6 +1250,7 @@ async fn audio_set(app: State<'_, App>, pv: State<'_, Arc<Previewer>>, settings:
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             let dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&dir)?;

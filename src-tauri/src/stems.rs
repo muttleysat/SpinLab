@@ -21,9 +21,25 @@ const MAGIC: &[u8; 8] = b"SPSTEM01";
 /// stem compressi: 4 flussi FLAC (uno per stem) decodificabili in parallelo
 const MAGIC2: &[u8; 8] = b"SPSTEM02";
 
+/// Il modello viaggia dentro l'installer (cartella «models» accanto al programma): se c'e' si usa quello, senza scaricare niente.
+/// In sviluppo si cerca in `src-tauri/models` (lo mette `tools/fetch_model.py`); in ultimo, nei dati dell'utente (dove lo scarica `ensure_model`).
 pub fn model_path(dir: &Path) -> PathBuf {
-    dir.join("models").join("htdemucs.onnx")
+    let mut c: Vec<PathBuf> = vec![];
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(d) = exe.parent() {
+            c.push(d.join("models").join(MODEL_FILE));
+            c.push(d.join("resources").join("models").join(MODEL_FILE));
+            for up in d.ancestors().take(4) {
+                c.push(up.join("models").join(MODEL_FILE));
+                c.push(up.join("src-tauri").join("models").join(MODEL_FILE));
+            }
+        }
+    }
+    c.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("models").join(MODEL_FILE));
+    c.into_iter().find(|p| p.is_file()).unwrap_or_else(|| dir.join("models").join(MODEL_FILE))
 }
+
+const MODEL_FILE: &str = "htdemucs.onnx";
 
 /// file di cache degli stem di un brano (chiave: percorso, dimensione e data di modifica)
 pub fn cache_path(dir: &Path, track: &str) -> PathBuf {
@@ -80,7 +96,7 @@ pub fn delete_for(dir: &Path, track: &str) {
 
 const MODEL_URL: &str = "https://huggingface.co/adowu/htdemucs-onnx/resolve/main/htdemucs_fp16weights.onnx";
 
-/// Scarica il modello (circa 166 MB, licenza MIT) la prima volta che serve, con il curl incluso nel sistema.
+/// Se il modello non e' stato trovato (installazione senza il file, o sviluppo) lo scarica nei dati dell'utente, con il curl del sistema.
 pub fn ensure_model(model: &Path) -> Result<(), String> {
     if model.exists() {
         return Ok(());

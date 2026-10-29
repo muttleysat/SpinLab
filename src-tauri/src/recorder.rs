@@ -1,7 +1,7 @@
 //! Registrazione dell'uscita master su file WAV (16 o 24 bit) o MP3. Il thread audio manda solo i blocchi su un canale
 //! senza mai aspettare; un thread a parte li scrive su disco, cosi' il disco lento non provoca scatti.
 
-use mp3lame_encoder::{Bitrate, Builder, FlushNoGap, InterleavedPcm, Quality};
+use crate::lame::Lame;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -100,7 +100,7 @@ impl Recorder {
 
 enum Sink {
     Wav(hound::WavWriter<std::io::BufWriter<std::fs::File>>, Format),
-    Mp3(mp3lame_encoder::Encoder, std::io::BufWriter<std::fs::File>),
+    Mp3(Lame, std::io::BufWriter<std::fs::File>),
 }
 
 impl Sink {
@@ -112,18 +112,7 @@ impl Sink {
                 Ok(Sink::Wav(w, fmt))
             }
             Format::Mp3(kbps) => {
-                let mut b = Builder::new().ok_or("encoder MP3 non disponibile")?;
-                b.set_num_channels(2).map_err(|e| format!("{e:?}"))?;
-                b.set_sample_rate(sr).map_err(|e| format!("{e:?}"))?;
-                b.set_brate(match kbps {
-                    128 => Bitrate::Kbps128,
-                    192 => Bitrate::Kbps192,
-                    256 => Bitrate::Kbps256,
-                    _ => Bitrate::Kbps320,
-                })
-                .map_err(|e| format!("{e:?}"))?;
-                b.set_quality(Quality::Good).map_err(|e| format!("{e:?}"))?;
-                let enc = b.build().map_err(|e| format!("{e:?}"))?;
+                let enc = Lame::new(sr, kbps)?;
                 let f = std::fs::File::create(path).map_err(|e| format!("non riesco a creare il file: {e}"))?;
                 Ok(Sink::Mp3(enc, std::io::BufWriter::new(f)))
             }
@@ -144,13 +133,8 @@ impl Sink {
                 Ok(())
             }
             Sink::Mp3(enc, f) => {
-                let pcm: Vec<i16> = block.iter().map(|v| (v.clamp(-1.0, 1.0) * 32767.0).round() as i16).collect();
-                let mut out: Vec<u8> = Vec::new();
-                out.reserve(mp3lame_encoder::max_required_buffer_size(pcm.len() / 2));
-                let n = enc.encode(InterleavedPcm(&pcm), out.spare_capacity_mut()).map_err(|e| format!("{e:?}"))?;
-                // SAFETY: l'encoder ha scritto esattamente n byte nella capacita' riservata
-                unsafe { out.set_len(n) };
-                f.write_all(&out).map_err(|e| e.to_string())
+                let bytes = enc.encode(block)?;
+                f.write_all(bytes).map_err(|e| e.to_string())
             }
         }
     }
@@ -159,12 +143,7 @@ impl Sink {
         match self {
             Sink::Wav(w, _) => w.finalize().map_err(|e| e.to_string()),
             Sink::Mp3(mut enc, mut f) => {
-                let mut out: Vec<u8> = Vec::new();
-                out.reserve(mp3lame_encoder::max_required_buffer_size(0).max(8192));
-                let n = enc.flush::<FlushNoGap>(out.spare_capacity_mut()).map_err(|e| format!("{e:?}"))?;
-                // SAFETY: come sopra
-                unsafe { out.set_len(n) };
-                f.write_all(&out).map_err(|e| e.to_string())?;
+                f.write_all(enc.finish()?).map_err(|e| e.to_string())?;
                 f.flush().map_err(|e| e.to_string())
             }
         }

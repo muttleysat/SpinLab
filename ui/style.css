@@ -417,3 +417,11 @@ dialog .hint a { color: var(--accent); }
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px)); }
 .ab-arc.l { left: -3%; background: conic-gradient(from 90deg, transparent 0 14%, #18b6ff 28% 44%, transparent 58%); filter: drop-shadow(0 0 6px #18b6ff); }
 .ab-arc.r { right: -3%; background: conic-gradient(from 270deg, transparent 0 14%, #ffa51f 28% 44%, transparent 58%); filter: drop-shadow(0 0 6px #ffa51f); }
+
+.ab-upd { margin-top: 14px; display: grid; gap: 6px; justify-items: center; }
+.ab-small { padding: 6px 16px; border-radius: 6px; border: 1px solid #1a82b8; background: transparent; color: #4fd3ff; letter-spacing: .14em; font-size: 11px; cursor: pointer; }
+.ab-small:hover { background: rgba(24,182,255,.12); } .ab-small:disabled { opacity: .5; cursor: default; }
+.ab-auto { display: flex; gap: 6px; align-items: center; margin: 2px 0 0; font-size: 10px; color: #7f93b3; letter-spacing: 0; }
+#updBanner { position: fixed; right: 18px; bottom: 18px; z-index: 900; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px;
+  background: #0d1828; border: 1px solid #1a82b8; box-shadow: 0 8px 30px #000a; font-size: 13px; }
+#updBanner[hidden] { display: none; } #updBanner button { padding: 4px 10px; font-size: 12px; }
