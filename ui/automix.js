@@ -39,10 +39,16 @@ function bpmDistance(a, b) {
 }
 function amOrderTracks(rows, first) {
   let list = rows.filter((t) => t.path);
+  const o = AM.opt.order, byBpm = o === "bpmup" || o === "bpmdown";
+  if (byBpm) {
+    // per tempo: i brani senza BPM vanno in fondo, a parita' di tempo si resta nell'ordine della tabella
+    const key = (t) => (t.bpm > 0 ? (o === "bpmup" ? t.bpm : -t.bpm) : Infinity);
+    list = list.map((t, k) => [t, k]).sort((a, b) => (key(a[0]) === key(b[0]) ? a[1] - b[1] : key(a[0]) < key(b[0]) ? -1 : 1)).map((x) => x[0]);
+  }
   if (first != null) {
     const k = list.findIndex((t) => t.id === first);
-    // «come in elenco»: si va avanti dal brano di partenza fino in fondo (i brani sopra suonano solo con «Ripeti»); gli altri ordini li usano tutti
-    if (k > 0) list = AM.opt.order === "list" && !AM.opt.loop ? list.slice(k) : [...list.slice(k), ...list.slice(0, k)];
+    // «come in elenco» e per BPM: si va avanti dal brano di partenza fino in fondo (i brani sopra suonano solo con «Ripeti»); gli altri ordini li usano tutti
+    if (k > 0) list = (o === "list" || byBpm) && !AM.opt.loop ? list.slice(k) : [...list.slice(k), ...list.slice(0, k)];
   }
   if (AM.opt.order === "shuffle") {
     const head = first != null ? list.splice(0, 1) : [];
@@ -73,17 +79,29 @@ function amBuildQueue() {
   if (pth) q = q.filter((t) => t.path !== pth);
   return { q, playing };
 }
+// da fermo la coda e' un'anteprima che si rifa' quando cambia qualcosa (cartella, ordine, brano che suona o selezionato),
+// a meno che tu non l'abbia modificata a mano: in quel caso resta com'e' finche' non premi «Ripristina»
+function amSyncPreview() {
+  if (AM.on) return;
+  const rows = (typeof lib !== "undefined" && lib.rows) || [];
+  const pl = [0, 1].map((i) => (amSnap(i).playing && amSnap(i).loaded ? amSnap(i).path : "")).join("|");
+  const sig = [rows.length, rows[0]?.id, rows[rows.length - 1]?.id, AM.opt.order, AM.opt.loop, lib.last, pl].join("/");
+  if (sig === AM.sig || (AM.edited && AM.queue.length)) { if (!AM.edited) AM.sig = sig; return; }
+  AM.sig = sig; AM.queue = amBuildQueue().q; AM.idx = 0;
+}
 function amStart() {
   if (!((typeof lib !== "undefined" && lib.rows) || []).length) { toast("AUTOMIX: scegli prima una cartella o una playlist con dei brani"); return; }
-  const { q, playing } = amBuildQueue();
-  AM.queue = q;
+  amSyncPreview();
+  const playing = [0, 1].find((i) => amSnap(i).playing && amSnap(i).loaded);
+  if (playing != null) { const pth = amSnap(playing).path; AM.queue = AM.queue.filter((t) => t.path !== pth); }
+  if (!AM.queue.length) { toast("AUTOMIX: la coda e' vuota"); return; }
   AM.idx = 0; AM.mix = null; AM.ramp = null; AM.on = true; AM.busy = false;
   AM.cur = playing ?? [0, 1].find((i) => !amSnap(i).loaded) ?? 0; AM.nxt = 1 - AM.cur;
   amMsg(playing != null ? "In corso: il prossimo brano parte alla fine di quello che suona" : "Avvio…");
   amRender();
 }
 function amStop(why) {
-  AM.on = false; AM.busy = false; AM.mix = null; AM.ramp = null;
+  AM.on = false; AM.busy = false; AM.mix = null; AM.ramp = null; AM.edited = false; AM.sig = "";
   amMsg(why || "Fermato. I deck restano come sono.");
   amRender();
 }
@@ -98,7 +116,7 @@ function amAdoptManual() {
   const s = amSnap(AM.nxt), d = decks[AM.nxt];
   if (!s.loaded || s.playing || d.loading || !s.path) return;
   const next = AM.queue[AM.idx];
-  if (next && next.path === s.path) return;
+  if ((next && next.path === s.path) || s.path === AM.lastPre) return;   // quello preparato da AUTOMIX stesso non e' una scelta tua
   const known = (typeof lib !== "undefined" && lib.rows.find((t) => t.path === s.path)) || { id: -1, path: s.path, title: s.name, artist: "", bpm: s.bpm_orig };
   const at = AM.queue.findIndex((t, k) => k >= AM.idx && t.path === s.path);
   if (at >= 0) AM.queue.splice(at, 1);
@@ -158,6 +176,7 @@ async function amPlayFresh() {
 async function amPreload(next) {
   AM.busy = true;
   try {
+    AM.lastPre = next.path;
     amMsg(`Preparo «${next.title || next.path}»…`);
     await loadTrack(AM.nxt, next.path);
     for (let k = 0; k < 80 && !amReady(AM.nxt, next.path); k++) await amSleep(100);
@@ -263,35 +282,46 @@ function amRender() {
   go.textContent = AM.on ? "FERMA AUTOMIX" : "AVVIA AUTOMIX"; go.classList.toggle("on", AM.on);
   $("#amSkip").disabled = !AM.on;
   $("#amStatus").textContent = AM.on ? AM.msg : AM.msg || "";
-  const cur = amSnap(AM.cur), list = [], row = (t, cls, n) => `<div class="amq${cls}">${n ? n + ". " : ""}${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}<span>${t.bpm ? Math.round(t.bpm) : ""} ${esc(t.key || "")}</span></div>`;
-  if (AM.on) {
-    if (cur.loaded) list.push(`<div class="amq now">▶ ${esc(cur.name || "")}</div>`);
-    const left = AM.queue.length - AM.idx;
-    list.push(`<div class="amh">PROSSIMI${AM.opt.loop ? " (poi ricomincia)" : ""}${left > 0 ? ` · ${left} in coda` : ""}</div>`);
-    AM.queue.slice(AM.idx, AM.idx + 10).forEach((t, k) => list.push(row(t, k === 0 ? " next" : "", k + 1)));
-    if (left > 10) list.push(`<div class="amh">… altri ${left - 10}</div>`);
-  } else {
-    // da fermo si vede cosa suonerebbe: l'elenco della tabella, dal brano che suona o selezionato
-    const rows = (typeof lib !== "undefined" && lib.rows) || [], { q: pre, playing } = amBuildQueue();
-    list.push(`<div class="amhelp">AUTOMIX suona i brani che vedi nella tabella della libreria (playlist, cartella o ricerca), nell'ordine scelto. Parte dal brano che sta suonando; se nessuno suona, da quello selezionato; se non ce n'è, dal primo.</div>`);
+  amSyncPreview();
+  const cur = amSnap(AM.cur), list = [], SHOW = 40, base = AM.on ? AM.idx : 0;
+  const row = (t, k) => `<div class="amq${k === 0 ? " next" : ""}" data-k="${base + k}"><b>${k + 1}.</b><em title="${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}">${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}</em><span>${t.bpm ? Math.round(t.bpm) : "–"} ${esc(t.key || "")}</span>`
+    + `<i data-act="top" title="Mettilo per primo">⤒</i><i data-act="up" title="Sposta su">▲</i><i data-act="dn" title="Sposta giù">▼</i><i data-act="del" title="Toglilo dalla coda">✕</i></div>`;
+  if (AM.on && cur.loaded) list.push(`<div class="amq now"><em>▶ ${esc(cur.name || "")}</em></div>`);
+  const left = AM.queue.length - base;
+  if (AM.on) list.push(`<div class="amh">PROSSIMI${AM.opt.loop ? " (poi ricomincia)" : ""} · ${left} in coda</div>`);
+  else {
+    const rows = (typeof lib !== "undefined" && lib.rows) || [];
+    list.push(`<div class="amhelp">AUTOMIX suona i brani della tabella della libreria (playlist, cartella o ricerca) nell'ordine scelto, a partire dal brano che suona o da quello selezionato. Puoi cambiare la coda qui sotto: sposta, togli o metti un brano per primo.</div>`);
     if (!rows.length) list.push(`<div class="amh">Apri una playlist o una cartella per avere dei brani</div>`);
-    else if (AM.opt.order === "shuffle") list.push(`<div class="amh">CASUALE · ${rows.length} brani: l'ordine si decide all'avvio</div>`);
-    else {
-      list.push(`<div class="amh">${playing != null ? "SUONERANNO DOPO QUELLO IN CORSO" : "SUONERANNO"} · ${pre.length} brani</div>`);
-      pre.slice(0, 10).forEach((t, k) => list.push(row(t, k === 0 ? " next" : "", k + 1)));
-      if (pre.length > 10) list.push(`<div class="amh">… altri ${pre.length - 10}</div>`);
-    }
+    else list.push(`<div class="amh">${AM.edited ? "CODA MODIFICATA" : "SUONERANNO"} · ${left} brani${AM.edited ? ` <u data-act="reset">ripristina</u>` : ""}</div>`);
   }
+  AM.queue.slice(base, base + SHOW).forEach((t, k) => list.push(row(t, k)));
+  if (left > SHOW) list.push(`<div class="amh">… altri ${left - SHOW}</div>`);
   const html = list.join("");
   const q = $("#amQueue"); if (q._h !== html) { q._h = html; q.innerHTML = html; }
+}
+
+// modifica della coda con i pulsanti sulle righe
+function amEdit(act, k) {
+  const Q = AM.queue, floor = AM.on ? AM.idx : 0;
+  if (act === "reset") { AM.edited = false; AM.sig = ""; return; }
+  if (k < floor || k >= Q.length) return;
+  if (act === "del") Q.splice(k, 1);
+  else if (act === "top") Q.splice(floor, 0, Q.splice(k, 1)[0]);
+  else if (act === "up" && k > floor) [Q[k - 1], Q[k]] = [Q[k], Q[k - 1]];
+  else if (act === "dn" && k < Q.length - 1) [Q[k + 1], Q[k]] = [Q[k], Q[k + 1]];
+  AM.edited = true;
+  amRender();
 }
 
 function bindAutomix() {
   if (!$("#amGo")) return;
   $("#amGo").onclick = () => (AM.on ? amStop() : amStart());
   $("#amSkip").onclick = amSkip;
+  $("#amQueue").addEventListener("click", (e) => { const a = e.target.closest("[data-act]"); if (!a) return; const r = a.closest("[data-k]"); amEdit(a.dataset.act, r ? +r.dataset.k : -1); });
   const bind = (id, key, num) => { const e = $(id); e.value = String(AM.opt[key]); e.onchange = () => { AM.opt[key] = num ? +e.value : e.value; amSave(); }; };
   bind("#amBars", "bars", true); bind("#amStyle", "style"); bind("#amOrder", "order");
+  $("#amOrder").addEventListener("change", () => { AM.edited = false; AM.sig = ""; });
   $("#amLoop").checked = !!AM.opt.loop; $("#amLoop").onchange = () => { AM.opt.loop = $("#amLoop").checked; amSave(); };
   setInterval(() => { amTick().catch((e) => { AM.busy = false; amMsg("Errore: " + (e?.message || e)); }); amRampStep(); amRender(); }, 250);
 }

@@ -143,7 +143,8 @@ AUTOMIX suona da solo i brani della libreria, uno dopo l'altro, con transizioni 
 4. **FERMA AUTOMIX** lo ferma: i deck restano come sono. **Salta** passa subito al brano successivo con una transizione.
 
 **Le impostazioni**
-- **Ordine.** *Come in elenco*, *Casuale*, oppure *Intelligente*: dopo ogni brano sceglie quello con tonalità (codice Camelot) e tempo più vicini, per mix più armonici.
+- **Ordine.** *Come in elenco* (quello della tabella), *BPM crescente* o *BPM decrescente* (i brani senza BPM vanno in fondo), *Intelligente* (dopo ogni brano sceglie quello con tonalità, codice Camelot, e tempo più vicini, per mix più armonici) oppure *Casuale*.
+- **La coda si può modificare.** Sotto le impostazioni c'è l'elenco dei prossimi brani. Su ogni riga: ⤒ lo mette per primo, ▲ e ▼ lo spostano, ✕ lo toglie. Da fermo, *ripristina* annulla le modifiche; cambiando l'ordine la coda si rifà da capo.
 - **Transizione.** Quante battute dura il mix: 4, 8, 16 o 32. A 120 BPM, 16 battute sono circa 32 secondi.
 - **Stile.** *Scambio dei bassi*: il nuovo brano entra senza bassi e a metà transizione i bassi passano da un brano all'altro, così non si sommano due bassi. *Dissolvenza semplice*: solo il crossfader. *Taglio rapido*: due battute, senza allineare il tempo.
 - **Ripeti.** Quando la coda finisce, ricomincia da capo.
