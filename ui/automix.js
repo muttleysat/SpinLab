@@ -39,7 +39,11 @@ function bpmDistance(a, b) {
 }
 function amOrderTracks(rows, first) {
   let list = rows.filter((t) => t.path);
-  if (first != null) { const k = list.findIndex((t) => t.id === first); if (k > 0) list = [...list.slice(k), ...list.slice(0, k)]; }
+  if (first != null) {
+    const k = list.findIndex((t) => t.id === first);
+    // «come in elenco»: si va avanti dal brano di partenza fino in fondo (i brani sopra suonano solo con «Ripeti»); gli altri ordini li usano tutti
+    if (k > 0) list = AM.opt.order === "list" && !AM.opt.loop ? list.slice(k) : [...list.slice(k), ...list.slice(0, k)];
+  }
   if (AM.opt.order === "shuffle") {
     const head = first != null ? list.splice(0, 1) : [];
     for (let k = list.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [list[k], list[j]] = [list[j], list[k]]; }
@@ -63,8 +67,11 @@ function amStart() {
   const rows = (typeof lib !== "undefined" && lib.rows) || [];
   if (!rows.length) { toast("AUTOMIX: scegli prima una cartella o una playlist con dei brani"); return; }
   const playing = [0, 1].find((i) => amSnap(i).playing && amSnap(i).loaded);
-  AM.queue = amOrderTracks(rows, playing == null ? lib.last : null);
-  if (playing != null) { const pth = amSnap(playing).path; AM.queue = AM.queue.filter((t) => t.path !== pth); }
+  // la coda parte dal brano che suona (o da quello selezionato) e segue l'elenco com'e' ordinato in tabella
+  const pth = playing != null ? amSnap(playing).path : null;
+  const here = pth ? rows.find((t) => t.path === pth) : null;
+  AM.queue = amOrderTracks(rows, here ? here.id : playing == null ? lib.last : null);
+  if (pth) AM.queue = AM.queue.filter((t) => t.path !== pth);
   AM.idx = 0; AM.mix = null; AM.ramp = null; AM.on = true; AM.busy = false;
   AM.cur = playing ?? [0, 1].find((i) => !amSnap(i).loaded) ?? 0; AM.nxt = 1 - AM.cur;
   amMsg(playing != null ? "In corso: il prossimo brano parte alla fine di quello che suona" : "Avvio…");
