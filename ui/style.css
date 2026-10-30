@@ -410,6 +410,9 @@ dialog .hint a { color: var(--accent); }
 .ab-sec::before, .ab-sec::after { content: ""; flex: 1; height: 1px; background: #1b5878; }
 .ab-asio { height: 58px; width: auto; display: block; margin: 0 auto; }
 .ab-note { margin-top: 8px; font-size: 10px; line-height: 1.4; color: #7f93b3; }
+.ab-lic { margin-top: 8px; font-size: 10px; color: #7f93b3; text-align: left; }
+.ab-lic summary { cursor: pointer; text-align: center; }
+.ab-lic pre { margin: 8px 0 0; max-height: 140px; overflow: auto; white-space: pre-wrap; font: 10px/1.4 monospace; color: #9fb0cc; }
 .ab-ver { font-size: 13px; color: #b9c8e2; }
 .ab-close { margin-top: 18px; padding: 8px 34px; border-radius: 6px; border: 1px solid #1a82b8; background: transparent; color: #4fd3ff; letter-spacing: .22em; font-size: 12px; cursor: pointer; }
 .ab-close:hover { background: rgba(24,182,255,.12); }

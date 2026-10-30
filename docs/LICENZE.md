@@ -31,6 +31,23 @@ Cosa risulta:
 
 Quindi: l'etichetta MIT esiste, ma i pesi dipendono da dati con restrizioni non commerciali. Usarli in un prodotto venduto e' una **zona grigia**. Molte applicazioni li usano, ma il rischio e' di chi vende.
 
+### Le due letture della licenza MIT (aggiornato il 30 ottobre 2026)
+
+Il repository di Demucs contiene una licenza MIT (Copyright (c) Meta, Inc. and its affiliates) che permette espressamente di «use, copy, modify, merge, publish, distribute, sublicense, and/or sell». Il testo e' ora riportato nella scheda Informazioni del programma e in `THIRD-PARTY-LICENSES.md`.
+
+- **A favore della vendita**: la MIT e' esplicita e pubblica; i dati di addestramento di norma non sono «copiati» nei pesi; il vincolo di MUSDB18 e' spesso letto come condizione d'uso del dataset, che vincola chi l'ha scaricato (Meta). Molti prodotti commerciali usano Demucs e non risultano contestazioni.
+- **Contro**: quel testo e' nel repository del codice, non e' detto che copra i **pesi** (scaricati dai server di Meta); la MIT concede solo i diritti che chi la applica possiede; il manutentore ha scritto che la licenza dei pesi non e' chiara. Il rischio, se qualcuno contesta, e' di chi vende.
+
+Conclusione: vendere con HT-Demucs e' una scelta di **rischio basso ma non nullo**. Il testo MIT e il copyright di Meta vanno sempre riportati.
+
+### Riduzione del rischio: modello scaricato dall'utente (da fare)
+
+Non includere `htdemucs.onnx` nell'installer: alla prima apertura dell'area stem il programma mostra la licenza e il link alla fonte, l'utente conferma e scarica (o importa) il file, controllato con la firma SHA-256. Cosi' la distribuzione dei pesi non e' nostra. Nell'EULA: l'uso del modello e' sotto la responsabilita' dell'utente; nel marketing non promettere «stem inclusi». Stato: **non ancora implementato** (oggi `tools/fetch_model.py` mette il modello nell'installer).
+
+### Prima di vendere: parere dell'avvocato
+
+Fargli valutare la tesi «i pesi sono coperti dalla MIT» e la formula delle eventuali donazioni (contributo volontario, senza corrispettivo).
+
 ### Strade possibili
 
 | Strada | Pro | Contro |
