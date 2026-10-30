@@ -32,13 +32,14 @@ ort = { version = "=2.0.0-rc.15" }
 flacenc = "0.5.1"
 claxon = "0.4.3"
 
+# licenze: certificato firmato Ed25519 e impronta del computer; client HTTP interno (TLS rustls), usato anche per il modello degli stem su Android dove curl non esiste
+ed25519-dalek = "2"
+sha2 = "0.10"
+ureq = { version = "2", default-features = false, features = ["tls", "json"] }
+
 # aggiornamenti automatici (solo desktop)
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
-
-# su Android non c'e' curl: il modello degli stem si scarica con un client HTTP interno (TLS rustls)
-[target.'cfg(target_os = "android")'.dependencies]
-ureq = { version = "2", default-features = false, features = ["tls"] }
 
 # MIDI (midir) non supporta Android
 [target.'cfg(not(target_os = "android"))'.dependencies]

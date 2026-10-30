@@ -151,6 +151,15 @@
 
 <div id="updBanner" hidden><span id="updBannerTxt"></span><button id="updBannerGo">Dettagli</button><button id="updBannerX" title="Più tardi">×</button></div>
 
+<dialog id="licDlg">
+  <h2>Registra SpinLab</h2>
+  <div class="hint" id="licWhy">Inserisci la chiave di licenza che hai ricevuto per email al momento dell'acquisto.</div>
+  <label>CHIAVE DI LICENZA<input id="licKey" placeholder="SPIN-XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" spellcheck="false" maxlength="40"></label>
+  <div id="licMsg" class="hint"></div>
+  <div class="btns"><button id="licClose" hidden>Chiudi</button><button id="licGo" class="primary">REGISTRA</button></div>
+  <div class="hint">Serve una connessione a internet solo per la registrazione e, ogni tanto, per rinnovarla. La chiave funziona su un numero limitato di computer.</div>
+</dialog>
+
 <dialog id="aboutDlg">
   <div class="ab-arc l"></div><div class="ab-arc r"></div>
   <div class="ab-card">
@@ -159,6 +168,10 @@
     <div class="ab-line"></div>
     <div class="ab-name">SpinLab DJ</div>
     <div class="ab-by">Developed by Vinz Trombetta</div>
+    <div class="ab-sec"><span>LICENZA</span></div>
+    <div id="abLic" class="ab-note">—</div>
+    <div class="ab-upd"><button id="abLicBtn" class="ab-small">REGISTRA</button><button id="abLicOff" class="ab-small" hidden>DISATTIVA SU QUESTO COMPUTER</button></div>
+    <div class="ab-line"></div>
     <div class="ab-sec"><span>MOTORE AUDIO</span></div>
     <img class="ab-asio" src="assets/asio-logo-white.png" alt="ASIO Compatible">
     <div class="ab-note">ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</div>

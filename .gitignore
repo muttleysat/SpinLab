@@ -14,3 +14,7 @@ asiosdk*
 # modello degli stem (166 MB): lo scarica tools/fetch_model.py
 src-tauri/models/
 .DS_Store
+
+# server licenze: configurazione con password e chiave privata
+server/inc/config.php
+*license-private*

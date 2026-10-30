@@ -1647,6 +1647,56 @@ $("#updBannerX").onclick = () => ($("#updBanner").hidden = true);
 $("#updBannerGo").onclick = () => { $("#updBanner").hidden = true; openAbout(); };
 // controllo silenzioso a qualche secondo dall'avvio, a schermata d'avvio chiusa
 setTimeout(() => { if (autoUpd.get()) checkUpdates(true); }, 9000);
+/* ============================================================ REGISTRAZIONE (licenza)
+   La chiave si scambia con il server contro un certificato firmato, legato al computer (vedi license.rs). Senza registrazione il programma
+   non carica brani; le build di sviluppo non hanno obblighi. */
+const lic = { st: null };
+const licOk = () => !lic.st || ["ok", "grace", "dev"].includes(lic.st.state);
+function licShow(st) {
+  lic.st = st;
+  const ok = licOk(), txt = $("#abLic");
+  txt.textContent = st.state === "dev" ? "Versione di sviluppo: nessuna registrazione richiesta."
+    : st.state === "none" ? "Non registrato."
+    : `Registrato${st.name ? " a " + st.name : ""} · ${st.key}${st.state === "ok" ? "" : " · " + st.message}`;
+  $("#abLicBtn").hidden = st.state === "dev";
+  $("#abLicBtn").textContent = st.state === "none" || st.state === "expired" ? "REGISTRA" : "RINNOVA ORA";
+  $("#abLicOff").hidden = !["ok", "grace", "expired"].includes(st.state) || !st.key;
+  const d = $("#licDlg");
+  if (!ok) {
+    $("#licWhy").textContent = st.state === "expired" ? (st.message || "La registrazione va ricontrollata: collegati a internet e conferma.") : "Inserisci la chiave di licenza che hai ricevuto per email al momento dell'acquisto.";
+    $("#licClose").hidden = true;
+    if (!d.open) d.showModal();
+  } else if (d.open && !lic.manual) d.close();
+}
+async function licCheck() { try { licShow(await inv("license_status")); } catch (e) { /* senza motore non c'e' niente da controllare */ } }
+async function licRefresh(silent) {
+  try { licShow(await inv("license_refresh")); }
+  catch (e) { if (!silent) toast("Registrazione: " + e); await licCheck(); }
+}
+$("#licDlg").addEventListener("cancel", (e) => { if (!licOk()) e.preventDefault(); lic.manual = false; });
+$("#licClose").onclick = () => { lic.manual = false; $("#licDlg").close(); };
+$("#licKey").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#licGo").click(); });
+$("#licGo").onclick = async () => {
+  const key = $("#licKey").value.trim(), m = $("#licMsg");
+  if (!key) { m.className = "hint err"; m.textContent = "Scrivi la chiave."; return; }
+  $("#licGo").disabled = true; m.className = "hint"; m.textContent = "Registrazione in corso…";
+  try {
+    const st = await inv("license_activate", { key });
+    lic.manual = false; m.textContent = ""; $("#licKey").value = "";
+    licShow(st); if ($("#licDlg").open) $("#licDlg").close(); toast("SpinLab registrato. Grazie!");
+  } catch (e) { m.className = "hint err"; m.textContent = String(e); }
+  finally { $("#licGo").disabled = false; }
+};
+$("#abLicBtn").onclick = async () => {
+  if (lic.st && ["ok", "grace", "expired"].includes(lic.st.state) && lic.st.key) { $("#abLic").textContent = "Controllo in corso…"; await licRefresh(false); return; }
+  lic.manual = true; $("#licClose").hidden = false; $("#licMsg").textContent = ""; $("#licDlg").showModal();
+};
+$("#abLicOff").onclick = async () => {
+  if (!confirm("Disattivare la licenza su questo computer? Potrai registrarla di nuovo qui o su un altro computer.")) return;
+  try { licShow(await inv("license_deactivate")); } catch (e) { toast("Disattivazione non riuscita: " + e); }
+};
+licCheck();
+setTimeout(() => licRefresh(true), 15000);   // rinnovo silenzioso a programma avviato (serve internet solo se c'e')
 $("#aboutClose").onclick = () => $("#aboutDlg").close();
 document.addEventListener("click", (e) => { const a = e.target.closest?.("[data-help]"); if (a) { e.preventDefault(); openHelp(a.dataset.help); } });
 $("#helpDlg").addEventListener("click", (e) => { if (e.target === $("#helpDlg")) $("#helpDlg").close(); });

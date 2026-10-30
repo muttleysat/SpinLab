@@ -7,6 +7,7 @@ mod decode;
 mod engine;
 mod fx;
 mod lame;
+mod license;
 mod library;
 #[cfg(not(target_os = "android"))]
 mod midi;
@@ -120,6 +121,9 @@ async fn load_track(
 ) -> Result<TrackInfo, String> {
     if deck >= NUM_DECKS {
         return Err("deck non valido".into());
+    }
+    if !license::allowed(&app.dir) {
+        return Err("Programma non registrato: apri Informazioni e inserisci la chiave di licenza".into());
     }
     let _guard = LoadGuard::new();
     let my_seq = LOAD_SEQ[deck].fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
@@ -1266,6 +1270,29 @@ async fn audio_set(app: State<'_, App>, pv: State<'_, Arc<Previewer>>, settings:
     Ok(info)
 }
 
+// ---------------------------------------------------------------- registrazione (licenza)
+
+#[tauri::command]
+fn license_status(app: State<'_, App>) -> license::Status {
+    license::status(&app.dir)
+}
+#[tauri::command]
+async fn license_activate(app: State<'_, App>, key: String) -> Result<license::Status, String> {
+    let dir = app.dir.clone();
+    tauri::async_runtime::spawn_blocking(move || license::activate(&dir, &key)).await.map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn license_refresh(app: State<'_, App>) -> Result<license::Status, String> {
+    let dir = app.dir.clone();
+    tauri::async_runtime::spawn_blocking(move || license::refresh(&dir)).await.map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn license_deactivate(app: State<'_, App>) -> Result<license::Status, String> {
+    let dir = app.dir.clone();
+    tauri::async_runtime::spawn_blocking(move || license::deactivate(&dir)).await.map_err(|e| e.to_string())?
+}
+
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
@@ -1348,7 +1375,8 @@ pub fn run() {
             fs_roots, fs_list, fs_tracks, playlist_add_folder, analyze_tracks, analyze_playlist,
             preview_play, preview_stop, preview_seek, preview_state,
             stems_queue, stems_queue_playlist, stems_queue_path, stems_have, stems_cfg, stems_cfg_set, stems_bench_cmd, stems_delete, deck_stems, stems_auto, track_art,
-            drum_load, drum_cmd, drum_save, midi_ports, midi_out_info, midi_out_select, midi_send, midi_map_get, midi_map_set, audio_current, rec_start, rec_stop
+            drum_load, drum_cmd, drum_save, midi_ports, midi_out_info, midi_out_select, midi_send, midi_map_get, midi_map_set, audio_current, rec_start, rec_stop,
+            license_status, license_activate, license_refresh, license_deactivate
         ])
         .run(tauri::generate_context!())
         .expect("errore avvio SpinLab");

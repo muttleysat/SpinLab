@@ -449,3 +449,7 @@ dialog .hint a { color: var(--accent); }
 .amq em { font-style: normal; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .amq i { font-style: normal; flex: none; cursor: pointer; color: var(--dim); font-size: 10px; padding: 2px 3px; border-radius: 4px; } .amq i:hover { color: #fff; background: #1a2a42; } .amq i[data-act=del]:hover { background: #4a1a20; }
 .amh u { cursor: pointer; color: var(--accent); margin-left: 6px; letter-spacing: 0; text-decoration: underline; }
+
+/* registrazione */
+#licDlg input { padding: 9px 10px; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; }
+#licMsg.err { color: #ff8a96; } #licMsg.ok { color: #7df0b6; }
