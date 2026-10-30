@@ -3,3 +3,12 @@
 CPAL_ASIO_DIR = "C:/Users/Vincenzo/asio-sdk/asiosdk_2.3.4_2025-10-15"
 LIBCLANG_PATH = "C:/Program Files/LLVM/bin"
 CLANG_PATH = "C:/Program Files/LLVM/bin/clang.exe"
+
+# Su macOS le librerie precompilate di ONNX Runtime richiedono almeno macOS 13.4:
+# senza questo flag il linker usa 11.0 e fallisce su ___isPlatformVersionAtLeast.
+[target.'cfg(target_os = "macos")']
+rustflags = [
+  "-C", "link-arg=-Wl,-macosx_version_min,13.4.0",
+  # ___isPlatformVersionAtLeast vive nel compiler-rt di clang; rustc linka con -nodefaultlibs e non lo include.
+  "-C", "link-arg=/Library/Developer/CommandLineTools/usr/lib/clang/21/lib/darwin/libclang_rt.osx.a",
+]
