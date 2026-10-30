@@ -83,6 +83,18 @@
   const bendEnd = () => { if (bend) { dc(bend.i, "nudge", 0); bend = null; } };
   document.addEventListener("pointerup", bendEnd); document.addEventListener("pointercancel", bendEnd);
 
+  /* ---- prototipo B: riga SYNC + LOOP sotto i pad. Inoltra ai pulsanti di sempre (nascosti) e ne copia lo stato acceso */
+  DK.forEach((D) => {
+    const row = document.createElement("div");
+    row.className = "ck-row";
+    row.innerHTML = `<button type="button">SYNC</button><button type="button">LOOP</button>`;
+    const [bs, bl] = row.children;
+    bs.onclick = () => D.sync.click(); bl.onclick = () => D.lsz.click();
+    D.el.querySelector(".lcol").appendChild(row);
+    const mirror = () => { bs.classList.toggle("on", D.sync.classList.contains("on")); bl.classList.toggle("on", D.lsz.classList.contains("on")); };
+    [D.sync, D.lsz].forEach((b) => new MutationObserver(mirror).observe(b, { attributes: true, attributeFilter: ["class"] }));
+  });
+
   /* ---- menu radiale dei pad (G3): tieni premuto il chip della modalita' o trascinalo; il tocco breve apre il menu di sempre (G4) */
   const rad = document.createElement("div");
   rad.id = "radial";

@@ -67,13 +67,24 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
    rimpicciolendosi se e' piu' piccola (o lo zoom di Windows e' alto) e ingrandendosi se e' piu' grande (schermo pieno, 1440p, 4K) */
 const BASE_W = 1240, BASE_H = 940, MAX_K = 3;
 let uiK = 1;
-/* layout Cockpit (docs/specifiche-android-cockpit.md): telefono Android in orizzontale. `?cockpit` lo forza per provarlo da browser.
-   In questa modalita' niente scala in blocco: il CSS di body.cockpit ridisegna la schermata alla misura reale */
-const isCockpit = () => /[?&]cockpit\b/.test(location.search) || (/Android/i.test(navigator.userAgent) && innerWidth > innerHeight && innerHeight < 600);
+/* interfaccia scelta in Impostazioni > INTERFACCIA (docs/specifiche-android-cockpit.md):
+   auto = Cockpit sui telefoni Android in orizzontale, desktop altrove; desktop; cockpit = Cockpit alla misura reale
+   (compatto sui telefoni); proto = Cockpit del prototipo B, disegnato a PROTO_W x PROTO_H e scalato in blocco.
+   `?cockpit` / `?proto` nell'indirizzo forzano la scelta per provarla da browser */
+const PROTO_W = 892, PROTO_H = 412;
+let uiMode = "auto"; try { uiMode = localStorage.getItem("spinlab.ui") || "auto"; } catch (e) {}
+const UI_PHONE = () => /Android/i.test(navigator.userAgent) && innerWidth > innerHeight && innerHeight < 600;
+function uiLayout() {
+  if (/[?&]proto\b/.test(location.search)) return "proto";
+  if (/[?&]cockpit\b/.test(location.search)) return "cockpit";
+  return uiMode === "auto" ? (UI_PHONE() ? "cockpit" : "desktop") : uiMode;
+}
+function setUiMode(m) { uiMode = m; try { localStorage.setItem("spinlab.ui", m); } catch (e) {} fitUI(); }
 function fitUI() {
-  const ck = isCockpit();
+  const lay = uiLayout(), ck = lay === "cockpit" || lay === "proto";
   document.body.classList.toggle("cockpit", ck);
-  uiK = ck ? 1 : Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
+  document.body.classList.toggle("proto", lay === "proto");
+  uiK = lay === "proto" ? Math.min(innerWidth / PROTO_W, innerHeight / PROTO_H) : ck ? 1 : Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
   document.documentElement.style.setProperty("--k", uiK.toFixed(4));
   requestAnimationFrame(resizeCanvases);
 }
@@ -1558,7 +1569,9 @@ function setSettingsTab(t) {
   $("#aApply").hidden = t !== "audio";
   if (t === "stem") refreshStemPane();
   if (t === "midi") refreshMidiPane();
+  if (t === "ui") $("#uiMode").value = uiMode;
 }
+$("#uiMode").onchange = () => setUiMode($("#uiMode").value);
 $$(".stabs button").forEach((b) => (b.onclick = () => setSettingsTab(b.dataset.sp)));
 
 /* scheda STEM: modalita' (automatica / tempo reale / solo preparati) e misura della velocita' del PC */

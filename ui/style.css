@@ -537,25 +537,45 @@ body.cockpit .cpu span { display: none; } body.cockpit .cpu i { width: 28px; }
 /* Cockpit compatto: telefoni con zoom dello schermo alto (S26 Ultra di serie: 697x330). Il piatto sarebbe largo 70 px:
    si toglie e la waveform, piu' alta, fa da piatto per lo scrub; i 4 pad stanno su una riga, il mixer si stringe */
 @media (max-height: 380px), (max-width: 780px) {
-  body.cockpit #stage { grid-template-columns: minmax(0, 1fr) 176px minmax(0, 1fr); }
-  body.cockpit .deck { grid-template-rows: 30px 64px minmax(0, 1fr); padding: 4px 5px 5px; }
-  body.cockpit .art { width: 26px; height: 26px; font-size: 13px; }
-  body.cockpit .artist { display: none; }
-  body.cockpit .deck .platter { display: none; }
-  body.cockpit .dmain { grid-template-columns: 36px minmax(0, 1fr); }
-  body.cockpit .deck.rev .dmain { grid-template-columns: minmax(0, 1fr) 36px; }
-  body.cockpit .deck .rcol { order: 1; } body.cockpit .deck .lcol { order: 2; }
-  body.cockpit .deck.rev .lcol { order: 1; } body.cockpit .deck.rev .rcol { order: 2; }
-  body.cockpit .rbtn2 { width: 36px; height: 32px; font-size: 10px; }
-  body.cockpit .transport { height: 44px; } body.cockpit .rbtn { height: 44px; }
-  body.cockpit .modebtn { height: 24px; }
-  body.cockpit .hcgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 1fr; }
-  body.cockpit .loopc .lr button, body.cockpit .loopc .lsz { height: 32px; }
-  body.cockpit .kcol .knobwrap, body.cockpit .fxsel { zoom: .72; }
-  body.cockpit .kcol { justify-content: flex-start; gap: 2px; }
-  body.cockpit .xfade { height: 40px; }
-  body.cockpit .lib-handle { min-width: 120px; }
-  body.cockpit .pn-handle { left: calc(50% + 66px); padding: 0 8px; }
-  body.cockpit #lower { grid-template-columns: 150px minmax(0, 1fr); }
-  body.cockpit .prow .chip2, body.cockpit .hpb { display: none; }
+  body.cockpit:not(.proto) #stage { grid-template-columns: minmax(0, 1fr) 176px minmax(0, 1fr); }
+  body.cockpit:not(.proto) .deck { grid-template-rows: 30px 64px minmax(0, 1fr); padding: 4px 5px 5px; }
+  body.cockpit:not(.proto) .art { width: 26px; height: 26px; font-size: 13px; }
+  body.cockpit:not(.proto) .artist { display: none; }
+  body.cockpit:not(.proto) .deck .platter { display: none; }
+  body.cockpit:not(.proto) .dmain { grid-template-columns: 36px minmax(0, 1fr); }
+  body.cockpit:not(.proto) .deck.rev .dmain { grid-template-columns: minmax(0, 1fr) 36px; }
+  body.cockpit:not(.proto) .deck .rcol { order: 1; } body.cockpit:not(.proto) .deck .lcol { order: 2; }
+  body.cockpit:not(.proto) .deck.rev .lcol { order: 1; } body.cockpit:not(.proto) .deck.rev .rcol { order: 2; }
+  body.cockpit:not(.proto) .rbtn2 { width: 36px; height: 32px; font-size: 10px; }
+  body.cockpit:not(.proto) .transport { height: 44px; } body.cockpit:not(.proto) .rbtn { height: 44px; }
+  body.cockpit:not(.proto) .modebtn { height: 24px; }
+  body.cockpit:not(.proto) .hcgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 1fr; }
+  body.cockpit:not(.proto) .loopc .lr button, body.cockpit:not(.proto) .loopc .lsz { height: 32px; }
+  body.cockpit:not(.proto) .kcol .knobwrap, body.cockpit:not(.proto) .fxsel { zoom: .72; }
+  body.cockpit:not(.proto) .kcol { justify-content: flex-start; gap: 2px; }
+  body.cockpit:not(.proto) .xfade { height: 40px; }
+  body.cockpit:not(.proto) .lib-handle { min-width: 120px; }
+  body.cockpit:not(.proto) .pn-handle { left: calc(50% + 66px); padding: 0 8px; }
+  body.cockpit:not(.proto) #lower { grid-template-columns: 150px minmax(0, 1fr); }
+  body.cockpit:not(.proto) .prow .chip2, body.cockpit:not(.proto) .hpb { display: none; }
 }
+
+/* Cockpit prototipo B (artboard «B · Cockpit orizzontale» del canvas di Claude Design): disegnato a 892x412 e scalato in blocco con --k */
+.ck-row { display: none; }
+body.cockpit.proto #app { transform: scale(var(--k, 1)); width: calc(100vw / var(--k, 1)); height: calc(100vh / var(--k, 1)); }
+body.cockpit.proto .brand span { display: inline; font-size: 14px; letter-spacing: 1.5px; color: var(--dim); font-weight: 600; }
+body.cockpit.proto .hp, body.cockpit.proto #nav { display: none; }
+body.cockpit.proto .deck { grid-template-rows: 40px 64px minmax(0, 1fr); }
+body.cockpit.proto .art { width: 30px; height: 30px; }
+body.cockpit.proto .kv b { font-size: 18px; color: var(--c); }
+body.cockpit.proto .dmain { grid-template-columns: 36px minmax(0, 1fr) 108px; }
+body.cockpit.proto .deck.rev .dmain { grid-template-columns: 108px minmax(0, 1fr) 36px; }
+body.cockpit.proto .pbtn, body.cockpit.proto .prow, body.cockpit.proto .loopc, body.cockpit.proto .rcol > :not(.pf) { display: none; }
+body.cockpit.proto .rcol { justify-content: stretch; }
+body.cockpit.proto .modebtn { height: 22px; font-size: 9px; }
+body.cockpit.proto .ck-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; height: 36px; }
+body.cockpit.proto .ck-row button { padding: 0; font-weight: 700; font-size: 11px; letter-spacing: .5px; border-radius: 10px; }
+body.cockpit.proto .ck-row button.on { color: #001018; background: var(--c); border-color: var(--c); }
+body.cockpit.proto .rbtn.cue { color: #ffb020; border-color: #ffb020; }
+body.cockpit.proto .fxsel, body.cockpit.proto .knobwrap:has([data-k="filter"]), body.cockpit.proto .hpbtn { display: none; }
+body.cockpit.proto .kcol { justify-content: flex-start; gap: 10px; padding-top: 6px; }
