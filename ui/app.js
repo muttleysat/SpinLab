@@ -67,8 +67,13 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
    rimpicciolendosi se e' piu' piccola (o lo zoom di Windows e' alto) e ingrandendosi se e' piu' grande (schermo pieno, 1440p, 4K) */
 const BASE_W = 1240, BASE_H = 940, MAX_K = 3;
 let uiK = 1;
+/* layout Cockpit (docs/specifiche-android-cockpit.md): telefono Android in orizzontale. `?cockpit` lo forza per provarlo da browser.
+   In questa modalita' niente scala in blocco: il CSS di body.cockpit ridisegna la schermata alla misura reale */
+const isCockpit = () => /[?&]cockpit\b/.test(location.search) || (/Android/i.test(navigator.userAgent) && innerWidth > innerHeight && innerHeight < 600);
 function fitUI() {
-  uiK = Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
+  const ck = isCockpit();
+  document.body.classList.toggle("cockpit", ck);
+  uiK = ck ? 1 : Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
   document.documentElement.style.setProperty("--k", uiK.toFixed(4));
   requestAnimationFrame(resizeCanvases);
 }
@@ -84,8 +89,13 @@ function makeKnob(el, { value, def, onChange }) {
   const draw = () => { el.style.setProperty("--a", (-135 + v * 270) + "deg"); el.style.setProperty("--p", v); };
   const set = (x, emit = true) => { v = clamp01(x); draw(); if (emit) onChange(v); };
   let st = null;
-  el.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; el.setPointerCapture(e.pointerId); st = { y: e.clientY, v }; });
-  el.addEventListener("pointermove", (e) => { if (st) set(st.v + (st.y - e.clientY) / (e.shiftKey ? 600 : 150)); });
+  el.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; el.setPointerCapture(e.pointerId); st = { x: e.clientX, y: e.clientY, v, fine: false }; });
+  el.addEventListener("pointermove", (e) => {
+    if (!st) return;
+    /* Cockpit (tocco): spostandosi di lato mentre si trascina la regolazione diventa fine (1/4 della velocita'), senza salti */
+    if (!st.fine && document.body.classList.contains("cockpit") && Math.abs(e.clientX - st.x) > 24) st = { x: e.clientX, y: e.clientY, v, fine: true };
+    set(st.v + (st.y - e.clientY) / (e.shiftKey || st.fine ? 600 : 150));
+  });
   ["pointerup", "pointercancel"].forEach((ev) => el.addEventListener(ev, () => (st = null)));
   el.addEventListener("dblclick", () => set(def));
   el.addEventListener("wheel", (e) => { e.preventDefault(); set(v + (e.deltaY < 0 ? 0.03 : -0.03)); }, { passive: false });
