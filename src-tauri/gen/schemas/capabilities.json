@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"","local":true,"windows":["main"],"permissions":["core:default","dialog:default","updater:default"]}}
+{"default":{"identifier":"default","description":"","local":true,"windows":["main"],"permissions":["core:default","dialog:default","updater:default"],"platforms":["windows","macOS","linux"]},"mobile":{"identifier":"mobile","description":"","local":true,"windows":["main"],"permissions":["core:default","dialog:default"],"platforms":["android","iOS"]}}

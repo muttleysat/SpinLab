@@ -43,7 +43,14 @@ function splashHide() {
 }
 setTimeout(splashHide, 12000); // rete di sicurezza: se qualcosa non risponde, l'app si mostra comunque
 
-const inv = (c, a = {}) => T.core.invoke(c, a);
+/* All'avvio l'interfaccia puo' partire prima che il backend abbia finito `setup` (audio e libreria, lenti su Android):
+   in quel caso Tauri risponde "state not managed". Si riprova per qualche secondo invece di mostrare l'errore. */
+const inv = async (c, a = {}) => {
+  for (let i = 0; ; i++) {
+    try { return await T.core.invoke(c, a); }
+    catch (e) { if (i >= 100 || !/state not managed/.test(String(e))) throw e; await new Promise((r) => setTimeout(r, 100)); }
+  }
+};
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const COLORS = ["#00d6ff", "#ff3d9a", "#ffb020", "#44e07a"];
@@ -66,6 +73,9 @@ function fitUI() {
   requestAnimationFrame(resizeCanvases);
 }
 window.addEventListener("resize", fitUI);
+/* su Android (finestre mobili di Samsung) l'evento resize non scatta sempre quando la finestra cambia misura: si osserva anche il documento */
+try { new ResizeObserver(() => fitUI()).observe(document.documentElement); } catch (e) {}
+try { window.visualViewport?.addEventListener("resize", fitUI); } catch (e) {}
 fitUI();
 
 /* manopola rotante: trascina in verticale (o con la rotella), doppio clic = valore iniziale */
@@ -135,6 +145,8 @@ const decks = [0, 1].map(() => ({
   fx: { kind: "echo", on: false, wet: 0.5, param: 0.5, param2: 0.5, div: 3, feel: 0 }, hcPage: 0, pk: [0, 0], pkT: [0, 0], mode: "hc0", jumpSize: 4, rollBase: 0.125, brakeT: 1.5, meta: null, stTouch: 0, stGains: [1, 1, 1, 1], stMem: [1, 1, 1, 1], stText: "",
 }));
 let audioLatency = 0; // secondi di buffer del dispositivo: la grafica si ritarda di tanto per coincidere con il suono
+/* correzione manuale della latenza (ms), per i dispositivi dove quella stimata dal buffer e' troppo bassa (Android) */
+let visOffset = 0; try { visOffset = (+localStorage.getItem("spinlab.vis_offset_ms") || 0) / 1000; } catch (e) {}
 const activeDecks = 2;
 const DK = []; // riferimenti agli elementi di ogni deck e della sua striscia del mixer
 
@@ -316,7 +328,15 @@ function bindDeck(i) {
     b.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; held = true; b.setPointerCapture(e.pointerId); d.padAction(k, true, e); });
     const up = () => { if (held) { held = false; d.padAction(k, false); } };
     ["pointerup", "pointercancel"].forEach((ev) => b.addEventListener(ev, up));
-    b.addEventListener("contextmenu", (e) => { e.preventDefault(); if (d.mode === "hc0" || d.mode === "hc1") dc(i, "hotcue_clear", k + (d.mode === "hc1" ? 4 : 0)); });
+    // col mouse il clic destro cancella subito; col tocco il tocco prolungato genera lo stesso evento, quindi si chiede conferma
+    let touch = false;
+    b.addEventListener("pointerdown", (e) => { touch = e.pointerType !== "mouse"; });
+    b.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if (d.mode !== "hc0" && d.mode !== "hc1") return;
+      const slot = k + (d.mode === "hc1" ? 4 : 0), clear = () => dc(i, "hotcue_clear", slot);
+      if (touch) menu(e, [[`Elimina hot cue ${slot + 1}`, clear]]); else clear();
+    });
   });
   renderPads(i);
   // loop
@@ -824,7 +844,7 @@ function updateDeckUI(i, s) {
 function frame() {
   for (let i = 0; i < activeDecks; i++) {
     const s = decks[i].snap;
-    const pos = currentPos(i) - (decks[i].scrub == null && s?.playing ? audioLatency * (1 + s.tempo_pct / 100) : 0);
+    const pos = currentPos(i) - (decks[i].scrub == null && s?.playing ? (audioLatency + visOffset) * (1 + s.tempo_pct / 100) : 0);
     drawZoom(i, pos); drawOver(i, pos); drawPlatter(i, pos);
   }
   requestAnimationFrame(frame);
@@ -1559,6 +1579,14 @@ $("#aDrv").onchange = async () => { const l = await inv("audio_info", { driver: 
 let savedAudio = {};
 function showAudioStatus(i, msg) {
   $("#aStatus").innerHTML = `Uscita attiva: <b>${esc(i.driver || "")} · ${esc(i.device)}</b> a <b>${i.sample_rate} Hz</b>, buffer ${i.buffer || "auto"}${i.actual_buffer ? ` (${i.actual_buffer} frame reali)` : ""}, latenza stimata <b>${i.latency_ms.toFixed(1)} ms</b>. Blocchi audio elaborati: ${i.rendered}${i.missed ? ` (saltati ${i.missed})` : ""}.` + (msg ? `<br>${esc(msg)}` : "") + (i.error ? `<br><span class="warn">${esc(i.error)}</span>` : "");
+}
+{
+  const r = $("#aVis"), v = $("#aVisVal");
+  r.value = Math.round(visOffset * 1000); v.textContent = `${r.value} ms`;
+  r.oninput = () => {
+    visOffset = r.value / 1000; v.textContent = `${r.value} ms`;
+    try { localStorage.setItem("spinlab.vis_offset_ms", r.value); } catch (e) {}
+  };
 }
 $("#audioBtn").onclick = openAudioSettings;
 // guida: il manuale (guida.html, generato da docs/MANUALE.md) in una finestra; i link «data-help» aprono la sezione giusta
