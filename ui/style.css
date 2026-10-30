@@ -453,3 +453,72 @@ dialog .hint a { color: var(--accent); }
 /* registrazione */
 #licDlg input { padding: 9px 10px; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; }
 #licMsg.err { color: #ff8a96; } #licMsg.ok { color: #7df0b6; }
+
+/* ---------------------------------------------------------------- Cockpit: telefono Android in orizzontale (docs/specifiche-android-cockpit.md) */
+.lib-handle, #radial { display: none; }
+body.cockpit { overscroll-behavior: none; }
+body.cockpit #app { transform: none; width: 100vw; height: 100vh; grid-template-rows: 36px minmax(0, 1fr); }
+body.cockpit button { touch-action: manipulation; }
+/* barra */
+body.cockpit #top { position: relative; padding: 0 8px; gap: 8px; }
+body.cockpit .brand span, body.cockpit .clock, body.cockpit .hp, body.cockpit .mst .meter, body.cockpit #aboutBtn2, body.cockpit #helpBtn,
+body.cockpit #nav button:not([data-nav="rec"]) { display: none; }
+body.cockpit #nav { margin: 0; }
+body.cockpit #nav button { padding: 10px 10px 8px; }
+body.cockpit .cpu i { width: 36px; }
+body.cockpit .topr { gap: 10px; margin-left: auto; }
+body.cockpit .lib-handle { display: block; position: absolute; left: 50%; top: 0; height: 36px; transform: translateX(-50%); min-width: 170px; border: 0; border-radius: 0 0 12px 12px; background: #121827; color: var(--dim); font-size: 11px; letter-spacing: 1.5px; font-weight: 600; }
+body.cockpit.lib-open .lib-handle { color: var(--accent); }
+/* palco: deck | mixer | deck */
+body.cockpit #stage { grid-template-columns: minmax(0, 1fr) 212px minmax(0, 1fr); gap: 4px; padding: 4px 4px 4px; }
+body.cockpit .deck { grid-template-rows: 36px 56px minmax(0, 1fr); gap: 4px; padding: 5px 6px 6px; border-radius: 10px; }
+body.cockpit .deck > .wv + .wv, body.cockpit .dload, body.cockpit .deck .led, body.cockpit .kv.key, body.cockpit .clock2 span { display: none; }
+body.cockpit .dhead { gap: 8px; }
+body.cockpit .art { width: 32px; height: 32px; font-size: 15px; border-radius: 7px; }
+body.cockpit .title { font-size: 13px; } body.cockpit .artist { font-size: 11px; }
+body.cockpit .kv { min-width: 34px; } body.cockpit .kv small { display: none; } body.cockpit .kv b { font-size: 16px; }
+body.cockpit .clock2 { min-width: 54px; } body.cockpit .clock2 b { font-size: 15px; }
+body.cockpit .dmain { max-width: none; margin: 0; gap: 6px; grid-template-columns: 44px minmax(0, 1fr) 112px; }
+body.cockpit .deck.rev .dmain { grid-template-columns: 112px minmax(0, 1fr) 44px; }
+body.cockpit .deck .rcol { order: 1; } body.cockpit .deck .platter { order: 2; } body.cockpit .deck .lcol { order: 3; }
+body.cockpit .deck.rev .lcol { order: 1; } body.cockpit .deck.rev .platter { order: 2; } body.cockpit .deck.rev .rcol { order: 3; }
+body.cockpit .pbtn.bl, body.cockpit .pbtn.qb { display: none; }
+body.cockpit .pbtn.br { width: 36px; height: 36px; }
+body.cockpit .lcol { gap: 5px; }
+body.cockpit .transport { order: -1; margin-top: 0; gap: 6px; }
+body.cockpit .rbtn { flex: 1; width: auto; height: 48px; border-radius: 12px; }
+body.cockpit .lcol > .card:not(.loopc) { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 0; background: none; border: 0; }
+body.cockpit .card .ch { margin-bottom: 4px; justify-content: stretch; }
+body.cockpit .modebtn { width: 100%; height: 26px; font-size: 10px; letter-spacing: .6px; touch-action: none; border: 1px solid var(--line2); border-radius: 8px; background: #0a0e17; }
+body.cockpit .hcgrid { flex: 1; min-height: 0; grid-template-rows: 1fr 1fr; }
+body.cockpit .hcgrid button { height: auto; min-height: 44px; border-radius: 10px; }
+body.cockpit .loopc { padding: 0; background: none; border: 0; }
+body.cockpit .loopc .ch, body.cockpit .loopc .io { display: none; }
+body.cockpit .loopc .lr { grid-template-columns: 30px 1fr 30px; } body.cockpit .loopc .lr button, body.cockpit .loopc .lsz { height: 36px; }
+body.cockpit .rcol { gap: 6px; }
+body.cockpit .rbtn2 { width: 44px; height: 36px; font-size: 11px; }
+body.cockpit .rbtn2[data-r="range"], body.cockpit .rbtn2[data-r="keybtn"], body.cockpit .pval { display: none; }
+/* mixer */
+body.cockpit #mixer { padding: 6px 4px; gap: 4px; border-radius: 10px; }
+body.cockpit .mtop, body.cockpit .fxsel { display: none; }
+body.cockpit .xfade { height: 46px; padding: 0 4px; gap: 6px; }
+body.cockpit.mix-min .kcol { display: none; }
+/* libreria a tendina: scende dal bordo alto sopra i deck */
+body.cockpit #lower { position: fixed; left: 0; right: 0; top: 36px; bottom: 0; z-index: 60; background: var(--bg); grid-template-columns: 190px minmax(0, 1fr);
+  transform: translateY(-110%); visibility: hidden; }
+body.cockpit.lib-open #lower { transform: none; visibility: visible; }
+/* la transizione parte solo dopo il primo disegno (cockpit.js), altrimenti la tendina si vede scorrere all'avvio */
+body.cockpit.anim #lower { transition: transform .22s ease, visibility 0s .22s; } body.cockpit.anim.lib-open #lower { transition: transform .22s ease; }
+body.cockpit #rpanel { display: none; }
+/* menu radiale per la modalita' dei pad */
+body.cockpit #radial { display: block; position: fixed; z-index: 200; width: 200px; height: 200px; margin: -100px 0 0 -100px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #0b101a 0 30%, #0d1320ee 31%); border: 1px solid #3a4a6e; box-shadow: 0 14px 40px #000d; opacity: 0; transform: scale(.85); transition: opacity .1s, transform .1s; }
+body.cockpit #radial.show { opacity: 1; transform: none; }
+#radial b { position: absolute; width: 84px; margin-left: -42px; text-align: center; font-size: 11px; letter-spacing: .6px; padding: 6px 0; border-radius: 9px; color: var(--dim); }
+#radial b.on { background: var(--accent); color: #001018; }
+#radial b:nth-child(1) { left: 50%; top: 10px; } #radial b:nth-child(2) { left: calc(100% - 46px); top: 86px; }
+#radial b:nth-child(3) { left: 50%; top: 162px; } #radial b:nth-child(4) { left: 46px; top: 86px; }
+body.cockpit .prow [hidden], body.cockpit .prow span[hidden] { display: none !important; }
+body.cockpit .prow button { height: 26px; }
+body.cockpit .mst .knobwrap { zoom: .62; }
+body.cockpit .mst .knobwrap span { display: none; }

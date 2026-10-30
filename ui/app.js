@@ -67,8 +67,13 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
    rimpicciolendosi se e' piu' piccola (o lo zoom di Windows e' alto) e ingrandendosi se e' piu' grande (schermo pieno, 1440p, 4K) */
 const BASE_W = 1240, BASE_H = 940, MAX_K = 3;
 let uiK = 1;
+/* layout Cockpit (docs/specifiche-android-cockpit.md): telefono Android in orizzontale. `?cockpit` lo forza per provarlo da browser.
+   In questa modalita' niente scala in blocco: il CSS di body.cockpit ridisegna la schermata alla misura reale */
+const isCockpit = () => /[?&]cockpit\b/.test(location.search) || (/Android/i.test(navigator.userAgent) && innerWidth > innerHeight && innerHeight < 600);
 function fitUI() {
-  uiK = Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
+  const ck = isCockpit();
+  document.body.classList.toggle("cockpit", ck);
+  uiK = ck ? 1 : Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
   document.documentElement.style.setProperty("--k", uiK.toFixed(4));
   requestAnimationFrame(resizeCanvases);
 }
