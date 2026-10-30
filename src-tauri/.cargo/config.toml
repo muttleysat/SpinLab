@@ -1,6 +1,9 @@
-# Percorsi per la compilazione del supporto ASIO (cpal + bindgen). Gli SDK sono in cartelle dell'utente.
+# Compilazione del supporto ASIO (cpal + bindgen).
+# L'SDK ASIO di Steinberg non e' nel repository (licenza): su ogni PC va estratto in src-tauri/asio-sdk
+# (cartella ignorata da git) in modo che dentro ci siano direttamente "common", "host", "driver"...
+# Il percorso e' relativo a questa cartella, quindi e' lo stesso su tutti i PC. Vedi docs/SVILUPPO.md.
 [env]
-CPAL_ASIO_DIR = "C:/Users/vincenzo.trombetta/asio-sdk/asiosdk_2.3.3_2019-06-14"
+CPAL_ASIO_DIR = { value = "asio-sdk", relative = true }
 LIBCLANG_PATH = "C:/Program Files/LLVM/bin"
 CLANG_PATH = "C:/Program Files/LLVM/bin/clang.exe"
 
