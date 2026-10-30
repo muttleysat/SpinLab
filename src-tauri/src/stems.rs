@@ -24,22 +24,35 @@ const MAGIC2: &[u8; 8] = b"SPSTEM02";
 /// Il modello viaggia dentro l'installer (cartella «models» accanto al programma): se c'e' si usa quello, senza scaricare niente.
 /// In sviluppo si cerca in `src-tauri/models` (lo mette `tools/fetch_model.py`); in ultimo, nei dati dell'utente (dove lo scarica `ensure_model`).
 pub fn model_path(dir: &Path) -> PathBuf {
-    let mut c: Vec<PathBuf> = vec![];
+    let mut dirs: Vec<PathBuf> = vec![];
     if let Ok(exe) = std::env::current_exe() {
         if let Some(d) = exe.parent() {
-            c.push(d.join("models").join(MODEL_FILE));
-            c.push(d.join("resources").join("models").join(MODEL_FILE));
+            dirs.push(d.join("models"));
+            dirs.push(d.join("resources").join("models"));
             for up in d.ancestors().take(4) {
-                c.push(up.join("models").join(MODEL_FILE));
-                c.push(up.join("src-tauri").join("models").join(MODEL_FILE));
+                dirs.push(up.join("models"));
+                dirs.push(up.join("src-tauri").join("models"));
             }
         }
     }
-    c.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("models").join(MODEL_FILE));
-    c.into_iter().find(|p| p.is_file()).unwrap_or_else(|| dir.join("models").join(MODEL_FILE))
+    dirs.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("models"));
+    // l'ordine dei nomi e' l'ordine di preferenza: su Android il modello int8 (piu' veloce) se c'e'
+    let names: &[&str] = if cfg!(target_os = "android") { &[MODEL_FILE_INT8, MODEL_FILE] } else { &[MODEL_FILE] };
+    for name in names {
+        if let Some(p) = dirs.iter().map(|d| d.join(name)).chain(std::iter::once(dir.join("models").join(name))).find(|p| p.is_file()) {
+            return p;
+        }
+    }
+    // niente da nessuna parte: quello da scaricare
+    dir.join("models").join(if cfg!(target_os = "android") && MODEL_URL_INT8.is_some() { MODEL_FILE_INT8 } else { MODEL_FILE })
 }
 
 const MODEL_FILE: &str = "htdemucs.onnx";
+/// Versione con MatMul/Gemm quantizzati in int8: su CPU ARM (Android) e' circa 1,7 volte piu' veloce con differenze
+/// inudibili (30-40 dB sotto lo stem). Non ha ancora un indirizzo di download: finche' e' `None` l'app usa il modello
+/// normale, ma se il file e' gia' nella cartella `models` (copiato a mano) lo preferisce.
+const MODEL_FILE_INT8: &str = "htdemucs_int8.onnx";
+const MODEL_URL_INT8: Option<&str> = None;
 
 /// file di cache degli stem di un brano (chiave: percorso, dimensione e data di modifica)
 pub fn cache_path(dir: &Path, track: &str) -> PathBuf {
@@ -96,28 +109,48 @@ pub fn delete_for(dir: &Path, track: &str) {
 
 const MODEL_URL: &str = "https://huggingface.co/adowu/htdemucs-onnx/resolve/main/htdemucs_fp16weights.onnx";
 
-/// Se il modello non e' stato trovato (installazione senza il file, o sviluppo) lo scarica nei dati dell'utente, con il curl del sistema.
+/// Se il modello non e' stato trovato (installazione senza il file, o sviluppo) lo scarica nei dati dell'utente:
+/// con il curl del sistema su desktop, con un client HTTP interno su Android (dove curl non esiste).
 pub fn ensure_model(model: &Path) -> Result<(), String> {
     if model.exists() {
         return Ok(());
     }
+    let url = if model.file_name().is_some_and(|n| n == MODEL_FILE_INT8) {
+        MODEL_URL_INT8.ok_or("manca l'indirizzo di download del modello int8")?
+    } else {
+        MODEL_URL
+    };
     if let Some(p) = model.parent() {
         std::fs::create_dir_all(p).map_err(|e| e.to_string())?;
     }
     let tmp = model.with_extension("part");
-    // su Windows il curl incluso si chiama curl.exe, su macOS/Linux semplicemente curl
-    let curl = if cfg!(windows) { "curl.exe" } else { "curl" };
-    let st = std::process::Command::new(curl)
-        .args(["-L", "--fail", "-s", "-o"])
-        .arg(&tmp)
-        .arg(MODEL_URL)
-        .status()
-        .map_err(|e| format!("download del modello non riuscito: {e}"))?;
-    if !st.success() || std::fs::metadata(&tmp).map_or(0, |m| m.len()) < 100_000_000 {
+    let ok = download(url, &tmp).map_err(|e| format!("download del modello non riuscito: {e}"))?;
+    if !ok || std::fs::metadata(&tmp).map_or(0, |m| m.len()) < 100_000_000 {
         let _ = std::fs::remove_file(&tmp);
         return Err("download del modello non riuscito (serve la connessione a internet)".into());
     }
     std::fs::rename(&tmp, model).map_err(|e| e.to_string())
+}
+
+#[cfg(not(target_os = "android"))]
+fn download(url: &str, dest: &Path) -> Result<bool, String> {
+    // su Windows il curl incluso si chiama curl.exe, su macOS/Linux semplicemente curl
+    let curl = if cfg!(windows) { "curl.exe" } else { "curl" };
+    let st = std::process::Command::new(curl)
+        .args(["-L", "--fail", "-s", "-o"])
+        .arg(dest)
+        .arg(url)
+        .status()
+        .map_err(|e| e.to_string())?;
+    Ok(st.success())
+}
+
+#[cfg(target_os = "android")]
+fn download(url: &str, dest: &Path) -> Result<bool, String> {
+    let resp = ureq::get(url).call().map_err(|e| e.to_string())?;
+    let mut f = std::fs::File::create(dest).map_err(|e| e.to_string())?;
+    std::io::copy(&mut resp.into_reader(), &mut f).map_err(|e| e.to_string())?;
+    Ok(true)
 }
 
 /// Sessione del modello condivisa da tutti: prova gli acceleratori (DirectML su Windows, CoreML su macOS)
@@ -148,6 +181,10 @@ fn gpu_label(_attempt: usize) -> &'static str {
 #[cfg(target_os = "macos")]
 fn gpu_label(attempt: usize) -> &'static str {
     if attempt == 0 { "CoreML ANE+GPU" } else { "CoreML GPU" }
+}
+#[cfg(not(any(windows, target_os = "macos")))]
+fn gpu_label(_attempt: usize) -> &'static str {
+    "GPU"
 }
 
 fn open(model: &Path) -> Result<Session, String> {
@@ -187,7 +224,7 @@ fn open(model: &Path) -> Result<Session, String> {
         eprintln!("stem: GPU non utilizzabile ({last_err}), uso la CPU");
         GPU.store(2, Ordering::SeqCst);
     }
-    open_with(model, None).inspect(|_| eprintln!("stem: sessione CPU pronta"))
+    open_with(model, None).inspect(|_| eprintln!("stem: sessione CPU pronta ({})", model.file_name().map_or(String::new(), |n| n.to_string_lossy().into_owned())))
 }
 
 /// Apre il modello in anticipo (se il file c'e' gia').
@@ -210,7 +247,13 @@ fn with_session<R>(model: &Path, f: impl FnOnce(&mut Session) -> Result<R, Strin
 fn open_with(model: &Path, gpu: Option<u8>) -> Result<Session, String> {
     static ENV: std::sync::OnceLock<Result<ort::environment::Environment, String>> = std::sync::OnceLock::new();
     let env = ENV.get_or_init(|| ort::init().build().map_err(|e| e.to_string())).as_ref().map_err(|e| e.clone())?;
-    let threads = std::thread::available_parallelism().map_or(4, |n| n.get()).clamp(2, 12);
+    let mut threads = std::thread::available_parallelism().map_or(4, |n| n.get()).clamp(2, 12);
+    // prova: SPIN_STEM_THREADS oppure il file `stem_threads` accanto al modello (comodo su Android)
+    if let Some(n) = std::env::var("SPIN_STEM_THREADS").ok().or_else(|| model.parent().and_then(|p| std::fs::read_to_string(p.join("stem_threads")).ok()))
+        .and_then(|v| v.trim().parse::<usize>().ok()).filter(|n| (1..=16).contains(n)) {
+        threads = n;
+    }
+    eprintln!("stem: {threads} thread");
     let mut b = Session::builder(env).map_err(|e| e.to_string())?.with_intra_threads(threads).map_err(|e| e.to_string())?;
     if let Some(attempt) = gpu {
         b = b
