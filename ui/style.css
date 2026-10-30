@@ -461,7 +461,7 @@ body.cockpit #app { transform: none; width: 100vw; height: 100vh; grid-template-
 body.cockpit button { touch-action: manipulation; }
 /* barra */
 body.cockpit #top { position: relative; padding: 0 8px; gap: 8px; }
-body.cockpit .brand span, body.cockpit .clock, body.cockpit .hp, body.cockpit .mst .meter, body.cockpit #aboutBtn2, body.cockpit #helpBtn,
+body.cockpit .brand span, body.cockpit .clock, body.cockpit .mst .meter, body.cockpit #aboutBtn2, body.cockpit #helpBtn,
 body.cockpit #nav button:not([data-nav="rec"]) { display: none; }
 body.cockpit #nav { margin: 0; }
 body.cockpit #nav button { padding: 10px 10px 8px; }
@@ -500,16 +500,27 @@ body.cockpit .rbtn2 { width: 44px; height: 36px; font-size: 11px; }
 body.cockpit .rbtn2[data-r="range"], body.cockpit .rbtn2[data-r="keybtn"], body.cockpit .pval { display: none; }
 /* mixer */
 body.cockpit #mixer { padding: 6px 4px; gap: 4px; border-radius: 10px; }
-body.cockpit .mtop, body.cockpit .fxsel { display: none; }
+body.cockpit .mtop { display: none; }
+body.cockpit .fxsel { flex-direction: column; gap: 3px; }
+body.cockpit .fxsel select { width: 100%; flex: none; font-size: 9px; padding: 3px 0; }
+body.cockpit .fxsel .pwr { width: 100%; height: 18px; }
+body.cockpit .hp { padding: 0 6px; gap: 5px; }
+body.cockpit .hp .hpic { display: none; } body.cockpit .hpb button { min-width: 30px; height: 28px; }
+body.cockpit .hp .knobwrap { zoom: .62; } body.cockpit .hp .knobwrap span { display: none; }
 body.cockpit .xfade { height: 46px; padding: 0 4px; gap: 6px; }
 body.cockpit.mix-min .kcol { display: none; }
 /* libreria a tendina: scende dal bordo alto sopra i deck */
-body.cockpit #lower { position: fixed; left: 0; right: 0; top: 36px; bottom: 0; z-index: 60; background: var(--bg); grid-template-columns: 190px minmax(0, 1fr);
-  transform: translateY(-110%); visibility: hidden; }
-body.cockpit.lib-open #lower { transform: none; visibility: visible; }
+body.cockpit #lower { position: fixed; left: 0; right: 0; top: -100vh; bottom: 100vh; z-index: 60; background: var(--bg); grid-template-columns: 190px minmax(0, 1fr); visibility: hidden; }
+body.cockpit.lib-open #lower { top: 36px; bottom: 0; visibility: visible; }
 /* la transizione parte solo dopo il primo disegno (cockpit.js), altrimenti la tendina si vede scorrere all'avvio */
-body.cockpit.anim #lower { transition: transform .22s ease, visibility 0s .22s; } body.cockpit.anim.lib-open #lower { transition: transform .22s ease; }
-body.cockpit #rpanel { display: none; }
+body.cockpit.anim #lower { transition: top .22s ease, bottom .22s ease, visibility 0s .22s; } body.cockpit.anim.lib-open #lower { transition: top .22s ease, bottom .22s ease; }
+/* pannello AUTOMIX / SAMPLER / DRUMS / STEMS: cassetto dal bordo destro */
+body.cockpit #rpanel { position: fixed; top: 36px; bottom: 0; right: 0; width: min(420px, 62vw); z-index: 70; border-radius: 12px 0 0 12px; overflow: auto; transform: translateX(105%); visibility: hidden; box-shadow: -10px 0 30px #000c; }
+body.cockpit.pn-open #rpanel { transform: none; visibility: visible; }
+body.cockpit.anim #rpanel { transition: transform .22s ease, visibility 0s .22s; } body.cockpit.anim.pn-open #rpanel { transition: transform .22s ease; }
+.pn-handle { display: none; }
+body.cockpit .pn-handle { display: block; position: absolute; left: calc(50% + 100px); top: 0; height: 36px; padding: 0 12px; border: 0; border-radius: 0 0 10px 10px; background: #121827; color: var(--dim); font-size: 11px; letter-spacing: 1.5px; font-weight: 600; }
+body.cockpit.pn-open .pn-handle { color: var(--accent); }
 /* menu radiale per la modalita' dei pad */
 body.cockpit #radial { display: block; position: fixed; z-index: 200; width: 200px; height: 200px; margin: -100px 0 0 -100px; border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle, #0b101a 0 30%, #0d1320ee 31%); border: 1px solid #3a4a6e; box-shadow: 0 14px 40px #000d; opacity: 0; transform: scale(.85); transition: opacity .1s, transform .1s; }
@@ -522,3 +533,4 @@ body.cockpit .prow [hidden], body.cockpit .prow span[hidden] { display: none !im
 body.cockpit .prow button { height: 26px; }
 body.cockpit .mst .knobwrap { zoom: .62; }
 body.cockpit .mst .knobwrap span { display: none; }
+body.cockpit .cpu span { display: none; } body.cockpit .cpu i { width: 28px; }

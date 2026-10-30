@@ -89,8 +89,13 @@ function makeKnob(el, { value, def, onChange }) {
   const draw = () => { el.style.setProperty("--a", (-135 + v * 270) + "deg"); el.style.setProperty("--p", v); };
   const set = (x, emit = true) => { v = clamp01(x); draw(); if (emit) onChange(v); };
   let st = null;
-  el.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; el.setPointerCapture(e.pointerId); st = { y: e.clientY, v }; });
-  el.addEventListener("pointermove", (e) => { if (st) set(st.v + (st.y - e.clientY) / (e.shiftKey ? 600 : 150)); });
+  el.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; el.setPointerCapture(e.pointerId); st = { x: e.clientX, y: e.clientY, v, fine: false }; });
+  el.addEventListener("pointermove", (e) => {
+    if (!st) return;
+    /* Cockpit (tocco): spostandosi di lato mentre si trascina la regolazione diventa fine (1/4 della velocita'), senza salti */
+    if (!st.fine && document.body.classList.contains("cockpit") && Math.abs(e.clientX - st.x) > 24) st = { x: e.clientX, y: e.clientY, v, fine: true };
+    set(st.v + (st.y - e.clientY) / (e.shiftKey || st.fine ? 600 : 150));
+  });
   ["pointerup", "pointercancel"].forEach((ev) => el.addEventListener(ev, () => (st = null)));
   el.addEventListener("dblclick", () => set(def));
   el.addEventListener("wheel", (e) => { e.preventDefault(); set(v + (e.deltaY < 0 ? 0.03 : -0.03)); }, { passive: false });

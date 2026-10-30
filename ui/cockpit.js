@@ -31,6 +31,58 @@
   swipe($(".searchbar"), -1, "input,button");
   handle.style.touchAction = "none";
 
+  /* ---- cassetto del pannello laterale (AUTOMIX, SAMPLER, DRUMS, STEMS): pulsante nella barra, swipe verso sinistra dal bordo destro, swipe verso destra per chiuderlo */
+  const ph = document.createElement("button");
+  ph.className = "pn-handle"; ph.type = "button"; ph.textContent = "PANNELLO";
+  top.insertBefore(ph, top.querySelector(".topr"));
+  const setPn = (open) => { B.classList.toggle("pn-open", open); if (open) setLib(false); };
+  ph.addEventListener("click", () => setPn(!B.classList.contains("pn-open")));
+  let x0 = null;
+  const hswipe = (el, edge) => {
+    el.addEventListener("pointerdown", (e) => { x0 = on() && (edge ? e.clientX > innerWidth - 22 : !e.target.closest("input,select,.fader,.knob")) ? e.clientX : null; });
+    el.addEventListener("pointermove", (e) => {
+      if (x0 == null) return;
+      if (edge ? x0 - e.clientX > 40 : e.clientX - x0 > 60) { x0 = null; setPn(edge); }
+    });
+    ["pointerup", "pointercancel"].forEach((ev) => el.addEventListener(ev, () => (x0 = null)));
+  };
+  hswipe(document, true);
+  hswipe($(".ptabs"), false);
+
+  /* ---- menu del deck (tocco sul numero): griglia, tonalita', quantize, portata del pitch, carica, espelli (i pulsanti relativi sono nascosti nel Cockpit) */
+  document.addEventListener("click", (e) => {
+    const art = on() && e.target.closest(".art");
+    if (!art) return;
+    const i = +art.closest(".deck").dataset.i, D = DK[i], d = decks[i];
+    menu(e, [
+      ["Griglia…", () => openPop(i, "grid", art)], ["Tonalità…", () => openPop(i, "key", art)],
+      [d.snap?.quantize ? "Quantize: spegni" : "Quantize: accendi", () => dc(i, "quantize", d.snap?.quantize ? 0 : 1)],
+      [`Portata pitch (±${Math.round(d.snap?.range_pct ?? 8)}%): cambia`, () => D.range.click()],
+      "-", ["Carica il brano selezionato", () => D.r("load").click()], ["Espelli", () => D.eject.click()],
+    ]);
+  });
+
+  /* ---- pitch bend (G9): trascinando lungo il bordo esterno del piatto in senso orario si accelera, in senso antiorario si frena; al rilascio torna normale */
+  let bend = null;
+  document.addEventListener("pointerdown", (e) => {
+    const cv = on() && e.target.closest?.("canvas.plat");
+    if (!cv) return;
+    const b = cv.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2, R = Math.min(b.width, b.height) / 2;
+    if (Math.hypot(e.clientX - cx, e.clientY - cy) < R * 0.82) return; // dentro: scrub come sempre
+    e.stopImmediatePropagation();
+    cv.setPointerCapture(e.pointerId);
+    bend = { i: +cv.closest(".deck").dataset.i, cx, cy, a: Math.atan2(e.clientY - cy, e.clientX - cx), tot: 0 };
+  }, true);
+  document.addEventListener("pointermove", (e) => {
+    if (!bend) return;
+    const a = Math.atan2(e.clientY - bend.cy, e.clientX - bend.cx);
+    let da = a - bend.a; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI;
+    bend.a = a; bend.tot = Math.max(-0.6, Math.min(0.6, bend.tot + da));
+    dc(bend.i, "nudge", Math.max(-0.5, Math.min(0.5, bend.tot * 0.8)));
+  });
+  const bendEnd = () => { if (bend) { dc(bend.i, "nudge", 0); bend = null; } };
+  document.addEventListener("pointerup", bendEnd); document.addEventListener("pointercancel", bendEnd);
+
   /* ---- menu radiale dei pad (G3): tieni premuto il chip della modalita' o trascinalo; il tocco breve apre il menu di sempre (G4) */
   const rad = document.createElement("div");
   rad.id = "radial";

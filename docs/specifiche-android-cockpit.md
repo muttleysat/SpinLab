@@ -1,6 +1,6 @@
 # SpinLab Android: layout «Cockpit» (specifiche)
 
-Stato: in sviluppo, fase 1. Prototipo di riferimento: <https://claude.ai/artifact/DHgXnnMvibpFCNSvXmg6un> (artboard «B · Cockpit orizzontale», link privato).
+Stato: fasi 1 e 2 implementate (non provate su dispositivo), fase 3 da fare. Prototipo di riferimento: <https://claude.ai/artifact/DHgXnnMvibpFCNSvXmg6un> (artboard «B · Cockpit orizzontale», link privato).
 
 Questo file NON fa parte del manuale per gli utenti (non finisce nella guida dentro il programma).
 
@@ -68,10 +68,11 @@ Pannello a tutta larghezza che scende dal bordo alto sopra i deck; i deck restan
 | G4 | Tap breve sul chip modalità | Pad | Menu a tendina esistente | 1 |
 | G5 | Pizzica due dita | Mixer | Si chiude a soli fader + crossfader (pizzico verso dentro) o si riapre con EQ (verso fuori) | 1 |
 | G6 | Tap con due dita | Manopola | Riporta la manopola al valore iniziale (equivale al doppio clic) | 1 |
-| G7 | Trascina verticale | Manopola | Regola il valore (come oggi); swipe laterale = regolazione fine | 2 |
+| G7 | Trascina verticale, poi di lato | Manopola | Regola il valore; spostandosi di lato oltre 24 dp la regolazione diventa fine (1/4 della velocità) | 2 |
 | G8 | Scrub | Piatto, waveform | Come oggi | 1 (già presente) |
-| G9 | Pitch bend sul bordo esterno del piatto | Piatto | Accelera o frena temporaneamente | 2 |
-| G10 | Tocco prolungato | Fader pitch | Cambia la portata (4, 8, 16, 50, 100%) | 2 |
+| G9 | Trascina lungo il bordo esterno del piatto (oltre l'82% del raggio) | Piatto | Senso orario accelera, antiorario frena (comando `nudge`, ±50% al massimo); al rilascio torna normale | 2 |
+| G10 | Tap sul numero del deck | Testata | Menu: griglia, tonalità, quantize, portata pitch, carica, espelli (al posto del tocco prolungato sul fader, che farebbe saltare il pitch) | 2 |
+| G11 | Tap sul pulsante PANNELLO, o swipe a sinistra dal bordo destro | Barra, bordo | Cassetto con AUTOMIX, SAMPLER, DRUMS, STEMS e FX; si chiude con swipe a destra sulle schede | 2 |
 
 Regole comuni: bersagli di tocco ≥ 44 dp (eccezione: manopole 38 dp, ma con area di tocco estesa a 44 dp con padding); nessun gesto di sistema in conflitto: si usa `touch-action: none` sugli elementi che trascinano; i gesti a due dita non si attivano se un dito è già su un pad o sul piatto.
 
@@ -79,7 +80,7 @@ Regole comuni: bersagli di tocco ≥ 44 dp (eccezione: manopole 38 dp, ma con ar
 
 **Fase 1 (questo branch).** Rilevamento Cockpit, layout, libreria a tendina, G1–G6, blocco orizzontale. Verifica con `?cockpit` da browser (layout) e su dispositivo (gesti).
 
-**Fase 2.** Cassetto FX e stem, pannello Sampler/Drums, menu del piatto (griglia, tonalità, quantize), portata pitch, regolazione fine, pitch bend, comandi cuffie.
+**Fase 2 (fatta).** Cassetto del pannello (stem, FX, sampler, drums, automix), selettore FX nel mixer, CUE MIX e volume cuffie nella barra, menu del deck, regolazione fine, pitch bend.
 
 **Fase 3.** Messa a punto su dispositivo: misura della latenza del tocco su piatto e scrub, dimensione dei bersagli, consumo di batteria, prova dal vivo.
 
@@ -87,6 +88,8 @@ Regole comuni: bersagli di tocco ≥ 44 dp (eccezione: manopole 38 dp, ma con ar
 
 - **Latenza dello scratch col dito.** Dipende dal ritardo di tocco della WebView di Tauri; da misurare su dispositivo prima di promettere lo scratch (G8/G9).
 - **Altezza.** Con 412 dp (meno la barra di stato) la testata e la waveform sono strette: se non basta si può togliere la testata durante la riproduzione.
+- **Swipe dal bordo destro.** Può scontrarsi con il gesto Indietro di Android: per questo c'è anche il pulsante PANNELLO.
+- **Pitch bend.** Il valore resta finché il dito è sul bordo (non torna da solo se il dito si ferma); da tarare su dispositivo.
 - **Pad e hot cue.** Il pad scatta subito alla pressione; per questo il menu radiale è sul chip modalità e non sul pad.
 - **Mano sinistra.** Il layout assume il deck 1 a sinistra come su desktop; nessuna inversione per mancini in fase 1.
 - Il layout è verificato solo in un browser desktop a 915×412 (`?cockpit`, con backend simulato); i gesti no. Nessuna prova su dispositivo.
