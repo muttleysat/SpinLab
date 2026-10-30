@@ -757,13 +757,16 @@ fn stem_cfg_load(dir: &std::path::Path) {
     use std::sync::atomic::Ordering::SeqCst;
     if let Some(v) = std::fs::read_to_string(stem_cfg_path(dir)).ok().and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok()) {
         STEM_MODE.store(v["mode"].as_u64().unwrap_or(0).min(2) as u8, SeqCst);
-        STEM_SPEED.store((v["speed"].as_f64().unwrap_or(0.0) as f32).to_bits(), SeqCst);
+        // la velocita' vale solo per il modello con cui e' stata misurata (es. arriva il modello per telefoni): se no si rimisura
+        let same = v["model"].as_str().map_or(true, |m| m == stems::model_name(&stems::model_path(dir)));
+        let speed = if same { v["speed"].as_f64().unwrap_or(0.0) as f32 } else { 0.0 };
+        STEM_SPEED.store(speed.to_bits(), SeqCst);
     }
 }
 
 fn stem_cfg_save(dir: &std::path::Path) {
     use std::sync::atomic::Ordering::SeqCst;
-    let v = serde_json::json!({ "mode": STEM_MODE.load(SeqCst), "speed": stem_speed() });
+    let v = serde_json::json!({ "mode": STEM_MODE.load(SeqCst), "speed": stem_speed(), "model": stems::model_name(&stems::model_path(dir)) });
     let _ = std::fs::write(stem_cfg_path(dir), v.to_string());
 }
 
@@ -783,9 +786,13 @@ fn stem_bench(dir: &std::path::Path) -> Result<f32, String> {
     while LOADING.load(std::sync::atomic::Ordering::SeqCst) > 0 {
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
-    let t = std::time::Instant::now();
-    stems::infer_segment(&model, planar, stems::SEG)?;
-    let secs = t.elapsed().as_secs_f64().max(1e-3);
+    // il migliore di due: una sola misura e' rumorosa (su Android oscilla del 10-15% e la soglia e' vicina)
+    let mut secs = f64::MAX;
+    for _ in 0..2 {
+        let t = std::time::Instant::now();
+        stems::infer_segment(&model, planar.clone(), stems::SEG)?;
+        secs = secs.min(t.elapsed().as_secs_f64().max(1e-3));
+    }
     let speed = (stems::STRIDE as f64 / stems::SR as f64 / secs) as f32;
     eprintln!("stem: bench {speed:.2}x tempo reale ({secs:.2} s per segmento)");
     STEM_SPEED.store(speed.to_bits(), std::sync::atomic::Ordering::SeqCst);
@@ -1353,6 +1360,7 @@ pub fn run() {
                 let model = stems::model_path(&dir);
                 let d4 = dir.clone();
                 std::thread::spawn(move || {
+                    stems::background_priority();
                     stems::warm(&model);
                     // prima misura della velocita' (poi si rifa solo su richiesta dalle impostazioni)
                     if stem_speed() <= 0.0 && model.exists() {

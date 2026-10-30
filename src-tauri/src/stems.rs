@@ -36,23 +36,26 @@ pub fn model_path(dir: &Path) -> PathBuf {
         }
     }
     dirs.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("models"));
-    // l'ordine dei nomi e' l'ordine di preferenza: su Android il modello int8 (piu' veloce) se c'e'
-    let names: &[&str] = if cfg!(target_os = "android") { &[MODEL_FILE_INT8, MODEL_FILE] } else { &[MODEL_FILE] };
+    // l'ordine dei nomi e' l'ordine di preferenza: su Android il modello per telefoni (piu' veloce) se c'e'
+    let names: &[&str] = if cfg!(target_os = "android") { &[MODEL_FILE_MOBILE, MODEL_FILE] } else { &[MODEL_FILE] };
     for name in names {
         if let Some(p) = dirs.iter().map(|d| d.join(name)).chain(std::iter::once(dir.join("models").join(name))).find(|p| p.is_file()) {
             return p;
         }
     }
     // niente da nessuna parte: quello da scaricare
-    dir.join("models").join(if cfg!(target_os = "android") && MODEL_URL_INT8.is_some() { MODEL_FILE_INT8 } else { MODEL_FILE })
+    dir.join("models").join(if cfg!(target_os = "android") && MODEL_URL_MOBILE.is_some() { MODEL_FILE_MOBILE } else { MODEL_FILE })
 }
 
 const MODEL_FILE: &str = "htdemucs.onnx";
-/// Versione con MatMul/Gemm quantizzati in int8: su CPU ARM (Android) e' circa 1,7 volte piu' veloce con differenze
-/// inudibili (30-40 dB sotto lo stem). Non ha ancora un indirizzo di download: finche' e' `None` l'app usa il modello
-/// normale, ma se il file e' gia' nella cartella `models` (copiato a mano) lo preferisce.
-const MODEL_FILE_INT8: &str = "htdemucs_int8.onnx";
-const MODEL_URL_INT8: Option<&str> = None;
+/// Versione per telefoni, fatta da `tools/make_mobile_model.py`: pesi fp32, grafo semplificato (25 000 nodi -> 1 500)
+/// e iSTFT con una IDFT invece di due ConvTranspose da 2049x4096. Stesso risultato (differenze sotto 1e-4).
+/// Su Galaxy S26 Ultra (CPU, 4 thread): si apre in 0,6 s invece di 5,5 s e separa un segmento piu' in fretta.
+/// int8, fp16 e NNAPI sono stati provati e scartati: int8 non guadagna niente, fp16 e NNAPI sono 10-70 volte piu' lenti.
+/// Non ha ancora un indirizzo di download: finche' e' `None` l'app usa il modello normale, ma se il file e' gia'
+/// nella cartella `models` (copiato a mano, vedi docs/SVILUPPO.md) lo preferisce.
+const MODEL_FILE_MOBILE: &str = "htdemucs_mobile.onnx";
+const MODEL_URL_MOBILE: Option<&str> = None;
 
 /// file di cache degli stem di un brano (chiave: percorso, dimensione e data di modifica)
 pub fn cache_path(dir: &Path, track: &str) -> PathBuf {
@@ -115,8 +118,8 @@ pub fn ensure_model(model: &Path) -> Result<(), String> {
     if model.exists() {
         return Ok(());
     }
-    let url = if model.file_name().is_some_and(|n| n == MODEL_FILE_INT8) {
-        MODEL_URL_INT8.ok_or("manca l'indirizzo di download del modello int8")?
+    let url = if model.file_name().is_some_and(|n| n == MODEL_FILE_MOBILE) {
+        MODEL_URL_MOBILE.ok_or("manca l'indirizzo di download del modello per telefoni")?
     } else {
         MODEL_URL
     };
@@ -227,6 +230,21 @@ fn open(model: &Path) -> Result<Session, String> {
     open_with(model, None).inspect(|_| eprintln!("stem: sessione CPU pronta ({})", model.file_name().map_or(String::new(), |n| n.to_string_lossy().into_owned())))
 }
 
+/// Abbassa la priorita' del thread che chiama (e dei thread che crea, come quelli di ONNX Runtime): la separazione
+/// non deve togliere tempo all'interfaccia. L'audio non ne risente (gira in un thread a priorita' reale).
+pub fn background_priority() {
+    #[cfg(target_os = "android")]
+    unsafe {
+        // nice 5: sotto l'interfaccia (0), sopra i lavori di sfondo di Android (10) per non restare indietro
+        libc::setpriority(libc::PRIO_PROCESS, libc::gettid() as libc::id_t, 5);
+    }
+}
+
+/// Nome del file del modello in uso (per capire se la velocita' misurata vale ancora).
+pub fn model_name(model: &Path) -> String {
+    model.file_name().map_or(String::new(), |n| n.to_string_lossy().into_owned())
+}
+
 /// Apre il modello in anticipo (se il file c'e' gia').
 pub fn warm(model: &Path) {
     if model.exists() {
@@ -247,7 +265,8 @@ fn with_session<R>(model: &Path, f: impl FnOnce(&mut Session) -> Result<R, Strin
 fn open_with(model: &Path, gpu: Option<u8>) -> Result<Session, String> {
     static ENV: std::sync::OnceLock<Result<ort::environment::Environment, String>> = std::sync::OnceLock::new();
     let env = ENV.get_or_init(|| ort::init().build().map_err(|e| e.to_string())).as_ref().map_err(|e| e.clone())?;
-    let mut threads = std::thread::available_parallelism().map_or(4, |n| n.get()).clamp(2, 12);
+    // su Android 4 thread separano veloci come 6 o 8 (misurato su S26 Ultra) e lasciano liberi i core per audio e interfaccia
+    let mut threads = if cfg!(target_os = "android") { 4 } else { std::thread::available_parallelism().map_or(4, |n| n.get()).clamp(2, 12) };
     // prova: SPIN_STEM_THREADS oppure il file `stem_threads` accanto al modello (comodo su Android)
     if let Some(n) = std::env::var("SPIN_STEM_THREADS").ok().or_else(|| model.parent().and_then(|p| std::fs::read_to_string(p.join("stem_threads")).ok()))
         .and_then(|v| v.trim().parse::<usize>().ok()).filter(|n| (1..=16).contains(n)) {
@@ -664,6 +683,7 @@ impl Hub {
     pub fn spawn(self: &Arc<Hub>, dir: PathBuf, cb: Callbacks) {
         let hub = self.clone();
         std::thread::spawn(move || {
+            background_priority();
             let model = model_path(&dir);
             loop {
                 // sceglie il lavoro piu' urgente fra i deck

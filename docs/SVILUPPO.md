@@ -66,3 +66,26 @@ python docs/build_guida.py
 ```
 
 Genera `ui/guida.html`, che il programma mostra dal pulsante **?**.
+
+## Stem su Android
+
+Sul telefono gli stem si separano con la CPU (4 thread). Misure su Galaxy S26 Ultra con il modello normale: 2,6-3,0 s per un segmento da 7,8 s, cioè 1,95-2,2 volte il tempo reale. L'app accetta il tempo reale dalle 2 volte in su (`REALTIME_MIN_SPEED`), quindi con il modello normale il telefono è proprio sulla soglia.
+
+Per questo su Android l'app preferisce `htdemucs_mobile.onnx`, se c'è: è lo stesso modello reso più leggero (si apre in 0,6 s invece di 5,5 e calcola l'iSTFT con una IDFT). Si crea dal modello normale:
+
+```
+pip install onnx onnxslim onnxruntime
+python tools/make_mobile_model.py htdemucs.onnx htdemucs_mobile.onnx --verify
+```
+
+Non ha ancora un indirizzo di download (`MODEL_URL_MOBILE` in `src-tauri/src/stems.rs`): per ora si copia a mano su un telefono con la build di debug installata:
+
+```
+adb push htdemucs_mobile.onnx /data/local/tmp/
+adb shell run-as com.spinlab.dj mkdir -p models
+adb shell run-as com.spinlab.dj cp /data/local/tmp/htdemucs_mobile.onnx models/
+```
+
+(Da verificare sul dispositivo che la cartella dei dati dell'app sia quella in cui parte `run-as`.) Al riavvio l'app rimisura la velocità perché il modello è cambiato.
+
+Provati e scartati sul telefono: NNAPI (37 s per segmento), fp16 (186 s), int8 dinamico (nessun guadagno). Per misurare un modello direttamente sul telefono c'è `src-tauri/examples/stem_bench.rs` (istruzioni in testa al file).
