@@ -1,6 +1,6 @@
 # Percorsi per la compilazione del supporto ASIO (cpal + bindgen). Gli SDK sono in cartelle dell'utente.
 [env]
-CPAL_ASIO_DIR = "C:/Users/Vincenzo/asio-sdk/asiosdk_2.3.4_2025-10-15"
+CPAL_ASIO_DIR = "C:/Users/vincenzo.trombetta/asio-sdk/asiosdk_2.3.3_2019-06-14"
 LIBCLANG_PATH = "C:/Program Files/LLVM/bin"
 CLANG_PATH = "C:/Program Files/LLVM/bin/clang.exe"
 
