@@ -196,6 +196,8 @@
     <label>Uscita audio principale (master) &mdash; scheda del PC o del controller<select id="aDev"></select></label>
     <label>Frequenza di campionamento<select id="aRate"></select></label>
     <label>Dimensione buffer<select id="aBuf"></select></label>
+    <label>Allineamento della grafica <span id="aVisVal">0 ms</span><input id="aVis" type="range" min="-100" max="400" step="5" value="0"></label>
+    <p class="hint">Sposta waveform, griglia e cue rispetto al suono, solo sullo schermo. Se vedi la griglia in anticipo sul battito che senti (tipico su Android, dove l'uscita ha più latenza di quella stimata), aumentalo finché coincidono. Vale per questa uscita audio: ricontrollalo se cambi cuffie o altoparlante.</p>
     <label>Uscita cuffie (preascolto dei canali e anteprima dei brani)<select id="pDev"></select></label>
     <p class="hint">Con un controller che ha la scheda audio integrata (per esempio Denon Prime GO): scegli la sua uscita come principale e, per le cuffie del controller, «Stesso dispositivo, canali 3-4». Oppure tieni il master sulla scheda del PC e metti le cuffie sul controller scegliendolo nell'elenco delle cuffie.</p>
     <p class="hint">ASIO® usa il driver della tua scheda (per esempio Focusrite) e permette latenze molto più basse di Windows (WASAPI): conviene per suonare i pad della batteria dal vivo. Con ASIO la scheda è dedicata a SpinLab.</p>
