@@ -534,3 +534,28 @@ body.cockpit .prow button { height: 26px; }
 body.cockpit .mst .knobwrap { zoom: .62; }
 body.cockpit .mst .knobwrap span { display: none; }
 body.cockpit .cpu span { display: none; } body.cockpit .cpu i { width: 28px; }
+/* Cockpit compatto: telefoni con zoom dello schermo alto (S26 Ultra di serie: 697x330). Il piatto sarebbe largo 70 px:
+   si toglie e la waveform, piu' alta, fa da piatto per lo scrub; i 4 pad stanno su una riga, il mixer si stringe */
+@media (max-height: 380px), (max-width: 780px) {
+  body.cockpit #stage { grid-template-columns: minmax(0, 1fr) 176px minmax(0, 1fr); }
+  body.cockpit .deck { grid-template-rows: 30px 64px minmax(0, 1fr); padding: 4px 5px 5px; }
+  body.cockpit .art { width: 26px; height: 26px; font-size: 13px; }
+  body.cockpit .artist { display: none; }
+  body.cockpit .deck .platter { display: none; }
+  body.cockpit .dmain { grid-template-columns: 36px minmax(0, 1fr); }
+  body.cockpit .deck.rev .dmain { grid-template-columns: minmax(0, 1fr) 36px; }
+  body.cockpit .deck .rcol { order: 1; } body.cockpit .deck .lcol { order: 2; }
+  body.cockpit .deck.rev .lcol { order: 1; } body.cockpit .deck.rev .rcol { order: 2; }
+  body.cockpit .rbtn2 { width: 36px; height: 32px; font-size: 10px; }
+  body.cockpit .transport { height: 44px; } body.cockpit .rbtn { height: 44px; }
+  body.cockpit .modebtn { height: 24px; }
+  body.cockpit .hcgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 1fr; }
+  body.cockpit .loopc .lr button, body.cockpit .loopc .lsz { height: 32px; }
+  body.cockpit .kcol .knobwrap, body.cockpit .fxsel { zoom: .72; }
+  body.cockpit .kcol { justify-content: flex-start; gap: 2px; }
+  body.cockpit .xfade { height: 40px; }
+  body.cockpit .lib-handle { min-width: 120px; }
+  body.cockpit .pn-handle { left: calc(50% + 66px); padding: 0 8px; }
+  body.cockpit #lower { grid-template-columns: 150px minmax(0, 1fr); }
+  body.cockpit .prow .chip2, body.cockpit .hpb { display: none; }
+}

@@ -12,8 +12,9 @@ Fuori ambito: tablet (Galaxy Tab S10+ resta sul layout attuale), layout vertical
 
 ## Dispositivo di riferimento
 
-- Galaxy S26 Ultra, 6,9″, circa 915×412 dp in orizzontale (viewport della WebView, barre di sistema escluse).
-- Altezza minima da supportare: 360 dp. Larghezza minima: 640 dp.
+- Galaxy S26 Ultra, 6,9″. Con le impostazioni di serie la WebView in orizzontale misura **697×330 dp** (dpr 3, barre di sistema escluse); con lo zoom dello schermo al minimo circa 915×412.
+- Altezza minima da supportare: 320 dp. Larghezza minima: 640 dp.
+- **Variante compatta** (altezza ≤ 380 o larghezza ≤ 780, quindi il telefono di serie): il piatto non c'è (sarebbe largo 70 dp) e la waveform fa da piatto per lo scrub; 4 pad su una riga; mixer da 176 dp con manopole ridotte; niente PFL nella barra (restano sui canali) né QUANT accanto ai pad (resta nel menu del deck). Il pitch bend sul bordo del piatto (G9) vale solo nella variante larga.
 - Il motore audio e il backend Rust non cambiano: la modifica è solo di interfaccia (`ui/`) più il blocco dell'orientamento in `AndroidManifest.xml`.
 
 ## Quando si attiva
@@ -92,5 +93,5 @@ Regole comuni: bersagli di tocco ≥ 44 dp (eccezione: manopole 38 dp, ma con ar
 - **Pitch bend.** Il valore resta finché il dito è sul bordo (non torna da solo se il dito si ferma); da tarare su dispositivo.
 - **Pad e hot cue.** Il pad scatta subito alla pressione; per questo il menu radiale è sul chip modalità e non sul pad.
 - **Mano sinistra.** Il layout assume il deck 1 a sinistra come su desktop; nessuna inversione per mancini in fase 1.
-- Il layout è verificato solo in un browser desktop a 915×412 (`?cockpit`, con backend simulato); i gesti no. Nessuna prova su dispositivo.
+- Layout verificato sul telefono (697×330) e in browser a 915×412; i gesti non sono ancora stati provati a mano.
 - **Pizzico sul mixer.** Se le dita partono sopra le manopole queste possono muoversi di poco prima che il pizzico venga riconosciuto.

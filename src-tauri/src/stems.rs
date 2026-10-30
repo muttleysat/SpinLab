@@ -50,7 +50,8 @@ pub fn model_path(dir: &Path) -> PathBuf {
 const MODEL_FILE: &str = "htdemucs.onnx";
 /// Versione per telefoni, fatta da `tools/make_mobile_model.py`: pesi fp32, grafo semplificato (25 000 nodi -> 1 500)
 /// e iSTFT con una IDFT invece di due ConvTranspose da 2049x4096. Stesso risultato (differenze sotto 1e-4).
-/// Su Galaxy S26 Ultra (CPU, 4 thread): si apre in 0,6 s invece di 5,5 s e separa un segmento piu' in fretta.
+/// Su Galaxy S26 Ultra (CPU, 4 thread) si apre in 0,65 s invece di 6,4 s; la separazione ha la stessa velocita'
+/// (la DFT di ORT su ARM costa quasi quanto le ConvTranspose che sostituisce: 0,37 s contro 0,47).
 /// int8, fp16 e NNAPI sono stati provati e scartati: int8 non guadagna niente, fp16 e NNAPI sono 10-70 volte piu' lenti.
 /// Non ha ancora un indirizzo di download: finche' e' `None` l'app usa il modello normale, ma se il file e' gia'
 /// nella cartella `models` (copiato a mano, vedi docs/SVILUPPO.md) lo preferisce.

@@ -10,9 +10,9 @@ Cosa cambia rispetto al modello normale (il risultato e' lo stesso, differenze s
 3. l'iSTFT, che il modello fa con due ConvTranspose da 2049x4096 (45 miliardi di moltiplicazioni per segmento),
    diventa una IDFT + overlap-add.
 
-Misure: su Mac (CPU, 4 thread) un segmento da 7,8 s passa da 1,72 a 1,54 s; sul Galaxy S26 Ultra il modello normale
-impiega 2,6-3,0 s (di cui 0,47 nell'iSTFT) e si apre in 5,5 s, quello semplificato in 0,6 s. Il guadagno dell'IDFT
-sul telefono e' ancora da misurare.
+Misure (CPU, 4 thread): su Mac un segmento da 7,8 s passa da 1,72 a 1,54 s. Sul Galaxy S26 Ultra il modello si apre
+in 0,65 s invece di 6,4, ma un segmento costa uguale (2,9-3,3 s): la DFT di ORT su ARM (0,37 s) costa quasi quanto
+le ConvTranspose che sostituisce (0,47 s). Per guadagnare davvero l'iSTFT andrebbe fatta in Rust con rustfft.
 """
 import argparse
 import numpy as np
