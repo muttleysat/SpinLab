@@ -29,6 +29,19 @@ Per provarla da browser desktop: parametro `?cockpit` nell'indirizzo. Su tablet 
 
 L'app è bloccata in orizzontale (`sensorLandscape`) finché non esistono i layout verticali.
 
+## Scelta dell'interfaccia
+
+In **Impostazioni › INTERFACCIA** (ingranaggio nella barra) si sceglie fra:
+
+| Scelta | Cosa mostra |
+| --- | --- |
+| Automatica (predefinita) | Cockpit sui telefoni Android in orizzontale, desktop altrove |
+| Desktop | Il layout di sempre, scalato in blocco |
+| Cockpit | Cockpit alla misura reale dello schermo: sul telefono di serie la variante compatta, senza piatto |
+| Cockpit prototipo B | L'artboard «B · Cockpit orizzontale» del canvas di Claude Design: piatti, pad 2×2, riga SYNC + LOOP, mixer con HI/MID/LOW. Disegnato a 892×412 e scalato in blocco: sul telefono di serie testi e pulsanti sono circa il 78% |
+
+La scelta si salva nel browser della WebView (`localStorage`, chiave `spinlab.ui`) e vale subito. Per provarle da browser: `?cockpit` o `?proto` nell'indirizzo.
+
 ## Struttura della schermata
 
 Dall'alto in basso, tutto a tutta finestra:
