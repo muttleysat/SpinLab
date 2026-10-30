@@ -18,3 +18,6 @@ src-tauri/models/
 # server licenze: configurazione con password e chiave privata
 server/inc/config.php
 *license-private*
+
+# impostazioni locali dell'editor
+.vscode/
