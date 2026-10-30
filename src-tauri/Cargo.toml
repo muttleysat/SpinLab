@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 description = "SpinLab DJ"
 
+[lib]
+name = "spinlab_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -22,7 +26,6 @@ lofty = "0.22"
 walkdir = "2"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 base64 = "0.22"
-midir = "0.10"
 hound = "3.5"
 libloading = "0.8"
 ort = { version = "=2.0.0-rc.15" }
@@ -32,6 +35,14 @@ claxon = "0.4.3"
 # aggiornamenti automatici (solo desktop)
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
+
+# su Android non c'e' curl: il modello degli stem si scarica con un client HTTP interno (TLS rustls)
+[target.'cfg(target_os = "android")'.dependencies]
+ureq = { version = "2", default-features = false, features = ["tls"] }
+
+# MIDI (midir) non supporta Android
+[target.'cfg(not(target_os = "android"))'.dependencies]
+midir = "0.10"
 
 # ASIO e DirectML esistono solo su Windows
 [target.'cfg(windows)'.dependencies]
