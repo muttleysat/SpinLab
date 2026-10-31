@@ -47,6 +47,9 @@ svg { display: block; }
 #nav button.recording { color: #ff6b79; border-bottom-color: #ff3b4e; }
 .pathrow { display: flex; gap: 8px; } .pathrow input { flex: 1; min-width: 0; font-size: 12px; }
 button.ico { padding: 4px 7px; color: var(--dim); background: none; border-color: transparent; } button.ico:hover { color: var(--text); border-color: var(--line2); }
+.uibtn { display: flex; align-items: center; gap: 6px; border-color: var(--line2) !important; }
+.uibtn b { font-size: 10px; letter-spacing: 1.2px; font-weight: 600; }
+body.cockpit .uibtn { min-height: 30px; }
 
 /* manopole */
 .knobwrap { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; letter-spacing: 1px; color: var(--dim); }
@@ -558,6 +561,8 @@ body.cockpit .cpu span { display: none; } body.cockpit .cpu i { width: 28px; }
   body.cockpit:not(.proto) .pn-handle { left: calc(50% + 66px); padding: 0 8px; }
   body.cockpit:not(.proto) #lower { grid-template-columns: 150px minmax(0, 1fr); }
   body.cockpit:not(.proto) .prow .chip2, body.cockpit:not(.proto) .hpb { display: none; }
+  /* barra stretta: il pulsante dell'interfaccia resta, con la sola icona */
+  body.cockpit:not(.proto) .uibtn b, body.cockpit:not(.proto) .cpu { display: none; }
 }
 
 /* Cockpit prototipo B (artboard «B · Cockpit orizzontale» del canvas di Claude Design): disegnato a 892x412 e scalato in blocco con --k */

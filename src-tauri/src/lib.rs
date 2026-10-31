@@ -1247,9 +1247,7 @@ fn audio_current(app: State<'_, App>) -> audio::AudioInfo {
 
 #[tauri::command]
 fn audio_info(app: State<'_, App>, pv: State<'_, Arc<Previewer>>, driver: Option<String>) -> AudioListFull {
-    use cpal::traits::{DeviceTrait, HostTrait};
-    let host = cpal::default_host();
-    let preview_devices = host.output_devices().map(|d| d.filter_map(|x| x.name().ok()).collect()).unwrap_or_default();
+    let preview_devices = audio::device_names(&cpal::default_host());
     AudioListFull { list: app.audio.list(driver), preview_device: pv.device.lock().clone(), preview_ok: pv.sample_rate() > 0, preview_devices }
 }
 

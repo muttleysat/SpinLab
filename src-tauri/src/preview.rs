@@ -228,7 +228,7 @@ impl Previewer {
 
 fn open(host: &cpal::Host, device: Option<&str>, st: Arc<Mutex<PState>>, bus: Arc<CueBus>) -> Result<(cpal::Stream, u32), String> {
     let default = host.default_output_device();
-    let dev = match device {
+    let dev = match crate::audio::chosen(device) {
         Some(n) => host.output_devices().map_err(|e| e.to_string())?.find(|d| d.name().ok().as_deref() == Some(n)).ok_or_else(|| format!("dispositivo «{n}» non trovato"))?,
         None => default.ok_or("nessun dispositivo audio di uscita")?,
     };

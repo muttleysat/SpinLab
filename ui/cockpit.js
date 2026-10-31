@@ -166,4 +166,36 @@
     g = null;
   };
   mx.addEventListener("pointerup", rel); mx.addEventListener("pointercancel", rel);
+
+  /* ---- Indietro di Android: chiude menu, finestre, pannello e libreria (uno alla volta) invece di uscire dall'app.
+     L'attivita' Android torna indietro nella cronologia della WebView finche' ce n'e', poi chiude: con qualcosa aperto
+     si tiene una voce di cronologia in piu', e la si toglie quando tutto si chiude in altro modo. Vale con ogni interfaccia. */
+  if (/Android/i.test(navigator.userAgent)) {
+    const anyOpen = () => !$("#ctx").hidden || !!$(".keypop") || !!$("dialog[open]") || B.classList.contains("pn-open") || B.classList.contains("lib-open");
+    const closeTop = () => {
+      if (!$("#ctx").hidden) $("#ctx").hidden = true;
+      else if ($(".keypop")) closePops();
+      else if ($("dialog[open]")) [...$$("dialog[open]")].pop().close();
+      else if (B.classList.contains("pn-open")) setPn(false);
+      else if (B.classList.contains("lib-open")) setLib(false);
+    };
+    let guard = false, dropping = false;
+    const sync = () => {
+      if (dropping) return;
+      const o = anyOpen();
+      // solo dopo un tocco: Chrome segna come da saltare le voci aggiunte senza, e Indietro uscirebbe dall'app
+      if (o && !guard && navigator.userActivation?.isActive !== false) { history.pushState({ spinlabBack: 1 }, ""); guard = true; }
+      else if (!o && guard) { dropping = true; history.back(); }
+    };
+    addEventListener("popstate", () => {
+      guard = false;
+      if (dropping) dropping = false; else closeTop();
+      sync();
+    });
+    const mo = new MutationObserver(sync);
+    mo.observe(B, { attributes: true, attributeFilter: ["class"] });
+    mo.observe($("#ctx"), { attributes: true, attributeFilter: ["hidden"] });
+    $$("dialog").forEach((d) => mo.observe(d, { attributes: true, attributeFilter: ["open"] }));
+    DK.forEach((D) => mo.observe(D.el, { childList: true }));
+  }
 })();

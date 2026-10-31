@@ -43,6 +43,8 @@ tauri-plugin-updater = "2"
 
 [target.'cfg(target_os = "android")'.dependencies]
 libc = "0.2"
+# uscita audio con AAudio a bassa latenza (cpal non ne espone le opzioni); stessa versione e feature usate da cpal
+oboe = { version = "0.6", features = ["java-interface"] }
 
 # MIDI (midir) non supporta Android
 [target.'cfg(not(target_os = "android"))'.dependencies]
