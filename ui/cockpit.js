@@ -1,9 +1,11 @@
 "use strict";
 /* Gesture del layout Cockpit (telefono Android in orizzontale). Specifiche: docs/specifiche-android-cockpit.md.
-   Tutto agisce solo con body.cockpit; sul desktop questo file non fa nulla. Usa le funzioni globali di app.js. */
+   Agisce con body.cockpit; menu del deck, pitch bend, menu radiale e cassetto del pannello valgono anche per i modelli
+   verticali (body.mob, mobile.js). Sul desktop questo file non fa nulla. Usa le funzioni globali di app.js. */
 (function () {
   const B = document.body;
-  const on = () => B.classList.contains("cockpit");
+  const ck = () => B.classList.contains("cockpit");
+  const on = () => ck() || B.classList.contains("mob");
 
   /* ---- libreria a tendina (G1, G2): maniglia, swipe giu' dalla barra, swipe su dalla barra di ricerca */
   const top = $("#top"), handle = document.createElement("button");
@@ -20,7 +22,7 @@
   handle.addEventListener("click", () => { if (performance.now() - swiped > 400) setLib(!B.classList.contains("lib-open")); });
   const swipe = (el, dir, skip) => {
     let y0 = null;
-    el.addEventListener("pointerdown", (e) => { y0 = on() && !e.target.closest(skip || "x-none") ? e.clientY : null; });
+    el.addEventListener("pointerdown", (e) => { y0 = ck() && !e.target.closest(skip || "x-none") ? e.clientY : null; });
     el.addEventListener("pointermove", (e) => {
       if (y0 == null) return;
       if ((e.clientY - y0) * dir > 28) { y0 = null; swiped = performance.now(); setLib(dir > 0); }
@@ -37,8 +39,9 @@
   top.insertBefore(ph, top.querySelector(".topr"));
   const setPn = (open) => { B.classList.toggle("pn-open", open); if (open) setLib(false); };
   ph.addEventListener("click", () => setPn(!B.classList.contains("pn-open")));
-  let x0 = null;
+  // ogni swipe ha il suo punto di partenza: con uno solo condiviso il listener del documento (bordo) azzerava quello delle schede
   const hswipe = (el, edge) => {
+    let x0 = null;
     el.addEventListener("pointerdown", (e) => { x0 = on() && (edge ? e.clientX > innerWidth - 22 : !e.target.closest("input,select,.fader,.knob")) ? e.clientX : null; });
     el.addEventListener("pointermove", (e) => {
       if (x0 == null) return;
@@ -48,6 +51,8 @@
   };
   hswipe(document, true);
   hswipe($(".ptabs"), false);
+  // per mobile.js (modelli verticali): libreria e pannello si aprono anche dalle schede in basso
+  window.CK = { setLib, setPn };
 
   /* ---- menu del deck (tocco sul numero): griglia, tonalita', quantize, portata del pitch, carica, espelli (i pulsanti relativi sono nascosti nel Cockpit) */
   document.addEventListener("click", (e) => {
@@ -68,7 +73,8 @@
     const cv = on() && e.target.closest?.("canvas.plat");
     if (!cv) return;
     const b = cv.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2, R = Math.min(b.width, b.height) / 2;
-    if (Math.hypot(e.clientX - cx, e.clientY - cy) < R * 0.82) return; // dentro: scrub come sempre
+    const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+    if (dist < R * 0.82 || dist > R) return; // dentro: scrub come sempre; negli angoli fuori dal disco: altri gesti (arco del loop, mobile.js)
     e.stopImmediatePropagation();
     cv.setPointerCapture(e.pointerId);
     bend = { i: +cv.closest(".deck").dataset.i, cx, cy, a: Math.atan2(e.clientY - cy, e.clientX - cx), tot: 0 };
@@ -145,7 +151,7 @@
   const mx = $("#mixer"), P = new Map();
   let g = null;
   mx.addEventListener("pointerdown", (e) => {
-    if (!on() || e.pointerType === "mouse") return;
+    if (!ck() || e.pointerType === "mouse") return;
     P.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now(), knob: e.target.closest(".knob") });
     if (P.size === 2) {
       const [a, b] = [...P.values()];
@@ -171,12 +177,15 @@
      L'attivita' Android torna indietro nella cronologia della WebView finche' ce n'e', poi chiude: con qualcosa aperto
      si tiene una voce di cronologia in piu', e la si toglie quando tutto si chiude in altro modo. Vale con ogni interfaccia. */
   if (/Android/i.test(navigator.userAgent)) {
-    const anyOpen = () => !$("#ctx").hidden || !!$(".keypop") || !!$("dialog[open]") || B.classList.contains("pn-open") || B.classList.contains("lib-open");
+    // mobile.js aggiunge i suoi pannelli (cassetto del mixer, spazi della mappa) con CK.back = { open(), close() }
+    const extra = () => window.CK.back;
+    const anyOpen = () => !$("#ctx").hidden || !!$(".keypop") || !!$("dialog[open]") || !!extra()?.open() || B.classList.contains("pn-open") || B.classList.contains("lib-open");
     const closeTop = () => {
       if (!$("#ctx").hidden) $("#ctx").hidden = true;
       else if ($(".keypop")) closePops();
       else if ($("dialog[open]")) [...$$("dialog[open]")].pop().close();
       else if (B.classList.contains("pn-open")) setPn(false);
+      else if (extra()?.open()) extra().close();
       else if (B.classList.contains("lib-open")) setLib(false);
     };
     let guard = false, dropping = false;

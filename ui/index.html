@@ -28,7 +28,7 @@
   </nav>
   <div class="topr">
     <div id="recInd" hidden title="Registrazione in corso: clic per fermarla"><i></i><b>REC</b><span id="recTime">00:00</span></div>
-    <div class="cpu" title="Carico del thread audio"><span>CPU</span><i id="cpuBar"><b></b></i></div>
+    <div class="cpu" title="Carico del thread audio: sopra il 70% (giallo) l'audio rischia di scattare, sopra il 90% (rosso) scatta"><span>CPU</span><i id="cpuBar"><b></b></i><em id="cpuPct">0%</em></div>
     <div class="clock" id="clock">--:--</div>
     <div class="hp" title="Cuffie: accendi il preascolto (PFL) dei canali e dosa fra un lato e l'altro con CUE MIX">
       <svg viewBox="0 0 24 24" width="18" height="18" class="hpic"><path d="M4 15v-3a8 8 0 0 1 16 0v3M4 15h3v5H5a1 1 0 0 1-1-1zM20 15h-3v5h2a1 1 0 0 0 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
@@ -40,7 +40,7 @@
     </div>
     <div class="mst"><div class="knobwrap sm"><div class="knob" id="masterKnob" title="Volume master"></div><span>MASTER</span></div>
       <div class="meter horiz" id="masterMeter"><i></i><i></i></div></div>
-    <button id="uiBtn" class="ico uibtn" title="Interfaccia: desktop, Cockpit o Cockpit prototipo B"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 5h18v14H3zM9 5v14M9 12h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><b id="uiBtnLbl"></b></button>
+    <button id="uiBtn" class="ico uibtn" title="MODO: cambia interfaccia (A Stack, B Cockpit, C Focus, D Mappa, desktop)" aria-haspopup="menu"><i id="uiBtnLtr" class="ltr"></i><b id="uiBtnLbl"></b><svg viewBox="0 0 24 24" width="10" height="10" aria-hidden="true"><path d="M5 9l7 7 7-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button id="audioBtn" class="ico" title="Impostazioni audio"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm8.5 4.5-.1-1 1.9-1.5-1.9-3.3-2.3.9a7 7 0 0 0-1.7-1l-.4-2.4h-3.8l-.4 2.4a7 7 0 0 0-1.7 1l-2.3-.9-1.9 3.3L5.8 12l-.1 1 .1 1-1.9 1.5 1.9 3.3 2.3-.9a7 7 0 0 0 1.7 1l.4 2.4h3.8l.4-2.4a7 7 0 0 0 1.7-1l2.3.9 1.9-3.3L20.4 14z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
     <button id="aboutBtn2" class="ico" title="Informazioni su SpinLab DJ" aria-label="Informazioni"><b style="font-size:15px;font-family:Georgia,serif">i</b></button>
     <button id="helpBtn" class="ico" title="Guida: il manuale del programma" aria-label="Guida"><b style="font-size:15px">?</b></button>
@@ -259,12 +259,15 @@ SOFTWARE.</pre></details>
   </div>
   <div class="spane" id="sp-ui" hidden>
     <label>Interfaccia<select id="uiMode">
-      <option value="auto">Automatica: Cockpit sui telefoni in orizzontale, desktop altrove</option>
+      <option value="auto">Automatica: sui telefoni A in verticale e B compatto in orizzontale, desktop altrove</option>
+      <option value="stack">A · Stack verticale: due deck impilati, crossfader sotto il pollice (una mano)</option>
+      <option value="proto">B · Cockpit orizzontale: piatti, pad 2×2, SYNC e LOOP (due pollici)</option>
+      <option value="cockpit">B · Cockpit compatto: alla misura dello schermo, senza piatti</option>
+      <option value="focus">C · Focus + Platter: un deck col piatto grande e gli hot cue intorno (dal vivo)</option>
+      <option value="spaces">D · Mappa degli spazi: deck, mixer, libreria, FX, stem e sampler su una tela</option>
       <option value="desktop">Desktop: due deck, mixer, libreria e pannelli insieme</option>
-      <option value="cockpit">Cockpit: alla misura dello schermo (compatto sui telefoni, senza piatto)</option>
-      <option value="proto">Cockpit prototipo B: piatti, pad 2×2, SYNC e LOOP (scalato allo schermo)</option>
     </select></label>
-    <p class="hint">Il cambio è immediato e resta per le volte successive. Sul telefono il Cockpit prototipo rimpicciolisce tutto per far stare i piatti: testi e pulsanti sono più piccoli del Cockpit compatto.</p>
+    <p class="hint">Il cambio è immediato e resta per le volte successive; lo stesso menu si apre dal pulsante MODO nella barra. A, C e D sono pensati per il telefono in verticale, B in orizzontale.</p>
   </div>
   <div class="spane" id="sp-midi" hidden>
     <p class="hint" style="margin-top:0"><a href="#" data-help="controller-midi">Guida al controller MIDI</a> (SHIFT, livelli dei pad, encoder, jog). Collega il controller, premi «Learn» accanto a una funzione e muovi o premi il controllo da assegnare. Funziona con qualsiasi controller MIDI. I tasti con SHIFT si assegnano con la casella SHIFT dopo aver assegnato il tasto SHIFT stesso.</p>
@@ -286,5 +289,6 @@ SOFTWARE.</pre></details>
 <script src="midi.js"></script>
 <script src="automix.js"></script>
 <script src="cockpit.js"></script>
+<script src="mobile.js"></script>
 </body>
 </html>

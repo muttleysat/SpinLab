@@ -15,7 +15,7 @@ Fuori ambito: tablet (Galaxy Tab S10+ resta sul layout attuale), layout vertical
 - Galaxy S26 Ultra, 6,9″. Con le impostazioni di serie la WebView in orizzontale misura **697×330 dp** (dpr 3, barre di sistema escluse); con lo zoom dello schermo al minimo circa 915×412.
 - Altezza minima da supportare: 320 dp. Larghezza minima: 640 dp.
 - **Variante compatta** (altezza ≤ 380 o larghezza ≤ 780, quindi il telefono di serie): il piatto non c'è (sarebbe largo 70 dp) e la waveform fa da piatto per lo scrub; 4 pad su una riga; mixer da 176 dp con manopole ridotte; niente PFL nella barra (restano sui canali) né QUANT accanto ai pad (resta nel menu del deck). Il pitch bend sul bordo del piatto (G9) vale solo nella variante larga.
-- Il motore audio e il backend Rust non cambiano: la modifica è solo di interfaccia (`ui/`) più il blocco dell'orientamento in `AndroidManifest.xml`.
+- Il motore audio e il backend Rust non cambiano: la modifica è solo di interfaccia (`ui/`) più l'orientamento in `AndroidManifest.xml`.
 
 ## Quando si attiva
 
@@ -27,22 +27,21 @@ La modalità Cockpit si attiva (classe `cockpit` sul `body`) quando **tutte** qu
 
 Per provarla da browser desktop: parametro `?cockpit` nell'indirizzo. Su tablet (altezza ≥ 600 dp) e in finestra mobile Samsung ampia resta il layout attuale. La classe si ricalcola a ogni cambio di misura. In modalità Cockpit la scala `--k` vale 1 (nessun ridimensionamento in blocco), quindi i canvas si disegnano alla loro misura reale.
 
-L'app è bloccata in orizzontale (`sensorLandscape`) finché non esistono i layout verticali.
+L'app segue la rotazione del telefono (`fullUser`, rispetta il blocco della rotazione): in Automatica il telefono in verticale passa al modello A (Stack), descritto con C e D in [design/ux-mobile.md](design/ux-mobile.md).
 
 ## Scelta dell'interfaccia
 
-In **Impostazioni › INTERFACCIA** (ingranaggio nella barra) si sceglie fra:
+Dal pulsante **MODO** nella barra (lettera del modello, accanto all'ingranaggio, sempre visibile) o in **Impostazioni › INTERFACCIA**. Sul telefono la scelta è per orientamento: in orizzontale B · Cockpit orizzontale, B · Cockpit compatto o Desktop; in verticale A, C o D. Ruotando il telefono si passa dall'una all'altra. Per B:
 
 | Scelta | Cosa mostra |
 | --- | --- |
-| Automatica (predefinita) | Cockpit sui telefoni Android in orizzontale, desktop altrove |
-| Desktop | Il layout di sempre, scalato in blocco |
-| Cockpit | Cockpit alla misura reale dello schermo: sul telefono di serie la variante compatta, senza piatto |
-| Cockpit prototipo B | L'artboard «B · Cockpit orizzontale» del canvas di Claude Design: piatti, pad 2×2, riga SYNC + LOOP, mixer con HI/MID/LOW. Disegnato a 892×412 e scalato in blocco: sul telefono di serie testi e pulsanti sono circa il 78% |
+| Automatica (predefinita) | Sui telefoni Android: Cockpit compatto in orizzontale, Stack (A) in verticale; desktop altrove |
+| B · Cockpit compatto | Cockpit alla misura reale dello schermo: sul telefono di serie la variante compatta, senza piatto |
+| B · Cockpit orizzontale | L'artboard «B · Cockpit orizzontale» del canvas di Claude Design: piatti, pad 2×2, riga SYNC + LOOP, mixer con HI/MID/LOW. Alla misura reale dello schermo (697×330 di serie): mixer da 176, pitch da 30 e controlli da 96, così restano i piatti (circa 110 dp) |
 
-La stessa scelta si fa dal pulsante INTERFACCIA nella barra, accanto all'ingranaggio, sempre visibile (anche nel layout desktop, per poter tornare al Cockpit dal telefono): mostra l'interfaccia attiva e al tocco apre il menu con le quattro voci.
+Gli altri modelli sono descritti in [design/ux-mobile.md](design/ux-mobile.md).
 
-La scelta si salva nel browser della WebView (`localStorage`, chiave `spinlab.ui`) e vale subito. Per provarle da browser: `?cockpit` o `?proto` nell'indirizzo.
+La scelta si salva nel browser della WebView (`localStorage`, chiave `spinlab.ui`) e vale subito. Per provarle da browser: `?cockpit`, `?proto`, `?stack`, `?focus` o `?spaces` nell'indirizzo.
 
 ## Struttura della schermata
 
