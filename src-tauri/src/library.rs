@@ -66,7 +66,7 @@ pub struct Playlist {
 const COLS: &str = "t.id,t.path,t.title,t.artist,t.album,t.genre,t.year,t.bpm,t.key,t.duration,t.rating,t.tags,t.comment,\n    EXISTS(SELECT 1 FROM analysis a WHERE a.path=t.path AND a.version=2)";
 
 /// cambia quando cambia l'algoritmo di analisi: le analisi vecchie vengono rifatte (tenere allineato con COLS)
-pub const ANALYSIS_VERSION: i64 = 2;
+pub const ANALYSIS_VERSION: i64 = 3;
 
 fn row(r: &rusqlite::Row) -> rusqlite::Result<LibTrack> {
     Ok(LibTrack {

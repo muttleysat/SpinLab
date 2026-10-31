@@ -10,8 +10,14 @@ use std::f32::consts::PI;
 pub const PEAK_RATE: usize = 400;
 /// frazione della finestra di energia da sottrarre per arrivare all'inizio reale del transitorio
 const ATTACK_OFFSET: f64 = 0.17;
-/// peso del flusso sotto i 160 Hz: la grancassa definisce il battito più delle note
-const LOW_WEIGHT: f32 = 20.0;
+/// peso del flusso sotto LOW_HZ: la grancassa (e il basso) definiscono il battito piu' degli alti. Provati 1-200 e 100-500 Hz contro le
+/// griglie di Engine DJ su 60 brani dance (tools/engine_compare.py): con 20 / 160 Hz i marker saltavano spesso sul contrattempo.
+const LOW_WEIGHT: f32 = 6.0;
+const LOW_HZ: f32 = 250.0;
+/// griglia costante se, in ogni quarto del brano, cade sull'envelope almeno questa frazione di quanto ci cade il tracking dinamico
+const CONST_RATIO: f32 = 0.6;
+/// sotto questo scarto quadratico (s) dalla retta di regressione dei battiti, la griglia diventa la retta (tempo fisso)
+const FIXED_RMS: f64 = 0.035;
 const SMOOTH_HALF: usize = 3;
 const SMOOTH_SIGMA: f64 = 1.2;
 
@@ -197,7 +203,7 @@ fn onset_envelope(mono: &[f32], sr: u32) -> (Vec<f32>, f32, usize) {
     let fft = FftPlanner::<f32>::new().plan_fft_forward(n);
     let win = hann(n);
     let max_bin = ((9000.0 / (sr as f32 / n as f32)) as usize).min(n / 2);
-    let low_bins = (160.0 / (sr as f32 / n as f32)) as usize;
+    let low_bins = (LOW_HZ / (sr as f32 / n as f32)) as usize;
     let mut prev = vec![0f32; max_bin];
     let mut env = Vec::with_capacity(mono.len() / hop);
     let mut buf = vec![Complex::new(0f32, 0f32); n];
@@ -267,6 +273,49 @@ fn fine_onset(mono: &[f32], sr: u32) -> Fine {
     Fine { on, hop, win }
 }
 
+/// Griglia a passo costante: cerca il periodo (entro ±1,5% di `period`) e la fase che mettono i battiti sui massimi dell'envelope
+/// per tutta la durata del brano. Ritorna (periodo, fase, punteggio medio per battito) in unita' di frame dell'envelope.
+fn const_grid(o: &[f32], period: f32) -> Option<(f32, f32, f32)> {
+    let n = o.len();
+    if n < 200 || period < 10.0 {
+        return None;
+    }
+    // envelope appena ammorbidito: tollera 5-10 ms di errore sul singolo colpo
+    let mut sm = vec![0f32; n];
+    for i in 1..n - 1 {
+        sm[i] = 0.25 * o[i - 1] + 0.5 * o[i] + 0.25 * o[i + 1];
+    }
+    let at = |x: f32| -> f32 {
+        let i = x as usize;
+        if i + 1 >= n { return 0.0; }
+        let f = x - i as f32;
+        sm[i] * (1.0 - f) + sm[i + 1] * f
+    };
+    let nb = (n as f32 / period) as usize;
+    // passo del periodo tale che la deriva su tutto il brano resti sotto 0,25 frame (1,2 ms)
+    let step = (0.25 / nb.max(1) as f32).max(0.004);
+    let steps = (0.015 * period / step).ceil() as i32;
+    let (mut best, mut best_s) = ((period, 0.0f32), f32::MIN);
+    for si in -steps..=steps {
+        let p = period + si as f32 * step;
+        let beats = (n as f32 / p) as usize;
+        let mut ph = 0.0f32;
+        while ph < p {
+            let mut sum = 0f32;
+            for k in 0..beats {
+                sum += at(ph + k as f32 * p);
+            }
+            let sc = sum / beats.max(1) as f32;
+            if sc > best_s {
+                best_s = sc;
+                best = (p, ph);
+            }
+            ph += 1.0;
+        }
+    }
+    Some((best.0, best.1, best_s))
+}
+
 fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64>, f64, usize) {
     let (o, fps, half) = onset_envelope(mono, sr);
     progress(0.35);
@@ -296,16 +345,27 @@ fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64
         let f = x - i as f32;
         ac[i] * (1.0 - f) + ac[i + 1] * f
     };
+    let support = |l: f32| -> f32 { (at(l) + 0.9 * at(2.0 * l) + 0.8 * at(3.0 * l) + 0.7 * at(4.0 * l)) / 3.4 };
     let mut best = lag_lo;
     let mut best_v = f32::MIN;
     for lag in lag_lo..=lag_hi {
         let l = lag as f32;
-        let support = (at(l) + 0.9 * at(2.0 * l) + 0.8 * at(3.0 * l) + 0.7 * at(4.0 * l)) / 3.4;
         let r = (l / center).log2();
-        let v = support * (-0.5 * (r / 1.1) * (r / 1.1)).exp();
+        let v = support(l) * (-0.5 * (r / 1.1) * (r / 1.1)).exp();
         if v > best_v {
             best_v = v;
             best = lag;
+        }
+    }
+    // Errore tipico della musica dance: si sceglie un periodo di 3 battiti (un impulso ogni 3: 130 BPM diventa 86,7, due terzi del vero),
+    // perche' i colpi sincopati lo rinforzano. Se il periodo pari a 2/3 di quello scelto ha un supporto confrontabile, il battito vero
+    // e' quello: quando il tempo scelto e' giusto, 2/3 del suo periodo cade fra due battiti e ha un supporto molto piu' basso
+    // (misurato su 60 brani con il BPM nei tag: giusti 0,2-0,3 contro 0,5-0,8 del periodo scelto; sbagliati sempre sopra l'1,0).
+    {
+        let l2 = best as f32 * 2.0 / 3.0;
+        if l2 >= lag_lo as f32 && support(l2) > 0.9 * support(best as f32) {
+            let (a, b) = ((l2.round() as usize).saturating_sub(2).max(lag_lo), l2.round() as usize + 2);
+            best = (a..=b).max_by(|&x, &y| support(x as f32).partial_cmp(&support(y as f32)).unwrap()).unwrap_or(best);
         }
     }
     let (a, b, c) = (ac[best - 1], ac[best], ac[best + 1]);
@@ -353,7 +413,32 @@ fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64
     if idx.len() < 8 {
         return (vec![], 60.0 * fps as f64 / period as f64, 0);
     }
-    let coarse: Vec<f64> = idx.iter().map(|&i| coarse_t(i as f64)).collect();
+    // Brano a tempo fisso: una sola griglia per tutto il pezzo. Il DP segue localmente l'impulso piu' forte e in molti brani dance salta fra la
+    // grancassa e il contrattempo (mezzo battito) a meta' brano; con tempo costante la griglia e' unica e non puo' saltare.
+    // Si usa se, in tutti e quattro i quarti del brano, la griglia costante cade sull'envelope almeno quanto il DP (rapporto >= soglia).
+    let const_ratio = CONST_RATIO;
+    let mut idx_f: Vec<f64> = idx.iter().map(|&i| i as f64).collect();
+    if const_ratio > 0.0 {
+        if let Some((cp, cph, _)) = const_grid(&o, p) {
+            let nb = ((n as f32 - cph) / cp).floor() as usize;
+            let grid: Vec<f32> = (0..nb).map(|k| cph + k as f32 * cp).collect();
+            let hit = |x: f32| -> f32 {
+                let i = x.round() as isize;
+                (i - 1..=i + 1).filter(|&j| j >= 0 && (j as usize) < n).map(|j| o[j as usize]).fold(0.0, f32::max)
+            };
+            let quarter = |v: &[f32]| -> Vec<f32> {
+                let q = (v.len() / 4).max(1);
+                (0..4).map(|k| { let s = &v[(k * q).min(v.len())..((k + 1) * q).min(v.len())]; if s.is_empty() { 0.0 } else { s.iter().map(|&x| hit(x)).sum::<f32>() / s.len() as f32 } }).collect()
+            };
+            let dp: Vec<f32> = idx.iter().map(|&i| i as f32).collect();
+            let (qc, qd) = (quarter(&grid), quarter(&dp));
+            let ok = (0..4).all(|k| qd[k] <= 0.0 || qc[k] >= const_ratio * qd[k]);
+            if ok && grid.len() >= 8 {
+                idx_f = grid.iter().map(|&g| g as f64).collect();
+            }
+        }
+    }
+    let coarse: Vec<f64> = idx_f.iter().map(|&i| coarse_t(i)).collect();
 
     progress(0.65);
     // --- aggancio ai transitori reali nel dominio del tempo (±60 ms, risoluzione 1 ms)
@@ -453,6 +538,13 @@ fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64
     let mut ivs: Vec<f64> = beats.windows(2).map(|w| w[1] - w[0]).collect();
     ivs.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let med = ivs[ivs.len() / 2];
+    // brano a tempo fisso (elettronica, dance): la griglia diventa la retta di regressione, come in una griglia rigida
+    // (i micro-scarti dei singoli colpi non devono far ballare i marker rispetto alla grancassa)
+    if rms < FIXED_RMS {
+        for (i, t) in beats.iter_mut().enumerate() {
+            *t = my + slope * (i as f64 - mx);
+        }
+    }
     let mut bpm = if rms < 0.02 { 60.0 / slope } else { 60.0 / med };
     while bpm < 75.0 {
         bpm *= 2.0;
@@ -865,5 +957,24 @@ mod tests {
                 println!("{} @{sr}: decode {:?}, waveform {:?}, json onda {} KB in {:?}", std::path::Path::new(f).file_name().unwrap().to_string_lossy(), t1, t2, js.len() / 1024, t0.elapsed() - t1 - t2);
             }
         }
+    }
+
+    /// SPIN_FILES (separati da |), SPIN_OUT: analizza i file come fa il programma e scrive bpm, battuta e battiti in un JSON
+    /// (serve a confrontare la griglia con una misura indipendente: tools/grid_check.py)
+    #[test]
+    #[ignore]
+    fn analyze_dump() {
+        let mut out = serde_json::Map::new();
+        // SPIN_LIST: file UTF-8 con un percorso per riga (i nomi con caratteri speciali non passano bene dalle variabili d'ambiente)
+        let list: Vec<String> = match std::env::var("SPIN_LIST") {
+            Ok(l) => std::fs::read_to_string(l).unwrap().lines().map(str::to_string).filter(|f| !f.is_empty()).collect(),
+            Err(_) => std::env::var("SPIN_FILES").unwrap_or_default().split('|').filter(|f| !f.is_empty()).map(str::to_string).collect(),
+        };
+        for f in &list {
+            let d = match crate::decode::decode_file(f, 44100) { Ok(d) => d, Err(_) => continue };
+            let a = analyze(&d, 44100);
+            out.insert(f.clone(), serde_json::json!({ "bpm": a.bpm, "downbeat": a.downbeat, "beats": a.beats }));
+        }
+        std::fs::write(std::env::var("SPIN_OUT").unwrap(), serde_json::to_string(&out).unwrap()).unwrap();
     }
 }

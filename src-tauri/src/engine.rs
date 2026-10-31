@@ -694,6 +694,14 @@ impl Deck {
         }
         match cmd {
             "shift" => self.grid_base.iter_mut().for_each(|t| *t += a / 1000.0),
+            // mezzo battito avanti (a > 0) o indietro: serve quando i marker cadono sul contrattempo invece che sulla grancassa
+            "half" => {
+                let n = self.grid_base.len();
+                let p = (self.grid_base[n - 1] - self.grid_base[0]) / (n - 1) as f64;
+                let d = if a >= 0.0 { 0.5 * p } else { -0.5 * p };
+                self.grid_base.iter_mut().for_each(|t| *t += d);
+                self.grid_pins.clear();
+            }
             "halve" => {
                 self.grid_base = self.grid_base.iter().step_by(2).copied().collect();
                 self.grid_down = (self.grid_down / 2) % 4;
@@ -1982,6 +1990,11 @@ mod tests {
         t.downbeat = 1;
         d.load(Arc::new(t));
         assert!(d.grid_cmd("shift", 10.0));
+        assert!((d.track.as_ref().unwrap().beats[0] - 0.114).abs() < 1e-9);
+        // mezzo battito (a 120 bpm: 0,25 s) avanti e poi indietro
+        assert!(d.grid_cmd("half", 1.0));
+        assert!((d.track.as_ref().unwrap().beats[0] - 0.364).abs() < 1e-3, "{}", d.track.as_ref().unwrap().beats[0]);
+        assert!(d.grid_cmd("half", -1.0));
         assert!((d.track.as_ref().unwrap().beats[0] - 0.114).abs() < 1e-9);
         d.grid_cmd("double", 0.0);
         let t = d.track.as_ref().unwrap();
