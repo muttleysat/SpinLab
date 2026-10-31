@@ -67,29 +67,52 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
    rimpicciolendosi se e' piu' piccola (o lo zoom di Windows e' alto) e ingrandendosi se e' piu' grande (schermo pieno, 1440p, 4K) */
 const BASE_W = 1240, BASE_H = 940, MAX_K = 3;
 let uiK = 1;
-/* interfaccia scelta in Impostazioni > INTERFACCIA (docs/specifiche-android-cockpit.md):
-   auto = Cockpit sui telefoni Android in orizzontale, desktop altrove; desktop; cockpit = Cockpit alla misura reale
-   (compatto sui telefoni); proto = Cockpit del prototipo B, disegnato a PROTO_W x PROTO_H e scalato in blocco.
-   `?cockpit` / `?proto` nell'indirizzo forzano la scelta per provarla da browser */
-const PROTO_W = 892, PROTO_H = 412;
-let uiMode = "auto"; try { uiMode = localStorage.getItem("spinlab.ui") || "auto"; } catch (e) {}
-const UI_PHONE = () => /Android/i.test(navigator.userAgent) && innerWidth > innerHeight && innerHeight < 600;
+/* interfaccia (docs/design/ux-mobile.md). Sul telefono si sceglie un'interfaccia per orientamento, col pulsante MODO o in
+   Impostazioni > INTERFACCIA: in verticale A Stack (stack), C Focus (focus), D Mappa (spaces); in orizzontale B Cockpit (proto, coi piatti),
+   B compatto (cockpit) o desktop. Ruotando il telefono si passa dall'una all'altra, e un modello orizzontale non finisce mai in verticale.
+   I modelli per telefono sono alla misura reale dello schermo (scala 1, misure in dp) e si adattano; solo il desktop si scala in blocco.
+   Su computer e tablet c'e' una sola scelta (auto = desktop).
+   `?cockpit` / `?proto` / `?stack` / `?focus` / `?spaces` nell'indirizzo forzano la scelta per provarla da browser */
+const UI_MOBILE = ["stack", "focus", "spaces"], UI_LAND = ["proto", "cockpit", "desktop"], UI_DEF = { v: "stack", h: "cockpit" };
+const UI_ANDROID = /Android/i.test(navigator.userAgent);
+const uiPhone = () => UI_ANDROID && Math.min(innerWidth, innerHeight) < 600;
+const uiOrient = () => (innerHeight >= innerWidth ? "v" : "h");
+const uiGet = (k) => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+const uiPut = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+let uiMode = uiGet("spinlab.ui") || "auto"; // computer e tablet
+const uiPick = { v: uiGet("spinlab.ui.v"), h: uiGet("spinlab.ui.h") }; // telefono, per orientamento
+// la scelta unica delle versioni precedenti vale per il suo orientamento
+if (!uiPick.v && UI_MOBILE.includes(uiMode)) uiPick.v = uiMode;
+if (!uiPick.h && (uiMode === "proto" || uiMode === "cockpit")) uiPick.h = uiMode;
 function uiLayout() {
-  if (/[?&]proto\b/.test(location.search)) return "proto";
-  if (/[?&]cockpit\b/.test(location.search)) return "cockpit";
-  return uiMode === "auto" ? (UI_PHONE() ? "cockpit" : "desktop") : uiMode;
+  const q = location.search.match(/[?&](proto|cockpit|stack|focus|spaces)\b/);
+  if (q) return q[1];
+  if (uiPhone()) { const o = uiOrient(), m = uiPick[o]; return (o === "v" ? UI_MOBILE : UI_LAND).includes(m) ? m : UI_DEF[o]; }
+  return uiMode === "auto" ? "desktop" : uiMode;
 }
-function setUiMode(m) { uiMode = m; try { localStorage.setItem("spinlab.ui", m); } catch (e) {} fitUI(); }
+// la scelta mostrata in impostazioni e nel menu: "auto" se sul telefono non e' stata scelta per l'orientamento attuale
+const uiChoice = () => (uiPhone() ? uiPick[uiOrient()] || "auto" : uiMode);
+function setUiMode(m) {
+  if (uiPhone()) {
+    if (m === "auto") { uiPick.v = uiPick.h = ""; uiPut("spinlab.ui.v", ""); uiPut("spinlab.ui.h", ""); }
+    else { const o = UI_MOBILE.includes(m) ? "v" : "h"; uiPick[o] = m; uiPut("spinlab.ui." + o, m); }
+  } else { uiMode = m; uiPut("spinlab.ui", m); }
+  fitUI();
+}
 function fitUI() {
-  const lay = uiLayout(), ck = lay === "cockpit" || lay === "proto";
+  const lay = uiLayout(), ck = lay === "cockpit" || lay === "proto", mob = UI_MOBILE.includes(lay);
   document.body.classList.toggle("cockpit", ck);
   document.body.classList.toggle("proto", lay === "proto");
-  uiK = lay === "proto" ? Math.min(innerWidth / PROTO_W, innerHeight / PROTO_H) : ck ? 1 : Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
+  document.body.classList.toggle("mob", mob);
+  UI_MOBILE.forEach((m) => document.body.classList.toggle("m-" + m, lay === m));
+  uiK = ck || mob ? 1 : Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
   document.documentElement.style.setProperty("--k", uiK.toFixed(4));
   const lbl = $("#uiBtnLbl"); if (lbl) lbl.textContent = UI_NAMES[lay];
+  const ltr = $("#uiBtnLtr"); if (ltr) ltr.textContent = UI_LETTERS[lay];
   requestAnimationFrame(resizeCanvases);
 }
-const UI_NAMES = { desktop: "DESKTOP", cockpit: "COCKPIT", proto: "PROTO B" };
+const UI_NAMES = { desktop: "DESKTOP", cockpit: "COMPATTO", proto: "COCKPIT", stack: "STACK", focus: "FOCUS", spaces: "MAPPA" };
+const UI_LETTERS = { desktop: "▭", cockpit: "B", proto: "B", stack: "A", focus: "C", spaces: "D" };
 window.addEventListener("resize", fitUI);
 /* su Android (finestre mobili di Samsung) l'evento resize non scatta sempre quando la finestra cambia misura: si osserva anche il documento */
 try { new ResizeObserver(() => fitUI()).observe(document.documentElement); } catch (e) {}
@@ -106,7 +129,7 @@ function makeKnob(el, { value, def, onChange }) {
   el.addEventListener("pointermove", (e) => {
     if (!st) return;
     /* Cockpit (tocco): spostandosi di lato mentre si trascina la regolazione diventa fine (1/4 della velocita'), senza salti */
-    if (!st.fine && document.body.classList.contains("cockpit") && Math.abs(e.clientX - st.x) > 24) st = { x: e.clientX, y: e.clientY, v, fine: true };
+    if (!st.fine && (document.body.classList.contains("cockpit") || document.body.classList.contains("mob")) && Math.abs(e.clientX - st.x) > 24) st = { x: e.clientX, y: e.clientY, v, fine: true };
     set(st.v + (st.y - e.clientY) / (e.shiftKey || st.fine ? 600 : 150));
   });
   ["pointerup", "pointercancel"].forEach((ev) => el.addEventListener(ev, () => (st = null)));
@@ -746,7 +769,8 @@ function drawTonearm(g, dpr, rv, cx, cy, tx, ty) {
 }
 
 function drawPlatter(i, pos) {
-  const cv = DK[i].plat; if (!cv.width || cv.offsetParent === null) return;
+  // anche se largo 0 (piatto non ancora misurato, modello C): il rapporto fra pixel e misura esploderebbe e il disegno lancerebbe un errore
+  const cv = DK[i].plat; if (!cv.width || !cv.clientWidth || cv.offsetParent === null) return;
   const g = cv.getContext("2d"), W = cv.width, H = cv.height, d = decks[i], s = d.snap, pal = PAL[i];
   const dpr = W / Math.max(1, cv.clientWidth);
   g.clearRect(0, 0, W, H);
@@ -835,7 +859,9 @@ async function poll() {
     s.decks.slice(0, 2).forEach((ds, i) => { decks[i].snap = ds; decks[i].t = now; updateDeckUI(i, ds); });
     setMeter($("#masterMeter"), s.master_level);
     $("#autoGain").classList.toggle("on", !!s.auto_gain);
-    $("#cpuBar").style.setProperty("--v", Math.min(100, (s.cpu ?? 0) * 100) + "%");
+    const cpu = Math.min(100, Math.round((s.cpu ?? 0) * 100));
+    $("#cpuBar").style.setProperty("--v", cpu + "%");
+    const cp = $("#cpuPct"); setText(cp, cpu + "%"); cp.className = cpu >= 90 ? "hot" : cpu >= 70 ? "warm" : "";
     updateStemsUI();
     updatePads(s.pads, s.pad_sync); updateDrums(s); updateRec(s);
   } catch (e) { /* motore non pronto */ }
@@ -1646,11 +1672,20 @@ function setSettingsTab(t) {
   $("#aApply").hidden = t !== "audio";
   if (t === "stem") refreshStemPane();
   if (t === "midi") refreshMidiPane();
-  if (t === "ui") $("#uiMode").value = uiMode;
+  if (t === "ui") $("#uiMode").value = uiChoice();
 }
 $("#uiMode").onchange = () => setUiMode($("#uiMode").value);
-// pulsante nella barra: cambio dell'interfaccia senza passare dalle impostazioni
-$("#uiBtn").onclick = (e) => menu(e, [["Automatica", "auto"], ["Desktop", "desktop"], ["Cockpit", "cockpit"], ["Cockpit prototipo B", "proto"]].map(([t, m]) => [(m === uiMode ? "✓ " : "") + t, () => setUiMode(m)]));
+// pulsante MODO nella barra: cambio dell'interfaccia senza passare dalle impostazioni (come nei prototipi di Claude Design).
+// Sul telefono elenca solo i modelli dell'orientamento attuale; l'altro gruppo si raggiunge ruotando il telefono
+const UI_CHOICES = [["auto", "Automatica", "verticale A, orizzontale B"], ["stack", "A · Stack verticale", "una mano"], ["proto", "B · Cockpit orizzontale", "due pollici"],
+  ["cockpit", "B · Cockpit compatto", "senza piatti"], ["focus", "C · Focus + Platter", "esecuzione dal vivo"], ["spaces", "D · Mappa degli spazi", "amministrazione"], ["desktop", "Desktop", "tutto insieme"]];
+$("#uiBtn").onclick = (e) => {
+  const cur = uiChoice(), v = uiOrient() === "v", phone = uiPhone();
+  const list = phone ? UI_CHOICES.filter(([m]) => m === "auto" || (v ? UI_MOBILE : UI_LAND).includes(m)) : UI_CHOICES;
+  const items = list.map(([m, t, sub]) => [`${m === cur ? "✓ " : ""}${t} — ${sub}`, () => setUiMode(m)]);
+  if (phone) items.push("-", [v ? "Ruota il telefono per B e desktop" : "Ruota il telefono per A, C e D", () => {}]);
+  menu(e, items);
+};
 $$(".stabs button").forEach((b) => (b.onclick = () => setSettingsTab(b.dataset.sp)));
 
 /* scheda STEM: modalita' (automatica / tempo reale / solo preparati) e misura della velocita' del PC */

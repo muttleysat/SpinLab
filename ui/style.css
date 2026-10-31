@@ -31,6 +31,7 @@ svg { display: block; }
 .seg button.on { background: var(--accent); color: #001018; border-color: var(--accent); font-weight: 700; }
 .cpu { display: flex; align-items: center; gap: 7px; font-size: 10px; color: var(--dim); letter-spacing: 1px; }
 .cpu i { width: 84px; height: 5px; border-radius: 3px; background: #172033; overflow: hidden; display: block; }
+.cpu em { font-style: normal; font-variant-numeric: tabular-nums; color: var(--text); min-width: 3.4ch; text-align: right; } .cpu em.warm { color: #ffc21a; } .cpu em.hot { color: #ff3b4e; font-weight: 700; }
 .cpu b { display: block; height: 100%; width: var(--v, 0%); background: linear-gradient(90deg, #18b6ff, #35e08a 60%, #ffc21a 85%, #ff3b4e); }
 .clock { font-variant-numeric: tabular-nums; color: var(--text); font-size: 12px; }
 .hp { display: flex; align-items: center; gap: 9px; padding: 2px 10px; border: 1px solid var(--line); border-radius: 9px; background: #080c14; }
@@ -522,7 +523,7 @@ body.cockpit #rpanel { position: fixed; top: 36px; bottom: 0; right: 0; width: m
 body.cockpit.pn-open #rpanel { transform: none; visibility: visible; }
 body.cockpit.anim #rpanel { transition: transform .22s ease, visibility 0s .22s; } body.cockpit.anim.pn-open #rpanel { transition: transform .22s ease; }
 .pn-handle { display: none; }
-body.cockpit .pn-handle { display: block; position: absolute; left: calc(50% + 100px); top: 0; height: 36px; padding: 0 12px; border: 0; border-radius: 0 0 10px 10px; background: #121827; color: var(--dim); font-size: 11px; letter-spacing: 1.5px; font-weight: 600; }
+body.cockpit .pn-handle { display: block; position: absolute; right: calc(50% + 92px); top: 0; height: 36px; padding: 0 12px; border: 0; border-radius: 0 0 10px 10px; background: #121827; color: var(--dim); font-size: 11px; letter-spacing: 1.5px; font-weight: 600; }
 body.cockpit.pn-open .pn-handle { color: var(--accent); }
 /* menu radiale per la modalita' dei pad */
 body.cockpit #radial { display: block; position: fixed; z-index: 200; width: 200px; height: 200px; margin: -100px 0 0 -100px; border-radius: 50%; pointer-events: none;
@@ -536,7 +537,7 @@ body.cockpit .prow [hidden], body.cockpit .prow span[hidden] { display: none !im
 body.cockpit .prow button { height: 26px; }
 body.cockpit .mst .knobwrap { zoom: .62; }
 body.cockpit .mst .knobwrap span { display: none; }
-body.cockpit .cpu span { display: none; } body.cockpit .cpu i { width: 28px; }
+body.cockpit .cpu i { display: none; }
 /* Cockpit compatto: telefoni con zoom dello schermo alto (S26 Ultra di serie: 697x330). Il piatto sarebbe largo 70 px:
    si toglie e la waveform, piu' alta, fa da piatto per lo scrub; i 4 pad stanno su una riga, il mixer si stringe */
 @media (max-height: 380px), (max-width: 780px) {
@@ -558,29 +559,233 @@ body.cockpit .cpu span { display: none; } body.cockpit .cpu i { width: 28px; }
   body.cockpit:not(.proto) .kcol { justify-content: flex-start; gap: 2px; }
   body.cockpit:not(.proto) .xfade { height: 40px; }
   body.cockpit:not(.proto) .lib-handle { min-width: 120px; }
-  body.cockpit:not(.proto) .pn-handle { left: calc(50% + 66px); padding: 0 8px; }
+  body.cockpit:not(.proto) .pn-handle { right: calc(50% + 64px); padding: 0 8px; }
   body.cockpit:not(.proto) #lower { grid-template-columns: 150px minmax(0, 1fr); }
   body.cockpit:not(.proto) .prow .chip2, body.cockpit:not(.proto) .hpb { display: none; }
   /* barra stretta: il pulsante dell'interfaccia resta, con la sola icona */
-  body.cockpit:not(.proto) .uibtn b, body.cockpit:not(.proto) .cpu { display: none; }
+  body.cockpit:not(.proto) .uibtn b { display: none; }
 }
 
-/* Cockpit prototipo B (artboard «B · Cockpit orizzontale» del canvas di Claude Design): disegnato a 892x412 e scalato in blocco con --k */
+/* Cockpit prototipo B (artboard «B · Cockpit orizzontale» del canvas di Claude Design), alla misura reale del telefono (697x330 dp di serie):
+   mixer da 176, pitch e controlli stretti, onda bassa, cosi' resta lo spazio per i piatti */
 .ck-row { display: none; }
-body.cockpit.proto #app { transform: scale(var(--k, 1)); width: calc(100vw / var(--k, 1)); height: calc(100vh / var(--k, 1)); }
+body.cockpit.proto #stage { grid-template-columns: minmax(0, 1fr) 176px minmax(0, 1fr); }
 body.cockpit.proto .brand span { display: inline; font-size: 14px; letter-spacing: 1.5px; color: var(--dim); font-weight: 600; }
 body.cockpit.proto .hp, body.cockpit.proto #nav { display: none; }
-body.cockpit.proto .deck { grid-template-rows: 40px 64px minmax(0, 1fr); }
-body.cockpit.proto .art { width: 30px; height: 30px; }
+body.cockpit.proto .deck { grid-template-rows: 32px 46px minmax(0, 1fr); padding: 5px 6px 6px; }
+body.cockpit.proto .art { width: 26px; height: 26px; }
 body.cockpit.proto .kv b { font-size: 18px; color: var(--c); }
-body.cockpit.proto .dmain { grid-template-columns: 36px minmax(0, 1fr) 108px; }
-body.cockpit.proto .deck.rev .dmain { grid-template-columns: 108px minmax(0, 1fr) 36px; }
+body.cockpit.proto .dmain { grid-template-columns: 30px minmax(0, 1fr) 96px; }
+body.cockpit.proto .deck.rev .dmain { grid-template-columns: 96px minmax(0, 1fr) 30px; }
 body.cockpit.proto .pbtn, body.cockpit.proto .prow, body.cockpit.proto .loopc, body.cockpit.proto .rcol > :not(.pf) { display: none; }
 body.cockpit.proto .rcol { justify-content: stretch; }
 body.cockpit.proto .modebtn { height: 22px; font-size: 9px; }
-body.cockpit.proto .ck-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; height: 36px; }
+body.cockpit.proto .rbtn { height: 40px; } body.cockpit.proto .hcgrid button { min-height: 36px; }
+body.cockpit.proto .ck-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; height: 32px; }
 body.cockpit.proto .ck-row button { padding: 0; font-weight: 700; font-size: 11px; letter-spacing: .5px; border-radius: 10px; }
 body.cockpit.proto .ck-row button.on { color: #001018; background: var(--c); border-color: var(--c); }
 body.cockpit.proto .rbtn.cue { color: #ffb020; border-color: #ffb020; }
 body.cockpit.proto .fxsel, body.cockpit.proto .knobwrap:has([data-k="filter"]), body.cockpit.proto .hpbtn { display: none; }
-body.cockpit.proto .kcol { justify-content: flex-start; gap: 10px; padding-top: 6px; }
+body.cockpit.proto .kcol { justify-content: flex-start; gap: 6px; padding-top: 4px; }
+body.cockpit.proto .kcol .knobwrap { zoom: .78; }
+body.cockpit.proto .xfade { height: 40px; }
+
+/* pulsante MODO (come nei prototipi): lettera del modello, nome, freccia */
+.uibtn { color: #7fd6ff !important; border-color: #18b6ff !important; background: #0b1f33 !important; }
+.uibtn .ltr { min-width: 20px; height: 20px; border-radius: 6px; background: var(--accent); color: #001018; display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 12px; }
+
+/* ================================================================ modelli verticali (docs/design/ux-mobile.md)
+   A Stack (m-stack), C Focus (m-focus), D Mappa (m-spaces): alla misura reale dello schermo (scala 1, misure in dp; S26 Ultra di serie
+   360x694 in verticale), con le altezze che si adattano.
+   Riusano deck, mixer, libreria e pannello di sempre; mobile.js aggiunge schede, anello degli hot cue, tela degli spazi e gesti. */
+body.mob #app { grid-template-rows: 44px minmax(0, 1fr) 52px; }
+body.mob.m-spaces #app { grid-template-rows: 44px; grid-auto-rows: minmax(0, 1fr); }
+body.mob #top { padding: 0 8px; gap: 6px; }
+body.mob .brand span, body.mob .clock, body.mob .hp, body.mob #nav, body.mob .mst, body.mob #aboutBtn2, body.mob #helpBtn { display: none; }
+body.mob .topr { gap: 8px; margin-left: auto; }
+body.mob .cpu i { display: none; } body.mob .cpu { font-size: 11px; gap: 5px; }
+body.mob .uibtn { height: 34px; padding: 0 8px; } body.mob .uibtn b { display: none; }
+body.mob #stage { display: flex; flex-direction: column; padding: 0; gap: 0; }
+body.mob .side { flex: none; gap: 0; }
+body.mob #sideL { order: 1; } body.mob #sideR { order: 2; } body.mob #mixer { order: 3; }
+body.mob .deck { border-radius: 0; border: 0; border-bottom: 1px solid var(--line); padding: 6px 10px; gap: 5px; }
+body.mob .dhead { gap: 10px; }
+body.mob .art { width: 28px; height: 28px; font-size: 13px; border-radius: 7px; }
+body.mob .title { font-size: 14px; font-weight: 700; } body.mob .artist { font-size: 12px; }
+body.mob .dload, body.mob .led { display: none; }
+body.mob .kv { min-width: 0; } body.mob .kv small { display: none; }
+body.mob .kv:not(.key) b { font-size: 18px; font-weight: 700; color: var(--c); } body.mob .kv.key b { font-size: 11px; color: var(--dim); }
+body.mob .clock2 { min-width: 0; } body.mob .clock2 b { font-size: 12px; color: var(--dim); } body.mob .clock2 span { display: none; }
+body.mob .rbtn.cue { color: #ffb020; border-color: #ffb020; }
+/* schede in basso (A e C): LIBRERIA, MIXER, FX, STEM, SAMPLER, con la maniglia della libreria */
+#mtabs, #mscrim, #spaces, #spTitle, #bubble { display: none; }
+body.mob #mtabs { display: flex; flex-direction: column; align-items: center; background: #080c14; border-top: 1px solid var(--line); touch-action: none; }
+body.mob.m-spaces #mtabs { display: none; }
+#mtabs .grip { width: 40px; height: 4px; border-radius: 2px; background: #5d6f9a; margin: 5px 0 1px; }
+#mtabs nav { display: flex; width: 100%; flex: 1; }
+#mtabs button { flex: 1; border: 0; background: none; border-radius: 0; color: var(--dim); font-size: 11px; font-weight: 600; letter-spacing: 1px; }
+#mtabs button.on { color: var(--accent); }
+/* velo dietro i cassetti: un tocco li chiude */
+body.mob.mix-open #mscrim, body.mob.pn-open #mscrim { display: block; position: fixed; left: 0; right: 0; top: 44px; bottom: 52px; z-index: 65; background: #0008; }
+/* libreria: foglio che sale dal basso */
+body.mob:not(.m-spaces) #lower { position: fixed; left: 0; right: 0; top: 100%; bottom: -100%; z-index: 60; background: var(--bg); grid-template-columns: minmax(0, 1fr); grid-template-rows: 128px minmax(0, 1fr); padding: 6px; visibility: hidden; }
+body.mob:not(.m-spaces).lib-open #lower { top: 44px; bottom: 52px; visibility: visible; }
+body.mob.anim:not(.m-spaces) #lower { transition: top .22s ease, bottom .22s ease, visibility 0s .22s; } body.mob.anim.lib-open:not(.m-spaces) #lower { transition: top .22s ease, bottom .22s ease; }
+body.mob #inspector { display: none; }
+/* libreria sul telefono (modelli verticali e Cockpit): elenco a due righe invece della tabella a 10 colonne.
+   Titolo a tutta larghezza (fino a due righe), sotto artista · BPM · tonalita' · durata, a destra i pulsanti per caricare
+   sui deck grandi quanto un dito; le intestazioni diventano pulsanti per ordinare. Selezione, anteprima e trascinamento restano quelli di sempre */
+:is(body.mob, body.cockpit) #tracks, :is(body.mob, body.cockpit) #tracks tbody { display: block; }
+:is(body.mob, body.cockpit) #tracks thead { display: block; position: sticky; top: 0; z-index: 2; background: #0b101a; border-bottom: 1px solid var(--line); }
+:is(body.mob, body.cockpit) #tracks thead tr { display: flex; gap: 6px; padding: 8px; overflow-x: auto; }
+:is(body.mob, body.cockpit) #tracks th { position: static; width: auto !important; flex: none; padding: 7px 14px; border: 1px solid var(--line2); border-radius: 16px; font-size: 12px; letter-spacing: .5px; background: #0d121c; }
+:is(body.mob, body.cockpit) #tracks th:not([data-s]), :is(body.mob, body.cockpit) #tracks th:is([data-s="genre"], [data-s="rating"]) { display: none; }
+:is(body.mob, body.cockpit) #tracks tbody tr { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto auto auto 108px; grid-template-areas: "pv ti ti ti ti ld" "pv ar bp ky tm ld";
+  align-items: center; column-gap: 10px; row-gap: 3px; min-height: 66px; padding: 8px 10px 8px 4px; border-bottom: 1px solid #141c2c; }
+:is(body.mob, body.cockpit) #tracks td { display: block; height: auto; padding: 0; border: 0; font-size: 13px; color: var(--dim); }
+:is(body.mob, body.cockpit) #tracks td:nth-child(1) { grid-area: pv; justify-self: center; }
+:is(body.mob, body.cockpit) #tracks td:is(:nth-child(2), :nth-child(7), :nth-child(10)) { display: none; }
+:is(body.mob, body.cockpit) #tracks td:nth-child(3) { grid-area: ti; font-size: 16px; font-weight: 600; line-height: 1.25; color: var(--text); white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+:is(body.mob, body.cockpit) #tracks td:nth-child(4) { grid-area: ar; }
+:is(body.mob, body.cockpit) #tracks td:nth-child(5) { grid-area: bp; font-variant-numeric: tabular-nums; } :is(body.mob, body.cockpit) #tracks td:nth-child(5):not(:empty)::after { content: " BPM"; font-size: 10px; letter-spacing: .5px; }
+:is(body.mob, body.cockpit) #tracks td:nth-child(6) { grid-area: ky; }
+:is(body.mob, body.cockpit) #tracks td:nth-child(8) { grid-area: tm; font-variant-numeric: tabular-nums; }
+:is(body.mob, body.cockpit) #tracks td.ld { grid-area: ld; display: flex; gap: 8px; justify-content: flex-end; }
+:is(body.mob, body.cockpit) #tracks .ld button { width: 46px; height: 46px; margin: 0; padding: 0; font-size: 16px; font-weight: 700; border-radius: 12px; border-width: 1.5px; }
+:is(body.mob, body.cockpit) #tracks .pv { width: 38px; height: 38px; line-height: 36px; font-size: 13px; }
+/* esplora e playlist: righe alte quanto un dito */
+:is(body.mob, body.cockpit) .tn { font-size: 15px; padding: 9px 8px; }
+:is(body.mob, body.cockpit) #search { font-size: 15px; }
+/* pannello AUTOMIX / SAMPLER / DRUMS / STEMS / FX: cassetto da destra (in D e' uno spazio) */
+body.mob:not(.m-spaces) #rpanel { position: fixed; top: 44px; bottom: 52px; right: 0; width: min(390px, 94%); z-index: 70; border-radius: 12px 0 0 12px; overflow: auto; transform: translateX(105%); visibility: hidden; box-shadow: -10px 0 30px #000c; }
+body.mob:not(.m-spaces).pn-open #rpanel { transform: none; visibility: visible; }
+body.mob.anim #rpanel { transition: transform .22s ease, visibility 0s .22s; } body.mob.anim.pn-open #rpanel { transition: transform .22s ease; }
+body.mob.pn-fx #rpanel .pn, body.mob.pn-fx #rpanel .ptabs { display: none; }
+/* mixer completo: cassetto da sinistra (A e C) */
+body.mob.mix-open:not(.m-spaces) #mixer { display: flex; position: fixed; left: 0; top: 44px; bottom: 52px; width: min(330px, 86%); z-index: 75; border-radius: 0 12px 12px 0; box-shadow: 10px 0 30px #000c; padding: 10px 8px; }
+body.mob.mix-open:not(.m-spaces) #mixer .mtop { display: none; }
+
+/* ---- A · Stack verticale e deck della mappa (D): due deck impilati, trasporto e pad a tutta larghezza, niente piatto */
+body.m-stack .side { flex: 1 1 0; min-height: 0; }
+body.m-stack .side .deck { flex: 1; }
+:is(body.m-stack, body.m-spaces) .deck { grid-template-rows: 32px 18px minmax(36px, 1fr) 46px 42px; }
+:is(body.m-stack, body.m-spaces) .deck > .dhead { order: 0; } :is(body.m-stack, body.m-spaces) .deck > .wv:nth-child(3) { order: 1; }
+:is(body.m-stack, body.m-spaces) .deck > .wv:nth-child(2) { order: 2; } :is(body.m-stack, body.m-spaces) .deck > .dmain { order: 3; }
+:is(body.m-stack, body.m-spaces) .deck .dmain { grid-row: span 2; max-width: none; margin: 0; display: grid; gap: 5px 6px; grid-template-columns: 62px minmax(0, 1fr) 62px 62px; grid-template-rows: 46px 42px;
+  grid-template-areas: "cue play sync loop" "mode pads pads pads"; }
+:is(body.m-stack, body.m-spaces) :is(.lcol, .lcol > .card, .card .ch, .transport, .rcol, .loopc .lr) { display: contents; }
+:is(body.m-stack, body.m-spaces) :is(.prow, .loopc .ch, .loopc .io, [data-loop], .platter, .pf, [data-r="range"], [data-r="keybtn"], .rcol .pval) { display: none; }
+:is(body.m-stack, body.m-spaces) .rbtn { width: auto; height: 46px; border-radius: 10px; }
+:is(body.m-stack, body.m-spaces) .rbtn.cue { grid-area: cue; font-weight: 700; } :is(body.m-stack, body.m-spaces) .rbtn.play { grid-area: play; }
+:is(body.m-stack, body.m-spaces) [data-r="sync"] { grid-area: sync; width: auto; height: 46px; border-radius: 10px; font-weight: 700; }
+:is(body.m-stack, body.m-spaces) .lsz { grid-area: loop; height: 46px; font-size: 15px; font-weight: 700; border-radius: 10px; }
+:is(body.m-stack, body.m-spaces) .lsz::before { content: "LOOP "; font-size: 11px; }
+:is(body.m-stack, body.m-spaces) .modebtn { grid-area: mode; height: 42px; white-space: normal; font-size: 9px; line-height: 1.15; letter-spacing: .4px; padding: 0 4px; border: 1px solid var(--line2); border-radius: 10px; background: #0a0e17; touch-action: none; }
+:is(body.m-stack, body.m-spaces) .hcgrid { grid-area: pads; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+:is(body.m-stack, body.m-spaces) .hcgrid button { height: 42px; border-radius: 10px; font-size: 13px; }
+/* zona del pollice: filtri dei due canali e crossfader grande; il mixer completo e' nel cassetto */
+body.m-stack:not(.mix-open) #mixer { flex: none; border-radius: 0; border: 0; border-top: 1px solid var(--line2); padding: 6px 12px; gap: 6px; }
+body.m-stack:not(.mix-open) .kcol .knob { zoom: .8; }
+body.m-stack:not(.mix-open) #mixer .mtop, body.m-stack:not(.mix-open) .mcol, body.m-stack:not(.mix-open) .kcol > :not(.knobwrap:has([data-k="filter"])) { display: none; }
+body.m-stack:not(.mix-open) #strips { flex: none; grid-template-columns: 1fr 1fr; }
+body.m-stack:not(.mix-open) .strip .kcol { grid-column: auto; flex-direction: row; justify-content: flex-start; gap: 10px; }
+body.m-stack:not(.mix-open) .strip[data-i="1"] .kcol { justify-content: flex-end; }
+body.m-stack:not(.mix-open) .kcol .knobwrap { flex-direction: row; gap: 8px; font-size: 10px; }
+body.m-stack:not(.mix-open) .xfade { height: 56px; border-radius: 12px; background: #0a0f18; border: 1px solid var(--line2); padding: 0 14px; }
+body.m-stack:not(.mix-open) .xfade .fader.h { height: 48px; } body.m-stack:not(.mix-open) .xfade .fader.h .fcap { width: 44px; left: calc(2px + var(--p) * (100% - 48px)); }
+
+/* ---- C · Focus + Platter: un deck col piatto grande, l'altro come striscia in alto */
+body.m-focus:not(.mix-open) #mixer { display: none; }
+body.m-focus .side { flex: none; }
+body.m-focus :is(#sideL, #sideR):has(.deck.foc) { flex: 1; order: 2; } body.m-focus :is(#sideL, #sideR):has(.deck.peek) { order: 1; padding: 6px 10px 0; }
+body.m-focus .deck.peek { grid-template-rows: 22px 28px; height: 70px; border: 1px solid color-mix(in srgb, var(--c) 35%, transparent); border-radius: 12px; padding: 6px 10px; background: #0d121c; cursor: pointer; touch-action: none; }
+body.m-focus .deck.peek > * { pointer-events: none; }
+body.m-focus .deck.peek > .wv:nth-child(2), body.m-focus .deck.peek > .dmain, body.m-focus .deck.peek .artist, body.m-focus .deck.peek .kv.key, body.m-focus .deck.peek .clock2 { display: none; }
+body.m-focus .deck.peek .art { width: 24px; height: 24px; font-size: 12px; border-radius: 6px; }
+body.m-focus .deck.peek .title { font-size: 13px; }
+body.m-focus .deck.foc { flex: 1; grid-template-rows: 40px 30px minmax(0, 1fr); padding: 4px 12px 8px; border-bottom: 0; }
+body.m-focus .deck.foc > .wv:nth-child(3) { display: none; }
+body.m-focus .deck.foc .title { font-size: 15px; } body.m-focus .deck.foc .kv:not(.key) b { font-size: 20px; }
+body.m-focus .deck.foc .dmain { max-width: none; margin: 0; display: grid; gap: 10px; grid-template-columns: 36px 72px minmax(0, 1fr) 72px; grid-template-rows: minmax(0, 1fr) 54px;
+  grid-template-areas: "pitch plat plat plat" "cue cue play sync"; }
+body.m-focus .deck.foc :is(.lcol, .transport, .rcol) { display: contents; }
+body.m-focus .deck.foc :is(.lcol > .card, .loopc, .pbtn, [data-r="range"], [data-r="keybtn"], .rcol .pval) { display: none; }
+body.m-focus .deck.foc .platter { grid-area: plat; }
+/* piatto quadrato al centro (lato di --pm, impostato da mobile.js): la corona intorno resta libera per l'arco del loop */
+body.m-focus .deck.foc canvas.plat { inset: auto; left: calc(50% - var(--pm, 0px) * .38); top: calc(50% - var(--pm, 0px) * .38); width: calc(var(--pm, 0px) * .76); height: calc(var(--pm, 0px) * .76); }
+body.m-focus .deck.foc .pf { grid-area: pitch; min-height: 0; }
+body.m-focus .deck.foc .rbtn { width: auto; height: 54px; border-radius: 12px; }
+body.m-focus .deck.foc .rbtn.cue { grid-area: cue; font-weight: 700; } body.m-focus .deck.foc .rbtn.play { grid-area: play; }
+body.m-focus .deck.foc [data-r="sync"] { grid-area: sync; width: auto; height: 54px; border-radius: 12px; font-weight: 700; }
+/* anello degli 8 hot cue intorno al piatto e arco del loop (mobile.js) */
+.cring { display: none; }
+body.m-focus .deck.foc .cring { display: block; position: absolute; inset: 0; pointer-events: none; }
+.cring button { position: absolute; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; padding: 0; pointer-events: auto; font-weight: 700; font-size: 13px; color: var(--text); background: #0a0f18; border: 3px solid var(--hc); }
+.cring button.set { background: color-mix(in srgb, var(--hc) 35%, #0a0f18); box-shadow: 0 0 10px var(--hc); }
+.cring i { position: absolute; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .15s;
+  background: conic-gradient(from var(--a0, 0deg), #ffc21a calc(var(--sw, 0) * 1deg), transparent 0); -webkit-mask: radial-gradient(closest-side, transparent 82%, #000 84%, #000 99%, transparent); mask: radial-gradient(closest-side, transparent 82%, #000 84%, #000 99%, transparent); }
+.cring i.on { opacity: 1; }
+
+/* ---- D · Mappa degli spazi: panoramica a riquadri, uno spazio a schermo pieno o due in split */
+body.m-spaces #stage, body.m-spaces #lower { display: none; }
+body.m-spaces:is(.sp-deck, .sp-mixer):not(.sp-ov) #stage { display: flex; }
+body.m-spaces:is(.sp-library, .sp-fx, .sp-stem, .sp-sampler):not(.sp-ov) #lower { display: flex; flex-direction: column; gap: 6px; padding: 6px; }
+body.m-spaces:not(.sp-deck) .side { display: none; }
+body.m-spaces.sp-deck .side { flex: 1; }
+body.m-spaces.sp-deck .side .deck { flex: 1; }
+body.m-spaces.sp-deck.sp-split .deck { grid-template-rows: 30px minmax(28px, 1fr) 44px; }
+body.m-spaces.sp-deck.sp-split .deck > .wv:nth-child(3), body.m-spaces.sp-deck.sp-split :is(.modebtn, .hcgrid) { display: none; }
+body.m-spaces.sp-deck.sp-split .dmain { grid-row: auto; grid-template-rows: 44px; grid-template-areas: "cue play sync loop"; }
+body.m-spaces.sp-deck.sp-split .rbtn, body.m-spaces.sp-deck.sp-split [data-r="sync"], body.m-spaces.sp-deck.sp-split .lsz { height: 44px; }
+body.m-spaces:not(.sp-mixer) #mixer { display: none; }
+body.m-spaces.sp-mixer #mixer { flex: 1; border-radius: 0; border: 0; padding: 12px 16px; }
+body.m-spaces.sp-mixer.sp-deck #mixer { flex: 0 0 50%; }
+body.m-spaces #lower > #side { flex: 0 0 150px; display: none; } body.m-spaces #browser { flex: 1; display: none; }
+body.m-spaces.sp-library #lower > #side, body.m-spaces.sp-library #browser { display: flex; } body.m-spaces.sp-library #browser { display: block; }
+body.m-spaces #rpanel { display: none; flex: 1; }
+body.m-spaces:is(.sp-fx, .sp-stem, .sp-sampler) #rpanel { display: flex; }
+body.m-spaces.sp-fx:not(.sp-stem):not(.sp-sampler) #rpanel :is(.pn, .ptabs) { display: none; }
+body.m-spaces:is(.sp-stem, .sp-sampler) #rpanel .ptabs { display: none; }
+body.m-spaces:is(.sp-stem, .sp-sampler):not(.sp-fx) #rpanel .fxbox { display: none; }
+body.m-spaces #spTitle { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 8px; max-width: 132px; overflow: hidden; white-space: nowrap; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--grn); background: none; border-color: var(--line2); }
+body.m-spaces.sp-ov #spaces { display: flex; }
+#spaces { position: absolute; left: 0; right: 0; top: 44px; bottom: 0; z-index: 50; flex-direction: column; background: var(--bg); padding: 0 14px; }
+#spaces .scenes { display: flex; gap: 6px; align-items: center; height: 48px; flex: none; overflow-x: auto; }
+#spaces .scenes span { font-size: 10px; letter-spacing: 1.2px; color: var(--dim); font-weight: 600; }
+#spaces .scenes button { height: 34px; flex: none; padding: 0 12px; border-radius: 16px; font-size: 12px; font-weight: 600; touch-action: none; }
+#spaces .scenes button.on { background: var(--grn); border-color: var(--grn); color: #001810; font-weight: 700; }
+#spaces .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-top: 4px; }
+#spaces .tile { height: 132px; border-radius: 16px; background: #0d121c; border: 1px solid var(--line2); padding: 10px; display: flex; flex-direction: column; gap: 10px; text-align: left; touch-action: none; color: var(--text); }
+#spaces .tile.on { border: 2px solid var(--accent); background: #0b1624; }
+#spaces .tile.drag { z-index: 5; border: 2px dashed var(--grn); background: #0a1a14; box-shadow: 0 14px 30px #000c; transition: none; }
+#spaces .tile .th { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; letter-spacing: 1.4px; color: #9aa6c2; }
+#spaces .tile .th i { font-style: normal; font-size: 10px; color: var(--dim); font-weight: 600; letter-spacing: .5px; }
+#spaces .tile svg { flex: 1; width: 100%; color: var(--tc, var(--accent)); }
+#spaces .drop { margin-top: 10px; height: 40px; border-radius: 12px; border: 1px dashed #35e08a88; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #35e08a; letter-spacing: 1px; flex: none; }
+#spaces .drop.hot { background: #0a1a14; border-color: var(--grn); }
+#spaces .mini { margin-top: auto; padding: 8px 0 10px; flex: none; }
+#spaces .mini div { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 1.2px; color: var(--dim); font-weight: 600; }
+#spaces .mini nav { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin-top: 6px; padding: 5px; border-radius: 10px; background: #0d121c; border: 1px solid var(--line2); }
+#spaces .mini button { height: 40px; min-width: 0; overflow: hidden; padding: 0; border-radius: 6px; background: #121827; border: 1px solid transparent; font-size: 9px; color: var(--dim); letter-spacing: .5px; }
+#spaces .mini button.on { background: #18b6ff22; border: 2px solid var(--accent); color: var(--text); }
+/* bolla fluttuante col crossfader */
+body.mob #bubble.on { display: flex; position: fixed; z-index: 80; width: 104px; height: 104px; border-radius: 50%; background: #0d121c; border: 2px solid #ffb020; box-shadow: 0 10px 24px #000c; flex-direction: column; align-items: center; justify-content: center; gap: 4px; touch-action: none; }
+#bubble span { font-size: 10px; letter-spacing: 1.2px; color: #ffb020; font-weight: 600; }
+#bubble .fader.h { width: 80px; height: 40px; } #bubble .fader.h .fcap { width: 24px; left: calc(2px + var(--p) * (100% - 28px)); }
+/* gesti: niente pan del browser sulle zone che non scorrono, altrimenti al primo movimento arriva pointercancel
+   e archi, swipe dai bordi e pizzichi si interrompono (le liste di libreria e pannello continuano a scorrere) */
+:is(body.mob, body.cockpit) #stage, body.mob #mixer, body.mob #mtabs, body.mob #spaces, body.mob .searchbar, body.mob #top, body.cockpit #top { touch-action: none; }
+/* telefono (B, A, C, D): testi da almeno 10 dp e bersagli da almeno 36 dp anche sui comandi secondari */
+:is(body.mob, body.cockpit) #audioBtn { min-width: 40px; min-height: 36px; display: grid; place-items: center; }
+:is(body.mob, body.cockpit) .uibtn { min-height: 36px; }
+body.cockpit .modebtn { height: 30px !important; font-size: 10.5px !important; letter-spacing: .4px; }
+:is(body.m-stack, body.m-spaces) .modebtn { font-size: 10.5px; }
+body.cockpit .knobwrap span, body.mob .knobwrap span { font-size: 10px; }
+body.cockpit .loopc .lr { grid-template-columns: 38px 1fr 38px; }
+body.cockpit .pwr, body.mob .pwr { width: 38px; height: 22px; border-radius: 11px; } body.cockpit .pwr i, body.mob .pwr i { width: 18px; height: 18px; } body.cockpit .pwr.on i, body.mob .pwr.on i { left: 17px; }
+#spaces .mini button { font-size: 10px; }
+body.cockpit .fxsel .pwr { height: 30px; } body.cockpit .fxsel .pwr i { width: 24px; height: 24px; }
+/* messaggi sul telefono: sopra le schede in basso e senza bloccare i tocchi */
+:is(body.mob, body.cockpit) #toast, :is(body.mob, body.cockpit) #toast2 { pointer-events: none; max-width: 86vw; } body.mob #toast, body.mob #toast2 { bottom: 64px; }
+:is(body.mob, body.cockpit) .ptabs { touch-action: pan-y; } /* lo swipe a destra che chiude il cassetto arriva al gesto invece di diventare uno scorrimento */
+body.cockpit .uibtn b { display: none; } body.cockpit .lib-handle { min-width: 140px; } /* B: MODO con la sola lettera, come nei modelli verticali: la CPU non finisce sotto la maniglia */
