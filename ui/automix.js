@@ -195,7 +195,7 @@ async function amStartMix(next, plan) {
     if (plan.sync) await dc(AM.nxt, "sync");               // tempo e battiti del nuovo brano sul deck che suona
     if (barOk) await amWaitBarStart(AM.cur);
     if (!AM.on) return;
-    await dc(AM.nxt, "play");
+    await dc(AM.nxt, barOk ? "play_q" : "play");           // play_q: il motore aspetta il prossimo battito del deck che suona, cioe' l'«uno»
     AM.mix = { t0: amSnap(AM.cur).pos, sec: plan.sec, from: AM.cur, to: AM.nxt, path: next.path, started: performance.now() };
     AM.idx++;
     amMsg(`Mix in corso verso «${next.title || next.path}»`);

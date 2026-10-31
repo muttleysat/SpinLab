@@ -227,6 +227,7 @@ fn deck_cmd(app: State<'_, App>, deck: usize, cmd: String, a: f64, b: f64) {
     match cmd.as_str() {
         "unload" => d.unload(),
         "play" => d.play_toggle(),
+        "play_q" => d.play_quantized(),
         "cue_press" => d.cue_press(),
         "cue_release" => d.cue_release(),
         "hotcue" => d.hot_cue_press(a as usize),

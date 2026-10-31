@@ -380,6 +380,22 @@ impl Deck {
         self.playing = !self.playing;
         self.need_preroll = true;
     }
+    /// Play sul prossimo battito del deck guida (partenza quantizzata): usato da AUTOMIX per far partire il brano sull'«uno» della battuta.
+    /// Il play normale (`play_toggle`) parte subito. Senza guida in riproduzione o senza SYNC parte subito anche questo.
+    pub fn play_quantized(&mut self) {
+        if self.track.is_none() { return; }
+        if self.armed {
+            self.armed = false;
+            return;
+        }
+        self.reset_motion();
+        if self.preview || self.playing { return; }
+        self.armed = true;
+        self.arm_pos = self.track.as_ref().and_then(|t| t.nearest_beat(self.pos_sec())).unwrap_or(self.pos_sec());
+        self.set_pos_sec(self.arm_pos);
+        self.sync_prev_playing = false;
+        self.need_preroll = true;
+    }
     pub fn cue_press(&mut self) {
         if self.track.is_none() { return; }
         self.armed = false;
@@ -1591,22 +1607,7 @@ impl Mixer {
                 }
                 continue;
             }
-            let started = d.playing && !d.sync_prev_playing;
             d.sync_prev_playing = d.playing;
-            if started && !d.preview && d.sync && i != m && mplay && mph.is_some() {
-                // play premuto con SYNC acceso proprio su un battito (cue, inizio brano): non salta avanti per allinearsi,
-                // aspetta il prossimo battito della guida e parte da li' esattamente
-                let pos0 = d.pos_sec();
-                let on_beat = d.track.as_ref().and_then(|t| t.beat_phase(pos0)).map_or(false, |ph| ph < 0.06 || ph > 0.94);
-                if on_beat {
-                    d.armed = true;
-                    d.arm_pos = d.track.as_ref().and_then(|t| t.nearest_beat(pos0)).unwrap_or(pos0);
-                    d.playing = false;
-                    d.sync_prev_playing = false;
-                    d.set_pos_sec(d.arm_pos);
-                    continue;
-                }
-            }
             if !d.sync || i == m { continue; }
             let Some(t) = d.track.clone() else { continue };
             let pos = d.pos_sec();
@@ -1618,18 +1619,13 @@ impl Mixer {
             while target / mine < 0.67 { target *= 2.0; octave = true; }
             let r0 = target / mine;
             let mut r = r0;
+            // la fase si porta in linea con una piccola variazione di velocita' proporzionale all'errore; il play non aspetta il battito
+            // e non salta in avanti: il suono parte nell'istante in cui si preme
             if let (Some(mp), Some(dp), true, true, false) = (mph, t.beat_phase(pos), mplay, d.playing, octave) {
-                if started {
-                    // partenza: allinea subito al battito della guida
-                    if let Some(nt) = t.time_at_phase(pos, mp) {
-                        d.set_pos_sec(nt);
-                    }
-                } else {
-                    let mut e = dp - mp;
-                    if e > 0.5 { e -= 1.0 } else if e < -0.5 { e += 1.0 }
-                    if e.abs() > 0.002 {
-                        r *= 1.0 - (0.5 * e).clamp(-0.04, 0.04);
-                    }
+                let mut e = dp - mp;
+                if e > 0.5 { e -= 1.0 } else if e < -0.5 { e += 1.0 }
+                if e.abs() > 0.002 {
+                    r *= 1.0 - (0.5 * e).clamp(-0.04, 0.04);
                 }
             }
             let want = r - 1.0;
@@ -2755,41 +2751,58 @@ mod tests {
 
     /// SYNC + cue: premere play su un battito non salta avanti di mezzo battito: aspetta il battito della guida e parte dal cue
     #[test]
-    fn sync_start_from_cue_waits_for_the_leader_beat() {
+    fn plain_play_starts_at_once_and_quantized_play_waits_for_the_leader_beat() {
         let sr = 44100;
         let mk = || {
             let track = Track { name: "g".into(), path: String::new(), data: Arc::new(tone(sr, 120.0, 220.0)), sr, beats: (0..238).map(|k| k as f64 * 0.5).collect(), bpm: 120.0, key: None, downbeat: 0 };
             Arc::new(track)
         };
-        let mut m = Mixer::new(sr);
-        m.decks[0].load(mk());
-        m.decks[0].keylock = false;
-        m.decks[0].set_pos_sec(20.25); // fase 0,5 del battito
-        m.decks[0].playing = true;
-        m.decks[1].load(mk());
-        m.decks[1].keylock = false;
-        m.decks[1].quantize = true;
-        m.decks[1].set_pos_sec(10.0);
-        m.decks[1].cue_point = 10.0;
-        m.decks[1].sync = true;
+        let setup = || {
+            let mut m = Mixer::new(sr);
+            m.decks[0].load(mk());
+            m.decks[0].keylock = false;
+            m.decks[0].set_pos_sec(20.25); // fase 0,5 del battito
+            m.decks[0].playing = true;
+            m.decks[1].load(mk());
+            m.decks[1].keylock = false;
+            m.decks[1].quantize = true;
+            m.decks[1].set_pos_sec(10.0);
+            m.decks[1].cue_point = 10.0;
+            m.decks[1].sync = true;
+            m
+        };
         let mut buf = vec![0f32; 256];
+        let ph = |d: &Deck| d.track.as_ref().unwrap().beat_phase(d.pos_sec()).unwrap();
+
+        // play normale: parte subito, dal punto in cui si e', senza attendere il battito ne' saltare avanti
+        let mut m = setup();
         for _ in 0..8 { m.render(&mut buf); }
         m.decks[1].play_toggle();
         for _ in 0..4 { m.render(&mut buf); }
+        assert!(m.decks[1].playing && !m.decks[1].armed, "deve partire subito");
+        let p = m.decks[1].pos_sec();
+        assert!((10.0..10.02).contains(&p), "parte dal punto scelto, senza saltare: {p}");
+        // con il SYNC la fase si porta in linea da sola (variazione di velocita' limitata al 4%: mezzo battito richiede qualche secondo)
+        for _ in 0..(20 * sr as usize / 128) { m.render(&mut buf); }
+        let mut e = ph(&m.decks[1]) - ph(&m.decks[0]);
+        if e > 0.5 { e -= 1.0 } else if e < -0.5 { e += 1.0 }
+        assert!(e.abs() < 0.04, "dopo qualche secondo i due deck sono in fase: {e}");
+
+        // play quantizzato: aspetta il battito della guida e parte esattamente dal punto scelto
+        let mut m = setup();
+        for _ in 0..8 { m.render(&mut buf); }
+        m.decks[1].play_quantized();
+        for _ in 0..4 { m.render(&mut buf); }
         assert!(m.decks[1].armed && !m.decks[1].playing, "in attesa del battito");
-        let lead0 = m.decks[0].pos_sec();
-        // il battito della guida scatta dopo circa 0,25 s
         let mut blocks = 0;
         while m.decks[1].armed && blocks < 400 { m.render(&mut buf); blocks += 1; }
         assert!(m.decks[1].playing, "deve partire da solo");
-        let _ = lead0;
         // il buffer ha 256 campioni = 128 frame per blocco
         let waited = (blocks + 4) as f64 * 128.0 / sr as f64;
         assert!((0.2..0.32).contains(&waited), "attesa fino al battito: {waited}");
         let p = m.decks[1].pos_sec();
         assert!((p - 10.0).abs() < 0.03, "parte dal cue, non mezzo battito dopo: {p}");
         for _ in 0..200 { m.render(&mut buf); }
-        let ph = |d: &Deck| d.track.as_ref().unwrap().beat_phase(d.pos_sec()).unwrap();
         let mut e = ph(&m.decks[1]) - ph(&m.decks[0]);
         if e > 0.5 { e -= 1.0 } else if e < -0.5 { e += 1.0 }
         assert!(e.abs() < 0.04, "i due deck sono in fase: {e}");
