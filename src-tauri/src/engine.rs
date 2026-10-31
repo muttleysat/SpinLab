@@ -2839,4 +2839,44 @@ mod tests {
         for _ in 0..300 { d.render(&mut buf, 1.0); }
         assert!(d.lvl[0] < 0.1, "il picco scende quando il segnale finisce: {}", d.lvl[0]);
     }
+
+    /// Costo del motore per blocco audio con e senza SYNC (con SYNC il tempo e' sempre un po' diverso e si usa lo stiramento temporale).
+    /// cargo test --release bench_render_sync -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn bench_render_sync() {
+        let sr = 44100;
+        let noisy = |bpm: f64| {
+            let mut x = 12345u32;
+            let n = 120 * sr as usize;
+            let data: Vec<f32> = (0..n).flat_map(|i| {
+                x = x.wrapping_mul(1664525).wrapping_add(1013904223);
+                let r = ((x >> 16) as f32 / 32768.0 - 1.0) * 0.1;
+                let v = (2.0 * std::f32::consts::PI * 220.0 * i as f32 / sr as f32).sin() * 0.3 + r;
+                [v, v]
+            }).collect();
+            let per = 60.0 / bpm;
+            Arc::new(Track { name: "b".into(), path: String::new(), data: Arc::new(data), sr, beats: (0..(120.0 / per) as usize).map(|k| k as f64 * per).collect(), bpm, key: None, downbeat: 0 })
+        };
+        for (label, sync) in [("senza SYNC (tempo 0)", false), ("con SYNC (tempo -3%, stiramento)", true)] {
+            let mut m = Mixer::new(sr);
+            m.decks[0].load(noisy(130.0));
+            m.decks[1].load(noisy(134.0));
+            m.decks[0].playing = true;
+            m.decks[1].playing = true;
+            if sync { m.decks[1].sync = true; m.decks[0].sync = false; }
+            let mut buf = vec![0f32; 1024];
+            for _ in 0..200 { m.render(&mut buf); } // assestamento
+            let mut times = vec![];
+            for _ in 0..3000 {
+                let t0 = std::time::Instant::now();
+                m.render(&mut buf);
+                times.push(t0.elapsed().as_secs_f64() * 1000.0);
+            }
+            times.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            let avg = times.iter().sum::<f64>() / times.len() as f64;
+            let block_ms = 512.0 / sr as f64 * 1000.0;
+            println!("{label}: blocco da {block_ms:.1} ms -> medio {avg:.2} ms ({:.0}% di un core), 99% {:.2} ms, massimo {:.2} ms, tempo deck2 {:+.2}%", avg / block_ms * 100.0, times[times.len() * 99 / 100], times[times.len() - 1], m.decks[1].tempo * 100.0);
+        }
+    }
 }

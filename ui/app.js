@@ -560,18 +560,42 @@ function drawCol(g, x, mid, hl, hm, hh, dim, pal) {
 }
 function bandMax(arr, k0, k1) { let m = 0; for (let q = Math.max(0, k0); q <= k1 && q < arr.length; q++) if (arr[q] > m) m = arr[q]; return m; }
 
+const ZT = 1024; // larghezza in pixel di una tessera della waveform di zoom
+function zoomTile(i, n, H, pps, dim) {
+  const d = decks[i], key = `${H}@${pps.toFixed(5)}`;
+  if (!d.zt || d.zt.key !== key || d.zt.wave !== d.wave) d.zt = { key, wave: d.wave, tiles: new Map() };
+  const tk = n * 2 + (dim ? 1 : 0);
+  let cv = d.zt.tiles.get(tk);
+  if (cv) return cv;
+  cv = document.createElement("canvas"); cv.width = ZT; cv.height = H;
+  const g = cv.getContext("2d"), rate = d.wave.rate, mid = H / 2, amp = mid * 0.96 / 255, pal = PAL[i];
+  for (let x = 0; x < ZT; x++) {
+    const t = (n * ZT + x) / pps, k0 = Math.floor(t * rate), k1 = Math.max(k0, Math.floor((t + 1 / pps) * rate));
+    if (k1 < 0) continue;
+    const hl = bandMax(d.wave.lo, k0, k1), hm = bandMax(d.wave.mid, k0, k1), hh = bandMax(d.wave.hi, k0, k1);
+    if (hl + hm + hh === 0) continue;
+    drawCol(g, x, mid, hl * amp, hm * amp, hh * amp, dim ? 0.55 : 1, pal);
+  }
+  const tiles = d.zt.tiles; tiles.set(tk, cv);
+  if (tiles.size > 24) tiles.delete(tiles.keys().next().value);
+  return cv;
+}
+
 function drawZoom(i, pos) {
   const c = DK[i].zoomCv; if (!c.width) return;
   const g = c.getContext("2d"), W = c.width, H = c.height, d = decks[i], pal = PAL[i];
   g.globalAlpha = 1; g.clearRect(0, 0, W, H);
   if (!d.wave) return;
-  const win = d.zoom, t0 = pos - win / 2, pps = W / win, mid = H / 2, rate = d.wave.rate, amp = mid * 0.96 / 255;
-  for (let x = 0; x < W; x++) {
-    const t = t0 + x / pps, k0 = Math.floor(t * rate), k1 = Math.max(k0, Math.floor((t + 1 / pps) * rate));
-    if (k1 < 0) continue;
-    const hl = bandMax(d.wave.lo, k0, k1), hm = bandMax(d.wave.mid, k0, k1), hh = bandMax(d.wave.hi, k0, k1);
-    if (hl + hm + hh === 0) continue;
-    drawCol(g, x, mid, hl * amp, hm * amp, hh * amp, t < pos ? 0.55 : 1, pal);
+  const win = d.zoom, t0 = pos - win / 2, pps = W / win;
+  // la waveform e' fatta di tessere gia' disegnate che scorrono: ridisegnare ogni fotogramma le ~2000 colonne costava piu' di 8 ms
+  // (e il disegno blocca il thread dell'interfaccia: fotogrammi lenti e stato dal motore in ritardo). La parte gia' suonata e' piu' scura.
+  const px0 = t0 * pps, n0 = Math.floor(px0 / ZT), n1 = Math.floor((px0 + W - 1) / ZT), half = Math.round(W / 2);
+  for (let n = n0; n <= n1; n++) {
+    if ((n + 1) * ZT <= 0) continue;
+    const dx = Math.round(n * ZT - px0);
+    // a sinistra del punto di ascolto (gia' suonato) la tessera scurita, a destra quella normale
+    if (dx < half) { g.save(); g.beginPath(); g.rect(0, 0, half, H); g.clip(); g.drawImage(zoomTile(i, n, H, pps, true), dx, 0); g.restore(); }
+    if (dx + ZT > half) { g.save(); g.beginPath(); g.rect(half, 0, W - half, H); g.clip(); g.drawImage(zoomTile(i, n, H, pps, false), dx, 0); g.restore(); }
   }
   g.globalAlpha = 1;
   // griglia: ogni linea e' un battito rilevato. Tempo forte (inizio battuta) piu' marcato.
