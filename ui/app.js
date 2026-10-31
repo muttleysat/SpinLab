@@ -803,7 +803,9 @@ document.addEventListener("keydown", (e) => {
 /* ---- aggiornamento stato */
 async function poll() {
   try {
+    const tq = performance.now();
     const s = await inv("get_state");
+    perfPush(perf.ipc, performance.now() - tq);
     if (!splash.ok.audio) splashStep("audio");
     const now = performance.now();
     s.decks.slice(0, 2).forEach((ds, i) => { decks[i].snap = ds; decks[i].t = now; updateDeckUI(i, ds); });
@@ -880,15 +882,46 @@ function smoothPos(i) {
   d.vp += (est - d.vp) * (1 - Math.exp(-dt / 0.12));
   return d.vp;
 }
+// misure per la diagnostica (Ctrl+Maiusc+D): intervallo fra i fotogrammi, tempo di disegno e andata e ritorno con il motore
+const perf = { fr: [], draw: [], ipc: [], zoom: 0, over: 0, plat: 0, n: 0 };
+const perfPush = (a, v, max = 240) => { a.push(v); if (a.length > max) a.shift(); };
 function frame(t) {
   if (t - lastFrame < FRAME_MIN_MS) { requestAnimationFrame(frame); return; }
+  if (lastFrame) perfPush(perf.fr, t - lastFrame);
   lastFrame = t;
+  const t0 = performance.now();
   for (let i = 0; i < activeDecks; i++) {
     const s = decks[i].snap;
     const pos = smoothPos(i) - (decks[i].scrub == null && s?.playing ? (audioLatency + visOffset) * (1 + s.tempo_pct / 100) : 0);
-    drawZoom(i, pos); drawOver(i, pos); drawPlatter(i, pos);
+    const a = performance.now(); drawZoom(i, pos); const b = performance.now(); drawOver(i, pos); const c = performance.now(); drawPlatter(i, pos); const d = performance.now();
+    perf.zoom += b - a; perf.over += c - b; perf.plat += d - c;
   }
+  perfPush(perf.draw, performance.now() - t0); perf.n++;
   requestAnimationFrame(frame);
+}
+{
+  let hud = null;
+  const pct = (a, q) => { if (!a.length) return 0; const v = [...a].sort((x, y) => x - y); return v[Math.min(v.length - 1, Math.floor(q * v.length))]; };
+  const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
+  setInterval(() => {
+    if (!hud) return;
+    const f = perf.fr, n = Math.max(1, perf.n);
+    const slow = f.filter((v) => v > 25).length;
+    hud.textContent = `fotogrammi: ${(1000 / Math.max(1, avg(f))).toFixed(0)} al s · intervallo 95%: ${pct(f, 0.95).toFixed(1)} ms · massimo ${Math.max(0, ...f).toFixed(0)} ms · lenti (>25 ms): ${slow}/${f.length}
+`
+      + `disegno: ${avg(perf.draw).toFixed(1)} ms in media (massimo ${Math.max(0, ...perf.draw).toFixed(0)}) · zoom ${(perf.zoom / n).toFixed(1)} · panoramica ${(perf.over / n).toFixed(1)} · piatto ${(perf.plat / n).toFixed(1)}
+`
+      + `stato dal motore: ${avg(perf.ipc).toFixed(1)} ms in media · 95% ${pct(perf.ipc, 0.95).toFixed(1)} · massimo ${Math.max(0, ...perf.ipc).toFixed(0)} ms · variazione ${(pct(perf.ipc, 0.95) - pct(perf.ipc, 0.05)).toFixed(1)} ms`;
+    perf.zoom = perf.over = perf.plat = 0; perf.n = 0;
+  }, 1000);
+  document.addEventListener("keydown", (e) => {
+    if (!(e.ctrlKey && e.shiftKey && (e.key === "D" || e.key === "d"))) return;
+    e.preventDefault();
+    if (hud) { hud.remove(); hud = null; return; }
+    hud = document.createElement("pre");
+    hud.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:9999;margin:0;padding:8px 10px;background:#000c;color:#7df0b6;font:11px/1.45 Consolas,monospace;border:1px solid #1a82b8;border-radius:6px;pointer-events:none;white-space:pre";
+    document.body.appendChild(hud);
+  });
 }
 
 /* ==================================================== BARRA SUPERIORE E MIXER */
