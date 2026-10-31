@@ -33,8 +33,8 @@ Per ogni versione:
    cargo tauri build --config tauri.release.conf.json
    ```
    Risultato in `src-tauri/target/release/bundle/` (`nsis` e `msi`). Con `tauri.release.conf.json` l'installer include modello, DLL e licenze e crea i file firmati degli aggiornamenti.
-4. Crea il file che descrive la versione: `python tools/make_update_manifest.py 0.2.0 https://tuo.sito/spinlab "Cosa c'e' di nuovo"`.
-5. Pubblica `latest.json` e `SpinLab_0.2.0_x64-setup.exe` all'indirizzo scelto. Il programma controlla l'indirizzo scritto in `src-tauri/tauri.conf.json` (`plugins.updater.endpoints`).
+4. Crea il file che descrive la versione: `python tools/make_update_manifest.py 0.2.0 "Cosa c'e' di nuovo"`. Scrive `latest.json` e copia anche l'installer in `server/updates/` (ignorata da git).
+5. Carica via FTP il contenuto di `server/updates/` nella cartella `updates` dell'hosting (`https://www.djtrombetta.it/server/updates/`): **prima l'installer, poi `latest.json`**, cosi' nessun programma vede la nuova versione prima che il file sia scaricabile. Il programma controlla l'indirizzo scritto in `src-tauri/tauri.conf.json` (`plugins.updater.endpoints`). Con la versione 0.1.0 non esiste ancora nessun `latest.json`: il controllo risponde «gia' aggiornato» o un errore di rete finche' non pubblichi la prima release.
 
 ### Chiave di firma degli aggiornamenti
 
@@ -46,7 +46,7 @@ cargo tauri signer generate -w %USERPROFILE%\.tauri\spinlab.key
 
 (scegli una password), copia la chiave pubblica stampata in `plugins.updater.pubkey` di `tauri.conf.json` e **fai una copia di sicurezza della chiave privata e della password**: se le perdi, i programmi gia' installati non potranno piu' ricevere aggiornamenti. La chiave privata non va mai nel repository.
 
-L'indirizzo degli aggiornamenti e' ora quello di GitHub Releases del repository: funziona solo se il repository (o la release) e' pubblico. Per un prodotto commerciale conviene un server o uno spazio tuo (per esempio un bucket) e cambiare `endpoints`.
+L'indirizzo degli aggiornamenti e' la cartella `updates` dell'hosting Aruba (`https://www.djtrombetta.it/server/updates/latest.json`), la stessa del server delle licenze: non dipende da GitHub. Installer da circa 140 MB per ogni cliente a ogni aggiornamento: controlla spazio e traffico del piano. Se pesa troppo, l'installer puo' stare altrove (basta cambiare l'`url` dentro `latest.json`) e `latest.json` resta sull'hosting.
 
 ## Icone
 

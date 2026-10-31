@@ -1,0 +1,10 @@
+# Cartella degli aggiornamenti: il programma legge latest.json e scarica l'installer indicato li' dentro.
+# Niente elenco dei file; latest.json non deve restare in cache (altrimenti una nuova versione si vede in ritardo).
+Options -Indexes
+AddType application/json .json
+AddType application/octet-stream .exe .msi
+<IfModule mod_headers.c>
+  <Files "latest.json">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </Files>
+</IfModule>
