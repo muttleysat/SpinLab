@@ -370,7 +370,8 @@ fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64
     }
     let (a, b, c) = (ac[best - 1], ac[best], ac[best + 1]);
     let denom = a - 2.0 * b + c;
-    let period = best as f32 + if denom.abs() > 1e-9 { 0.5 * (a - c) / denom } else { 0.0 };
+    // interpolazione parabolica del picco: solo se e' davvero un massimo, e mai oltre un campione (su picchi piatti denom ~ 0 e lo scarto esplode)
+    let period = best as f32 + if denom < -1e-9 { (0.5 * (a - c) / denom).clamp(-1.0, 1.0) } else { 0.0 };
 
     progress(0.5);
     // --- DP di Ellis: la tolleranza sull'intervallo lascia "fluttuare" la griglia
