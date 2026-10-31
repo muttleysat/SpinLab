@@ -24,3 +24,6 @@ server/updates/*.exe
 server/updates/*.msi
 server/updates/*.sig
 server/updates/latest.json
+
+# impostazioni locali dell'editor
+.vscode/

@@ -47,6 +47,9 @@ svg { display: block; }
 #nav button.recording { color: #ff6b79; border-bottom-color: #ff3b4e; }
 .pathrow { display: flex; gap: 8px; } .pathrow input { flex: 1; min-width: 0; font-size: 12px; }
 button.ico { padding: 4px 7px; color: var(--dim); background: none; border-color: transparent; } button.ico:hover { color: var(--text); border-color: var(--line2); }
+.uibtn { display: flex; align-items: center; gap: 6px; border-color: var(--line2) !important; }
+.uibtn b { font-size: 10px; letter-spacing: 1.2px; font-weight: 600; }
+body.cockpit .uibtn { min-height: 30px; }
 
 /* manopole */
 .knobwrap { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; letter-spacing: 1px; color: var(--dim); }
@@ -453,3 +456,131 @@ dialog .hint a { color: var(--accent); }
 /* registrazione */
 #licDlg input { padding: 9px 10px; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; }
 #licMsg.err { color: #ff8a96; } #licMsg.ok { color: #7df0b6; }
+
+/* ---------------------------------------------------------------- Cockpit: telefono Android in orizzontale (docs/specifiche-android-cockpit.md) */
+.lib-handle, #radial { display: none; }
+body.cockpit { overscroll-behavior: none; }
+body.cockpit #app { transform: none; width: 100vw; height: 100vh; grid-template-rows: 36px minmax(0, 1fr); }
+body.cockpit button { touch-action: manipulation; }
+/* barra */
+body.cockpit #top { position: relative; padding: 0 8px; gap: 8px; }
+body.cockpit .brand span, body.cockpit .clock, body.cockpit .mst .meter, body.cockpit #aboutBtn2, body.cockpit #helpBtn,
+body.cockpit #nav button:not([data-nav="rec"]) { display: none; }
+body.cockpit #nav { margin: 0; }
+body.cockpit #nav button { padding: 10px 10px 8px; }
+body.cockpit .cpu i { width: 36px; }
+body.cockpit .topr { gap: 10px; margin-left: auto; }
+body.cockpit .lib-handle { display: block; position: absolute; left: 50%; top: 0; height: 36px; transform: translateX(-50%); min-width: 170px; border: 0; border-radius: 0 0 12px 12px; background: #121827; color: var(--dim); font-size: 11px; letter-spacing: 1.5px; font-weight: 600; }
+body.cockpit.lib-open .lib-handle { color: var(--accent); }
+/* palco: deck | mixer | deck */
+body.cockpit #stage { grid-template-columns: minmax(0, 1fr) 212px minmax(0, 1fr); gap: 4px; padding: 4px 4px 4px; }
+body.cockpit .deck { grid-template-rows: 36px 56px minmax(0, 1fr); gap: 4px; padding: 5px 6px 6px; border-radius: 10px; }
+body.cockpit .deck > .wv + .wv, body.cockpit .dload, body.cockpit .deck .led, body.cockpit .kv.key, body.cockpit .clock2 span { display: none; }
+body.cockpit .dhead { gap: 8px; }
+body.cockpit .art { width: 32px; height: 32px; font-size: 15px; border-radius: 7px; }
+body.cockpit .title { font-size: 13px; } body.cockpit .artist { font-size: 11px; }
+body.cockpit .kv { min-width: 34px; } body.cockpit .kv small { display: none; } body.cockpit .kv b { font-size: 16px; }
+body.cockpit .clock2 { min-width: 54px; } body.cockpit .clock2 b { font-size: 15px; }
+body.cockpit .dmain { max-width: none; margin: 0; gap: 6px; grid-template-columns: 44px minmax(0, 1fr) 112px; }
+body.cockpit .deck.rev .dmain { grid-template-columns: 112px minmax(0, 1fr) 44px; }
+body.cockpit .deck .rcol { order: 1; } body.cockpit .deck .platter { order: 2; } body.cockpit .deck .lcol { order: 3; }
+body.cockpit .deck.rev .lcol { order: 1; } body.cockpit .deck.rev .platter { order: 2; } body.cockpit .deck.rev .rcol { order: 3; }
+body.cockpit .pbtn.bl, body.cockpit .pbtn.qb { display: none; }
+body.cockpit .pbtn.br { width: 36px; height: 36px; }
+body.cockpit .lcol { gap: 5px; }
+body.cockpit .transport { order: -1; margin-top: 0; gap: 6px; }
+body.cockpit .rbtn { flex: 1; width: auto; height: 48px; border-radius: 12px; }
+body.cockpit .lcol > .card:not(.loopc) { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 0; background: none; border: 0; }
+body.cockpit .card .ch { margin-bottom: 4px; justify-content: stretch; }
+body.cockpit .modebtn { width: 100%; height: 26px; font-size: 10px; letter-spacing: .6px; touch-action: none; border: 1px solid var(--line2); border-radius: 8px; background: #0a0e17; }
+body.cockpit .hcgrid { flex: 1; min-height: 0; grid-template-rows: 1fr 1fr; }
+body.cockpit .hcgrid button { height: auto; min-height: 44px; border-radius: 10px; }
+body.cockpit .loopc { padding: 0; background: none; border: 0; }
+body.cockpit .loopc .ch, body.cockpit .loopc .io { display: none; }
+body.cockpit .loopc .lr { grid-template-columns: 30px 1fr 30px; } body.cockpit .loopc .lr button, body.cockpit .loopc .lsz { height: 36px; }
+body.cockpit .rcol { gap: 6px; }
+body.cockpit .rbtn2 { width: 44px; height: 36px; font-size: 11px; }
+body.cockpit .rbtn2[data-r="range"], body.cockpit .rbtn2[data-r="keybtn"], body.cockpit .pval { display: none; }
+/* mixer */
+body.cockpit #mixer { padding: 6px 4px; gap: 4px; border-radius: 10px; }
+body.cockpit .mtop { display: none; }
+body.cockpit .fxsel { flex-direction: column; gap: 3px; }
+body.cockpit .fxsel select { width: 100%; flex: none; font-size: 9px; padding: 3px 0; }
+body.cockpit .fxsel .pwr { width: 100%; height: 18px; }
+body.cockpit .hp { padding: 0 6px; gap: 5px; }
+body.cockpit .hp .hpic { display: none; } body.cockpit .hpb button { min-width: 30px; height: 28px; }
+body.cockpit .hp .knobwrap { zoom: .62; } body.cockpit .hp .knobwrap span { display: none; }
+body.cockpit .xfade { height: 46px; padding: 0 4px; gap: 6px; }
+body.cockpit.mix-min .kcol { display: none; }
+/* libreria a tendina: scende dal bordo alto sopra i deck */
+body.cockpit #lower { position: fixed; left: 0; right: 0; top: -100vh; bottom: 100vh; z-index: 60; background: var(--bg); grid-template-columns: 190px minmax(0, 1fr); visibility: hidden; }
+body.cockpit.lib-open #lower { top: 36px; bottom: 0; visibility: visible; }
+/* la transizione parte solo dopo il primo disegno (cockpit.js), altrimenti la tendina si vede scorrere all'avvio */
+body.cockpit.anim #lower { transition: top .22s ease, bottom .22s ease, visibility 0s .22s; } body.cockpit.anim.lib-open #lower { transition: top .22s ease, bottom .22s ease; }
+/* pannello AUTOMIX / SAMPLER / DRUMS / STEMS: cassetto dal bordo destro */
+body.cockpit #rpanel { position: fixed; top: 36px; bottom: 0; right: 0; width: min(420px, 62vw); z-index: 70; border-radius: 12px 0 0 12px; overflow: auto; transform: translateX(105%); visibility: hidden; box-shadow: -10px 0 30px #000c; }
+body.cockpit.pn-open #rpanel { transform: none; visibility: visible; }
+body.cockpit.anim #rpanel { transition: transform .22s ease, visibility 0s .22s; } body.cockpit.anim.pn-open #rpanel { transition: transform .22s ease; }
+.pn-handle { display: none; }
+body.cockpit .pn-handle { display: block; position: absolute; left: calc(50% + 100px); top: 0; height: 36px; padding: 0 12px; border: 0; border-radius: 0 0 10px 10px; background: #121827; color: var(--dim); font-size: 11px; letter-spacing: 1.5px; font-weight: 600; }
+body.cockpit.pn-open .pn-handle { color: var(--accent); }
+/* menu radiale per la modalita' dei pad */
+body.cockpit #radial { display: block; position: fixed; z-index: 200; width: 200px; height: 200px; margin: -100px 0 0 -100px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, #0b101a 0 30%, #0d1320ee 31%); border: 1px solid #3a4a6e; box-shadow: 0 14px 40px #000d; opacity: 0; transform: scale(.85); transition: opacity .1s, transform .1s; }
+body.cockpit #radial.show { opacity: 1; transform: none; }
+#radial b { position: absolute; width: 84px; margin-left: -42px; text-align: center; font-size: 11px; letter-spacing: .6px; padding: 6px 0; border-radius: 9px; color: var(--dim); }
+#radial b.on { background: var(--accent); color: #001018; }
+#radial b:nth-child(1) { left: 50%; top: 10px; } #radial b:nth-child(2) { left: calc(100% - 46px); top: 86px; }
+#radial b:nth-child(3) { left: 50%; top: 162px; } #radial b:nth-child(4) { left: 46px; top: 86px; }
+body.cockpit .prow [hidden], body.cockpit .prow span[hidden] { display: none !important; }
+body.cockpit .prow button { height: 26px; }
+body.cockpit .mst .knobwrap { zoom: .62; }
+body.cockpit .mst .knobwrap span { display: none; }
+body.cockpit .cpu span { display: none; } body.cockpit .cpu i { width: 28px; }
+/* Cockpit compatto: telefoni con zoom dello schermo alto (S26 Ultra di serie: 697x330). Il piatto sarebbe largo 70 px:
+   si toglie e la waveform, piu' alta, fa da piatto per lo scrub; i 4 pad stanno su una riga, il mixer si stringe */
+@media (max-height: 380px), (max-width: 780px) {
+  body.cockpit:not(.proto) #stage { grid-template-columns: minmax(0, 1fr) 176px minmax(0, 1fr); }
+  body.cockpit:not(.proto) .deck { grid-template-rows: 30px 64px minmax(0, 1fr); padding: 4px 5px 5px; }
+  body.cockpit:not(.proto) .art { width: 26px; height: 26px; font-size: 13px; }
+  body.cockpit:not(.proto) .artist { display: none; }
+  body.cockpit:not(.proto) .deck .platter { display: none; }
+  body.cockpit:not(.proto) .dmain { grid-template-columns: 36px minmax(0, 1fr); }
+  body.cockpit:not(.proto) .deck.rev .dmain { grid-template-columns: minmax(0, 1fr) 36px; }
+  body.cockpit:not(.proto) .deck .rcol { order: 1; } body.cockpit:not(.proto) .deck .lcol { order: 2; }
+  body.cockpit:not(.proto) .deck.rev .lcol { order: 1; } body.cockpit:not(.proto) .deck.rev .rcol { order: 2; }
+  body.cockpit:not(.proto) .rbtn2 { width: 36px; height: 32px; font-size: 10px; }
+  body.cockpit:not(.proto) .transport { height: 44px; } body.cockpit:not(.proto) .rbtn { height: 44px; }
+  body.cockpit:not(.proto) .modebtn { height: 24px; }
+  body.cockpit:not(.proto) .hcgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 1fr; }
+  body.cockpit:not(.proto) .loopc .lr button, body.cockpit:not(.proto) .loopc .lsz { height: 32px; }
+  body.cockpit:not(.proto) .kcol .knobwrap, body.cockpit:not(.proto) .fxsel { zoom: .72; }
+  body.cockpit:not(.proto) .kcol { justify-content: flex-start; gap: 2px; }
+  body.cockpit:not(.proto) .xfade { height: 40px; }
+  body.cockpit:not(.proto) .lib-handle { min-width: 120px; }
+  body.cockpit:not(.proto) .pn-handle { left: calc(50% + 66px); padding: 0 8px; }
+  body.cockpit:not(.proto) #lower { grid-template-columns: 150px minmax(0, 1fr); }
+  body.cockpit:not(.proto) .prow .chip2, body.cockpit:not(.proto) .hpb { display: none; }
+  /* barra stretta: il pulsante dell'interfaccia resta, con la sola icona */
+  body.cockpit:not(.proto) .uibtn b, body.cockpit:not(.proto) .cpu { display: none; }
+}
+
+/* Cockpit prototipo B (artboard «B · Cockpit orizzontale» del canvas di Claude Design): disegnato a 892x412 e scalato in blocco con --k */
+.ck-row { display: none; }
+body.cockpit.proto #app { transform: scale(var(--k, 1)); width: calc(100vw / var(--k, 1)); height: calc(100vh / var(--k, 1)); }
+body.cockpit.proto .brand span { display: inline; font-size: 14px; letter-spacing: 1.5px; color: var(--dim); font-weight: 600; }
+body.cockpit.proto .hp, body.cockpit.proto #nav { display: none; }
+body.cockpit.proto .deck { grid-template-rows: 40px 64px minmax(0, 1fr); }
+body.cockpit.proto .art { width: 30px; height: 30px; }
+body.cockpit.proto .kv b { font-size: 18px; color: var(--c); }
+body.cockpit.proto .dmain { grid-template-columns: 36px minmax(0, 1fr) 108px; }
+body.cockpit.proto .deck.rev .dmain { grid-template-columns: 108px minmax(0, 1fr) 36px; }
+body.cockpit.proto .pbtn, body.cockpit.proto .prow, body.cockpit.proto .loopc, body.cockpit.proto .rcol > :not(.pf) { display: none; }
+body.cockpit.proto .rcol { justify-content: stretch; }
+body.cockpit.proto .modebtn { height: 22px; font-size: 9px; }
+body.cockpit.proto .ck-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; height: 36px; }
+body.cockpit.proto .ck-row button { padding: 0; font-weight: 700; font-size: 11px; letter-spacing: .5px; border-radius: 10px; }
+body.cockpit.proto .ck-row button.on { color: #001018; background: var(--c); border-color: var(--c); }
+body.cockpit.proto .rbtn.cue { color: #ffb020; border-color: #ffb020; }
+body.cockpit.proto .fxsel, body.cockpit.proto .knobwrap:has([data-k="filter"]), body.cockpit.proto .hpbtn { display: none; }
+body.cockpit.proto .kcol { justify-content: flex-start; gap: 10px; padding-top: 6px; }

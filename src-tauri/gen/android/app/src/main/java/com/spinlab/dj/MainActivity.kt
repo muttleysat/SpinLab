@@ -7,6 +7,7 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
@@ -20,6 +21,8 @@ class MainActivity : TauriActivity() {
     enableEdgeToEdge(SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT))
     super.onCreate(savedInstanceState)
     window.setBackgroundDrawable(ColorDrawable(0xFF070A10.toInt()))
+    // con l'app in primo piano lo schermo non si spegne (durante un set non si tocca il telefono per minuti)
+    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     // Android 15+ disegna sempre sotto le barre di stato e di navigazione: lascia loro lo spazio, altrimenti coprono l'intestazione
     val root = findViewById<View>(android.R.id.content)
     ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->

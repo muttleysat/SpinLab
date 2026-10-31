@@ -44,6 +44,8 @@ pub struct AudioInfo {
     pub actual_buffer: u32,
     pub latency_ms: f64,
     pub error: Option<String>,
+    /// dettagli del driver da mostrare all'utente (modalita' di AAudio su Android)
+    pub note: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -68,11 +70,20 @@ pub struct Counters {
     pub phase: AtomicU32,
     /// cuffie sullo stesso dispositivo (canali 3-4)
     pub inline: Arc<crate::preview::InlineCue>,
+    /// buffer dell'uscita in questo momento, se il driver lo cambia da se' (Android lo allarga dopo ogni scatto)
+    pub buffer_now: AtomicU32,
+    /// per chiedere al thread dell'audio di riaprire l'uscita (Android la chiude quando si collegano le cuffie)
+    reopen: Mutex<Option<mpsc::Sender<Cmd>>>,
 }
 
 enum Cmd {
     Open(Settings, mpsc::Sender<Result<AudioInfo, String>>),
+    #[cfg_attr(not(target_os = "android"), allow(dead_code))]
+    Reopen,
 }
+
+/// Il flusso aperto (cpal o, su Android, AAudio): resta in vita finche' non si chiude l'uscita.
+type OutStream = Box<dyn std::any::Any>;
 
 pub struct Audio {
     pub inline: Arc<crate::preview::InlineCue>,
@@ -89,22 +100,26 @@ impl Audio {
         let (first_tx, first_rx) = mpsc::channel::<Result<(AudioInfo, Arc<Mutex<Mixer>>, Arc<AtomicU32>, Arc<Counters>), String>>();
         let first = settings.clone();
         let counters = Arc::new(Counters::default());
+        *counters.reopen.lock() = Some(tx.clone());
         let thread_counters = counters.clone();
         std::thread::spawn(move || {
             let counters = thread_counters;
             let observed = Arc::new(AtomicU32::new(0));
             let mut mixer: Option<Arc<Mutex<Mixer>>> = None;
-            let mut stream: Option<cpal::Stream> = None;
+            let mut stream: Option<OutStream> = None;
             let mut pending = Some(first);
             let mut first_tx = Some(first_tx);
+            let mut last = Settings::default();
             loop {
                 let (st, reply): (Settings, Option<mpsc::Sender<Result<AudioInfo, String>>>) = match pending.take() {
                     Some(s) => (s, None),
                     None => match rx.recv() {
                         Ok(Cmd::Open(s, r)) => (s, Some(r)),
+                        Ok(Cmd::Reopen) => (last.clone(), None),
                         Err(_) => return,
                     },
                 };
+                last = st.clone();
                 drop(stream.take()); // chiude il flusso precedente prima di riaprire
                 let res = match attempt(&st, &mut mixer, &observed, &counters) {
                     Ok(r) => Ok(r),
@@ -165,7 +180,8 @@ impl Audio {
         i.entered = self.counters.entered.load(Ordering::Relaxed);
         i.exited = self.counters.exited.load(Ordering::Relaxed);
         i.phase = self.counters.phase.load(Ordering::Relaxed);
-        let frames = if i.buffer > 0 { i.buffer } else { i.actual_buffer };
+        let now = self.counters.buffer_now.load(Ordering::Relaxed);
+        let frames = if now > 0 { now } else if i.buffer > 0 { i.buffer } else { i.actual_buffer };
         i.latency_ms = frames as f64 / i.sample_rate.max(1) as f64 * 1000.0;
         i
     }
@@ -188,11 +204,12 @@ impl Audio {
             }
         }
         let host = pick_host(Some(&want));
-        let devices: Vec<String> = host.output_devices().map(|d| d.filter_map(|x| x.name().ok()).collect()).unwrap_or_default();
+        let devices = device_names(&host);
         let default_device = host.default_output_device().and_then(|d| d.name().ok()).unwrap_or_default();
         let name = if cur.device.is_empty() || !active_here { default_device.clone() } else { cur.device.clone() };
         let mut rates = vec![];
-        if let Some(dev) = host.output_devices().ok().and_then(|mut d| d.find(|x| x.name().ok().as_deref() == Some(&name))) {
+        let dev = if name == default_device { host.default_output_device() } else { host.output_devices().ok().and_then(|mut d| d.find(|x| x.name().ok().as_deref() == Some(&name))) };
+        if let Some(dev) = dev {
             if let Ok(cfgs) = dev.supported_output_configs() {
                 let cfgs: Vec<_> = cfgs.filter(|c| c.channels() >= 2).collect();
                 for r in [44100u32, 48000, 88200, 96000, 176400, 192000] {
@@ -202,7 +219,30 @@ impl Audio {
                 }
             }
         }
+        // su Android conta solo la frequenza nativa: le altre il sistema le ricampiona e niente bassa latenza
+        if cfg!(target_os = "android") {
+            rates = cur.rates.clone();
+        }
         AudioList { hosts, driver: host_label(host.id()), devices, default_device, rates, current: cur }
+    }
+}
+
+/// Su Android i dispositivi si chiamano tutti come il telefono (auricolare, altoparlante, microfono...) e cercandoli per
+/// nome si apre il primo, l'auricolare delle chiamate: li' si usa sempre l'uscita predefinita, che Android sposta da se'
+/// su altoparlante, cuffie, USB o Bluetooth.
+pub fn device_names(host: &cpal::Host) -> Vec<String> {
+    if cfg!(target_os = "android") {
+        return host.default_output_device().and_then(|d| d.name().ok()).into_iter().collect();
+    }
+    host.output_devices().map(|d| d.filter_map(|x| x.name().ok()).collect()).unwrap_or_default()
+}
+
+/// Il dispositivo scelto dall'utente, o None (predefinito) dove la scelta per nome non funziona (Android).
+pub fn chosen(device: Option<&str>) -> Option<&str> {
+    if cfg!(target_os = "android") {
+        None
+    } else {
+        device
     }
 }
 
@@ -229,10 +269,11 @@ fn attempt(
     mixer: &mut Option<Arc<Mutex<Mixer>>>,
     observed: &Arc<AtomicU32>,
     counters: &Arc<Counters>,
-) -> Result<(cpal::Stream, AudioInfo), String> {
+) -> Result<(OutStream, AudioInfo), String> {
     let host = pick_host(st.driver.as_deref());
     counters.rendered.store(0, Ordering::SeqCst);
     counters.missed.store(0, Ordering::SeqCst);
+    counters.buffer_now.store(0, Ordering::SeqCst);
     let (s, info) = open(&host, st, mixer, observed.clone(), counters.clone())?;
     for _ in 0..14 {
         std::thread::sleep(std::time::Duration::from_millis(50));
@@ -243,15 +284,33 @@ fn attempt(
     Err("il driver non richiama l'audio".into())
 }
 
+/// Su Android l'uscita si apre direttamente con AAudio (vedi `aaudio`), altrove con cpal.
 fn open(
     host: &cpal::Host,
     st: &Settings,
     mixer: &mut Option<Arc<Mutex<Mixer>>>,
     observed: Arc<AtomicU32>,
     counters: Arc<Counters>,
-) -> Result<(cpal::Stream, AudioInfo), String> {
+) -> Result<(OutStream, AudioInfo), String> {
+    #[cfg(target_os = "android")]
+    {
+        let _ = host;
+        aaudio::open(st, mixer, observed, counters)
+    }
+    #[cfg(not(target_os = "android"))]
+    open_cpal(host, st, mixer, observed, counters)
+}
+
+#[cfg_attr(target_os = "android", allow(dead_code))]
+fn open_cpal(
+    host: &cpal::Host,
+    st: &Settings,
+    mixer: &mut Option<Arc<Mutex<Mixer>>>,
+    observed: Arc<AtomicU32>,
+    counters: Arc<Counters>,
+) -> Result<(OutStream, AudioInfo), String> {
     // il dispositivo predefinito si cerca solo se serve: con ASIO caricarlo occupa il primo driver installato e impedisce di aprire gli altri
-    let dev = match &st.device {
+    let dev = match chosen(st.device.as_deref()) {
         Some(n) => host
             .output_devices()
             .map_err(|e| e.to_string())?
@@ -315,11 +374,34 @@ fn open(
     };
     stream.play().map_err(|e| e.to_string())?;
     Ok((
-        stream,
-        AudioInfo { rendered: 0, missed: 0, entered: 0, exited: 0, phase: 0, rates, driver: host_label(host.id()), device: name, sample_rate: sr, buffer: used_buf, channels, actual_buffer: 0, latency_ms: 0.0, error: warn },
+        Box::new(stream),
+        AudioInfo { rendered: 0, missed: 0, entered: 0, exited: 0, phase: 0, rates, driver: host_label(host.id()), device: name, sample_rate: sr, buffer: used_buf, channels, actual_buffer: 0, latency_ms: 0.0, error: warn, note: None },
     ))
 }
 
+/// Calcola un blocco stereo del mixer in `tmp`. Se il mixer e' occupato (comandi dell'interfaccia, stem) aspetta fino a
+/// `slack` frame di tempo invece di dare subito silenzio: un blocco muto si sente come un buco o uno schiocco.
+fn render_block(mixer: &Mutex<Mixer>, tmp: &mut Vec<f32>, frames: usize, slack: usize, sr: u32, observed: &AtomicU32, counters: &Counters) {
+    counters.entered.fetch_add(1, Ordering::Relaxed);
+    counters.phase.store(1, Ordering::Relaxed);
+    observed.store(frames as u32, Ordering::Relaxed);
+    tmp.resize(frames * 2, 0.0);
+    let wait = std::time::Duration::from_secs_f64((slack as f64 / sr.max(1) as f64).min(0.004));
+    match mixer.try_lock_for(wait) {
+        Some(mut m) => {
+            counters.phase.store(2, Ordering::Relaxed);
+            m.render(tmp);
+        }
+        None => {
+            tmp.iter_mut().for_each(|v| *v = 0.0);
+            counters.missed.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+    counters.rendered.fetch_add(1, Ordering::Relaxed);
+    counters.phase.store(3, Ordering::Relaxed);
+}
+
+#[cfg_attr(target_os = "android", allow(dead_code))]
 fn build<T: SizedSample + FromSample<f32>>(
     dev: &cpal::Device,
     cfg: &StreamConfig,
@@ -335,23 +417,8 @@ fn build<T: SizedSample + FromSample<f32>>(
         cfg,
         move |data: &mut [T], _| {
             let frames = data.len() / ch;
-            counters.entered.fetch_add(1, Ordering::Relaxed);
-            counters.phase.store(1, Ordering::Relaxed);
-            observed.store(frames as u32, Ordering::Relaxed);
-            tmp.resize(frames * 2, 0.0);
-            match mixer.try_lock() {
-                Some(mut m) => {
-                    counters.phase.store(2, Ordering::Relaxed);
-                    m.render(&mut tmp);
-                    counters.rendered.fetch_add(1, Ordering::Relaxed);
-                }
-                None => {
-                    tmp.iter_mut().for_each(|v| *v = 0.0);
-                    counters.missed.fetch_add(1, Ordering::Relaxed);
-                    counters.rendered.fetch_add(1, Ordering::Relaxed);
-                }
-            }
-            counters.phase.store(3, Ordering::Relaxed);
+            // un quarto del blocco: il driver non dice quanto margine resta
+            render_block(&mixer, &mut tmp, frames, frames / 4, sr, &observed, &counters);
             // cuffie sullo stesso dispositivo: canali 3-4
             let with_hp = ch >= 4 && counters.inline.render(frames, sr, &mut hp);
             for (i, f) in data.chunks_mut(ch).enumerate() {
@@ -365,6 +432,104 @@ fn build<T: SizedSample + FromSample<f32>>(
         None,
     )
     .map_err(|e| e.to_string())
+}
+
+/// Uscita Android con AAudio (oboe), senza passare da cpal che non permette di sceglierne le opzioni:
+/// - bassa latenza: il callback gira su un thread in tempo reale e non compete con la separazione degli stem;
+/// - frequenza nativa del telefono (48 kHz): niente ricampionamento nel sistema, che nega anche il percorso veloce;
+/// - buffer che si allarga di un burst a ogni scatto (underrun), come il LatencyTuner di oboe;
+/// - se Android chiude l'uscita (cuffie collegate o scollegate) il thread dell'audio la riapre.
+#[cfg(target_os = "android")]
+mod aaudio {
+    use super::*;
+    use oboe::{
+        AudioOutputCallback, AudioOutputStreamSafe, AudioStream, AudioStreamBase, AudioStreamBuilder, AudioStreamSafe, ContentType, DataCallbackResult,
+        PerformanceMode, SharingMode, Stereo, Usage,
+    };
+
+    /// buffer iniziale in burst (un burst sono pochi millisecondi): margine per i picchi del mixer
+    const START_BURSTS: i32 = 4;
+
+    struct Cb {
+        mixer: Arc<Mutex<Mixer>>,
+        observed: Arc<AtomicU32>,
+        counters: Arc<Counters>,
+        tmp: Vec<f32>,
+        xruns: i32,
+        /// buffer scelto nelle impostazioni: non si tocca
+        fixed: bool,
+    }
+
+    impl AudioOutputCallback for Cb {
+        type FrameType = (f32, Stereo);
+
+        fn on_audio_ready(&mut self, s: &mut dyn AudioOutputStreamSafe, data: &mut [(f32, f32)]) -> DataCallbackResult {
+            if !self.fixed {
+                if let Ok(x) = s.get_xrun_count() {
+                    if x > self.xruns {
+                        self.xruns = x;
+                        let grow = s.get_buffer_size_in_frames() + s.get_frames_per_burst();
+                        let _ = s.set_buffer_size_in_frames(grow.min(s.get_buffer_capacity_in_frames()));
+                    }
+                }
+            }
+            let buf = s.get_buffer_size_in_frames().max(0) as usize;
+            self.counters.buffer_now.store(buf as u32, Ordering::Relaxed);
+            // margine: meta' di quanto il buffer contiene oltre a questo blocco
+            let slack = buf.saturating_sub(data.len()).max(data.len()) / 2;
+            render_block(&self.mixer, &mut self.tmp, data.len(), slack, s.get_sample_rate() as u32, &self.observed, &self.counters);
+            for (f, v) in data.iter_mut().zip(self.tmp.chunks_exact(2)) {
+                *f = (v[0], v[1]);
+            }
+            DataCallbackResult::Continue
+        }
+
+        fn on_error_after_close(&mut self, _s: &mut dyn AudioOutputStreamSafe, e: oboe::Error) {
+            eprintln!("uscita audio chiusa da Android ({e:?}): la riapro");
+            if let Some(tx) = self.counters.reopen.lock().as_ref() {
+                let _ = tx.send(Cmd::Reopen);
+            }
+        }
+    }
+
+    pub(super) fn open(st: &Settings, mixer: &mut Option<Arc<Mutex<Mixer>>>, observed: Arc<AtomicU32>, counters: Arc<Counters>) -> Result<(OutStream, AudioInfo), String> {
+        let m = mixer.get_or_insert_with(|| Arc::new(Mutex::new(Mixer::new(st.sample_rate.unwrap_or(48000))))).clone();
+        let want = st.buffer.filter(|&b| b > 0);
+        let cb = Cb { mixer: m.clone(), observed, counters: counters.clone(), tmp: Vec::with_capacity(8192), xruns: 0, fixed: want.is_some() };
+        let mut b = AudioStreamBuilder::default()
+            .set_output()
+            .set_f32()
+            .set_stereo()
+            .set_performance_mode(PerformanceMode::LowLatency)
+            .set_sharing_mode(SharingMode::Shared)
+            .set_usage(Usage::Media)
+            .set_content_type(ContentType::Music);
+        if let Some(sr) = st.sample_rate {
+            b = b.set_sample_rate(sr as i32);
+        }
+        let mut s = b.set_callback(cb).open_stream().map_err(|e| format!("AAudio non si apre: {e:?}"))?;
+        let sr = s.get_sample_rate() as u32;
+        let burst = s.get_frames_per_burst();
+        let _ = s.set_buffer_size_in_frames(want.map_or(burst * START_BURSTS, |b| b as i32));
+        // il mixer passa alla frequenza dell'uscita prima che parta il callback
+        m.lock().change_sr(sr);
+        counters.inline.channels.store(2, Ordering::SeqCst);
+        counters.inline.sr.store(sr, Ordering::SeqCst);
+        counters.buffer_now.store(s.get_buffer_size_in_frames().max(0) as u32, Ordering::SeqCst);
+        s.request_start().map_err(|e| format!("AAudio non parte: {e:?}"))?;
+        let mode = if s.get_performance_mode() == PerformanceMode::LowLatency { "bassa latenza" } else { "latenza normale" };
+        let info = AudioInfo {
+            rates: vec![sr],
+            driver: host_label(cpal::default_host().id()),
+            device: "default".into(),
+            note: Some(format!("AAudio a {mode}, burst di {burst} frame; il buffer si allarga da solo se l'audio scatta")),
+            sample_rate: sr,
+            buffer: want.unwrap_or(0),
+            channels: 2,
+            ..Default::default()
+        };
+        Ok((Box::new(s), info))
+    }
 }
 
 // i test di questo modulo sono integrazione ASIO/WASAPI: solo su Windows

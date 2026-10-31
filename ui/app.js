@@ -67,11 +67,29 @@ const clamp01 = (x) => Math.min(1, Math.max(0, x));
    rimpicciolendosi se e' piu' piccola (o lo zoom di Windows e' alto) e ingrandendosi se e' piu' grande (schermo pieno, 1440p, 4K) */
 const BASE_W = 1240, BASE_H = 940, MAX_K = 3;
 let uiK = 1;
+/* interfaccia scelta in Impostazioni > INTERFACCIA (docs/specifiche-android-cockpit.md):
+   auto = Cockpit sui telefoni Android in orizzontale, desktop altrove; desktop; cockpit = Cockpit alla misura reale
+   (compatto sui telefoni); proto = Cockpit del prototipo B, disegnato a PROTO_W x PROTO_H e scalato in blocco.
+   `?cockpit` / `?proto` nell'indirizzo forzano la scelta per provarla da browser */
+const PROTO_W = 892, PROTO_H = 412;
+let uiMode = "auto"; try { uiMode = localStorage.getItem("spinlab.ui") || "auto"; } catch (e) {}
+const UI_PHONE = () => /Android/i.test(navigator.userAgent) && innerWidth > innerHeight && innerHeight < 600;
+function uiLayout() {
+  if (/[?&]proto\b/.test(location.search)) return "proto";
+  if (/[?&]cockpit\b/.test(location.search)) return "cockpit";
+  return uiMode === "auto" ? (UI_PHONE() ? "cockpit" : "desktop") : uiMode;
+}
+function setUiMode(m) { uiMode = m; try { localStorage.setItem("spinlab.ui", m); } catch (e) {} fitUI(); }
 function fitUI() {
-  uiK = Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
+  const lay = uiLayout(), ck = lay === "cockpit" || lay === "proto";
+  document.body.classList.toggle("cockpit", ck);
+  document.body.classList.toggle("proto", lay === "proto");
+  uiK = lay === "proto" ? Math.min(innerWidth / PROTO_W, innerHeight / PROTO_H) : ck ? 1 : Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
   document.documentElement.style.setProperty("--k", uiK.toFixed(4));
+  const lbl = $("#uiBtnLbl"); if (lbl) lbl.textContent = UI_NAMES[lay];
   requestAnimationFrame(resizeCanvases);
 }
+const UI_NAMES = { desktop: "DESKTOP", cockpit: "COCKPIT", proto: "PROTO B" };
 window.addEventListener("resize", fitUI);
 /* su Android (finestre mobili di Samsung) l'evento resize non scatta sempre quando la finestra cambia misura: si osserva anche il documento */
 try { new ResizeObserver(() => fitUI()).observe(document.documentElement); } catch (e) {}
@@ -84,8 +102,13 @@ function makeKnob(el, { value, def, onChange }) {
   const draw = () => { el.style.setProperty("--a", (-135 + v * 270) + "deg"); el.style.setProperty("--p", v); };
   const set = (x, emit = true) => { v = clamp01(x); draw(); if (emit) onChange(v); };
   let st = null;
-  el.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; el.setPointerCapture(e.pointerId); st = { y: e.clientY, v }; });
-  el.addEventListener("pointermove", (e) => { if (st) set(st.v + (st.y - e.clientY) / (e.shiftKey ? 600 : 150)); });
+  el.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; el.setPointerCapture(e.pointerId); st = { x: e.clientX, y: e.clientY, v, fine: false }; });
+  el.addEventListener("pointermove", (e) => {
+    if (!st) return;
+    /* Cockpit (tocco): spostandosi di lato mentre si trascina la regolazione diventa fine (1/4 della velocita'), senza salti */
+    if (!st.fine && document.body.classList.contains("cockpit") && Math.abs(e.clientX - st.x) > 24) st = { x: e.clientX, y: e.clientY, v, fine: true };
+    set(st.v + (st.y - e.clientY) / (e.shiftKey || st.fine ? 600 : 150));
+  });
   ["pointerup", "pointercancel"].forEach((ev) => el.addEventListener(ev, () => (st = null)));
   el.addEventListener("dblclick", () => set(def));
   el.addEventListener("wheel", (e) => { e.preventDefault(); set(v + (e.deltaY < 0 ? 0.03 : -0.03)); }, { passive: false });
@@ -520,7 +543,8 @@ async function pickFile(opts = {}) {
 /* ---- canvas */
 function resizeCanvases() {
   // con #app scalato da --k i canvas appaiono uiK volte piu' grandi: la risoluzione interna segue, cosi' restano nitidi
-  const dpr = (window.devicePixelRatio || 1) * uiK;
+  // su Android al massimo 2: a 3 (S26 Ultra) la differenza non si vede ma i pixel da ridisegnare a ogni frame sono 2,25 volte tanti
+  const dpr = Math.min(window.devicePixelRatio || 1, /Android/i.test(navigator.userAgent) ? 2 : 99) * uiK;
   $$("canvas").forEach((c) => { const w = Math.round(c.clientWidth * dpr), h = Math.round(c.clientHeight * dpr); if (w && (c.width !== w || c.height !== h)) { c.width = w; c.height = h; } });
   decks.forEach((d) => (d.over = null));
 }
@@ -841,7 +865,12 @@ function updateDeckUI(i, s) {
   setText(D.stm, d.stText);
 }
 
-function frame() {
+// su Android al massimo 60 disegni al secondo: lo schermo a 120 Hz raddoppierebbe il lavoro della grafica senza vantaggi visibili
+const FRAME_MIN_MS = /Android/i.test(navigator.userAgent) ? 12 : 0;
+let lastFrame = 0;
+function frame(t) {
+  if (t - lastFrame < FRAME_MIN_MS) { requestAnimationFrame(frame); return; }
+  lastFrame = t;
   for (let i = 0; i < activeDecks; i++) {
     const s = decks[i].snap;
     const pos = currentPos(i) - (decks[i].scrub == null && s?.playing ? (audioLatency + visOffset) * (1 + s.tempo_pct / 100) : 0);
@@ -1548,7 +1577,11 @@ function setSettingsTab(t) {
   $("#aApply").hidden = t !== "audio";
   if (t === "stem") refreshStemPane();
   if (t === "midi") refreshMidiPane();
+  if (t === "ui") $("#uiMode").value = uiMode;
 }
+$("#uiMode").onchange = () => setUiMode($("#uiMode").value);
+// pulsante nella barra: cambio dell'interfaccia senza passare dalle impostazioni
+$("#uiBtn").onclick = (e) => menu(e, [["Automatica", "auto"], ["Desktop", "desktop"], ["Cockpit", "cockpit"], ["Cockpit prototipo B", "proto"]].map(([t, m]) => [(m === uiMode ? "✓ " : "") + t, () => setUiMode(m)]));
 $$(".stabs button").forEach((b) => (b.onclick = () => setSettingsTab(b.dataset.sp)));
 
 /* scheda STEM: modalita' (automatica / tempo reale / solo preparati) e misura della velocita' del PC */
@@ -1570,7 +1603,7 @@ function fillAudio(list, own) {
   const cur = list.current;
   $("#aDrv").innerHTML = list.hosts.map((h) => `<option value="${h.toLowerCase()}" ${h === list.driver ? "selected" : ""}>${h === "WASAPI" ? "Windows (WASAPI)" : h === "ASIO" ? "ASIO (driver della scheda)" : h}</option>`).join("");
   const dev = own ? cur.device || list.default_device : list.default_device;
-  $("#aDev").innerHTML = list.devices.map((n) => `<option ${n === dev ? "selected" : ""}>${esc(n)}</option>`).join("");
+  $("#aDev").innerHTML = list.devices.map((n) => `<option value="${esc(n)}" ${n === dev ? "selected" : ""}>${n === "default" ? "Predefinita del sistema" : esc(n)}</option>`).join("");
   $("#aRate").innerHTML = `<option value="0">Automatica (${cur.sample_rate} Hz)</option>` + list.rates.map((r) => `<option value="${r}" ${own && r === cur.sample_rate && savedAudio.sample_rate ? "selected" : ""}>${r} Hz</option>`).join("");
   $("#pDev").innerHTML = `<option value="">Predefinita di Windows</option><option value="@main" ${list.preview_device === "@main" ? "selected" : ""}>Stesso dispositivo dell'uscita principale · canali 3-4 (cuffie del controller)</option>` + (list.preview_devices || list.devices).map((n) => `<option ${n === list.preview_device ? "selected" : ""}>${esc(n)}</option>`).join("");
   $("#aBuf").innerHTML = `<option value="0">Automatico</option>` + BUFFERS.map((b) => `<option value="${b}" ${own && b === cur.buffer ? "selected" : ""}>${b} frame (${(b / cur.sample_rate * 1000).toFixed(1)} ms)</option>`).join("");
@@ -1578,7 +1611,7 @@ function fillAudio(list, own) {
 $("#aDrv").onchange = async () => { const l = await inv("audio_info", { driver: $("#aDrv").value }); fillAudio(l, false); };
 let savedAudio = {};
 function showAudioStatus(i, msg) {
-  $("#aStatus").innerHTML = `Uscita attiva: <b>${esc(i.driver || "")} · ${esc(i.device)}</b> a <b>${i.sample_rate} Hz</b>, buffer ${i.buffer || "auto"}${i.actual_buffer ? ` (${i.actual_buffer} frame reali)` : ""}, latenza stimata <b>${i.latency_ms.toFixed(1)} ms</b>. Blocchi audio elaborati: ${i.rendered}${i.missed ? ` (saltati ${i.missed})` : ""}.` + (msg ? `<br>${esc(msg)}` : "") + (i.error ? `<br><span class="warn">${esc(i.error)}</span>` : "");
+  $("#aStatus").innerHTML = `Uscita attiva: <b>${esc(i.driver || "")} · ${esc(i.device)}</b> a <b>${i.sample_rate} Hz</b>, buffer ${i.buffer || "auto"}${i.actual_buffer ? ` (${i.actual_buffer} frame reali)` : ""}, latenza stimata <b>${i.latency_ms.toFixed(1)} ms</b>. Blocchi audio elaborati: ${i.rendered}${i.missed ? ` (saltati ${i.missed})` : ""}.` + (i.note ? `<br>${esc(i.note)}` : "") + (msg ? `<br>${esc(msg)}` : "") + (i.error ? `<br><span class="warn">${esc(i.error)}</span>` : "");
 }
 {
   const r = $("#aVis"), v = $("#aVisVal");
