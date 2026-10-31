@@ -38,13 +38,18 @@ Per ogni versione:
 
 ### Chiave di firma degli aggiornamenti
 
-Gli aggiornamenti sono firmati: il programma accetta solo file firmati con la chiave giusta. La chiave attuale (`%USERPROFILE%\.tauri\spinlab-dev-updater.key`) e' **solo per sviluppo, senza password**. **Prima della prima versione pubblica**:
+Gli aggiornamenti sono firmati: il programma accetta solo file firmati con la chiave giusta (la **pubblica** e' dentro il programma, in `plugins.updater.pubkey` di `tauri.conf.json`; la **privata** firma gli installer).
+
+- **Chiave di produzione:** `%USERPROFILE%\.tauri\spinlab.key` (+ `.pub`), creata con `cargo tauri signer generate -w %USERPROFILE%\.tauri\spinlab.key`, **protetta da password**. E' quella che sta nel programma. Copia di sicurezza della chiave e della password fuori dal PC: se le perdi, i programmi gia' installati non potranno piu' ricevere aggiornamenti (andrebbero reinstallati a mano). Non cambiarla dopo la prima distribuzione. Non va mai nel repository.
+- **Chiave di sviluppo** (`spinlab-dev-updater.key`, senza password): non e' piu' nel programma e non serve piu'; chiunque la possieda firma solo per le vecchie build di prova. Un'installazione fatta prima del 31/10/2026 porta ancora la vecchia pubblica e va reinstallata una volta.
+- **Per creare l'installer firmato** (la password si scrive nel terminale, non va salvata in file):
 
 ```
-cargo tauri signer generate -w %USERPROFILE%\.tauri\spinlab.key
+$env:TAURI_SIGNING_PRIVATE_KEY = "C:\Users\Vincenzo\.tauri\spinlab.key"
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = Read-Host "Password della chiave"
+cd src-tauri
+cargo tauri build --config tauri.release.conf.json
 ```
-
-(scegli una password), copia la chiave pubblica stampata in `plugins.updater.pubkey` di `tauri.conf.json` e **fai una copia di sicurezza della chiave privata e della password**: se le perdi, i programmi gia' installati non potranno piu' ricevere aggiornamenti. La chiave privata non va mai nel repository.
 
 L'indirizzo degli aggiornamenti e' la cartella `updates` dell'hosting Aruba (`https://www.djtrombetta.it/server/updates/latest.json`), la stessa del server delle licenze: non dipende da GitHub. Installer da circa 140 MB per ogni cliente a ogni aggiornamento: controlla spazio e traffico del piano. Se pesa troppo, l'installer puo' stare altrove (basta cambiare l'`url` dentro `latest.json`) e `latest.json` resta sull'hosting.
 
