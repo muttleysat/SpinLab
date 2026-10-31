@@ -14,7 +14,7 @@ const PUBKEY_HEX: &str = include_str!("../license_pubkey.txt");
 /// Indirizzo del server delle licenze (cartella `api` dell'hosting). Si cambia a compilazione con SPINLAB_LICENSE_URL.
 const API: &str = match option_env!("SPINLAB_LICENSE_URL") {
     Some(u) => u,
-    None => "https://licenze.spinlab.example/api",
+    None => "https://www.djtrombetta.it/server/api",
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
