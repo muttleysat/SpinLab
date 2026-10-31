@@ -868,12 +868,23 @@ function updateDeckUI(i, s) {
 // su Android al massimo 60 disegni al secondo: lo schermo a 120 Hz raddoppierebbe il lavoro della grafica senza vantaggi visibili
 const FRAME_MIN_MS = /Android/i.test(navigator.userAgent) ? 12 : 0;
 let lastFrame = 0;
+// Posizione per il disegno. La stima da currentPos() riparte a ogni stato ricevuto dal motore, e il ritardo di quella risposta cambia
+// da un poll all'altro: la waveform farebbe un piccolo salto a ogni stato (scatti). Qui la posizione avanza da sola a ogni disegno e
+// viene riportata sulla stima con una correzione dolce; solo uno scostamento grande (salto, loop, scratch) la rimette subito a posto.
+function smoothPos(i) {
+  const d = decks[i], s = d.snap, est = currentPos(i), now = performance.now();
+  if (!s || d.scrub != null || !s.playing || s.held || d.vp == null || Math.abs(est - d.vp) > 0.08) { d.vp = est; d.vt = now; return est; }
+  const dt = Math.min(0.1, (now - d.vt) / 1000); d.vt = now;
+  d.vp += dt * (1 + s.tempo_pct / 100);
+  d.vp += (est - d.vp) * (1 - Math.exp(-dt / 0.12));
+  return d.vp;
+}
 function frame(t) {
   if (t - lastFrame < FRAME_MIN_MS) { requestAnimationFrame(frame); return; }
   lastFrame = t;
   for (let i = 0; i < activeDecks; i++) {
     const s = decks[i].snap;
-    const pos = currentPos(i) - (decks[i].scrub == null && s?.playing ? (audioLatency + visOffset) * (1 + s.tempo_pct / 100) : 0);
+    const pos = smoothPos(i) - (decks[i].scrub == null && s?.playing ? (audioLatency + visOffset) * (1 + s.tempo_pct / 100) : 0);
     drawZoom(i, pos); drawOver(i, pos); drawPlatter(i, pos);
   }
   requestAnimationFrame(frame);
