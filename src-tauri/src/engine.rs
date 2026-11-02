@@ -496,6 +496,15 @@ impl Deck {
         }
     }
 
+    /// dimezza (`up` = false) o raddoppia il loop. Una lunghezza segnata a mano (3, 5, 6 battiti...) va alla potenza di due piu' vicina
+    /// nel verso scelto, invece di dare 1,5 o 0,75: le lunghezze restano sempre 1/32 ... 64
+    pub fn loop_step(&mut self, up: bool) {
+        let b = self.loop_beats.max(0.03125);
+        let e = b.log2();
+        let next = if (e - e.round()).abs() < 1e-6 { if up { b * 2.0 } else { b / 2.0 } } else if up { 2f64.powf(e.ceil()) } else { 2f64.powf(e.floor()) };
+        self.loop_size(next);
+    }
+
     // ---- movimenti sul brano
 
     fn reset_motion(&mut self) {
@@ -859,13 +868,23 @@ impl Deck {
                 self.lead = lead;
                 self.pos = heard + lead;
                 self.stretch.reset();
-                let lat = self.stretch.input_latency();
                 let p = self.pos.floor() as isize;
-                let s = (p - lat as isize).max(0) as usize;
-                let e = (p.max(0) as usize).min(frames);
-                if e > s {
-                    self.stretch.seek(&data[s * 2..e * 2], r);
+                // preroll: lo stretcher gira su audio che precede il punto di ripartenza e se ne scarta l'uscita, cosi' anche i buffer di
+                // sintesi sono a regime. Con il solo `seek` l'uscita partiva con la rampa d'ingresso delle finestre e l'attacco
+                // (il kick di un hot cue) usciva smussato e a un terzo dell'ampiezza.
+                let n_pre = lead.ceil() as usize + 512;
+                let q0 = p - (n_pre as f64 * r).round() as isize;
+                let pre_in_len = (p - q0).max(0) as usize;
+                let mut pre_in = vec![0f32; pre_in_len * 2];
+                for k in 0..pre_in_len {
+                    let f = q0 + k as isize;
+                    if f >= 0 && (f as usize) < frames {
+                        pre_in[k * 2] = data[f as usize * 2];
+                        pre_in[k * 2 + 1] = data[f as usize * 2 + 1];
+                    }
                 }
+                let mut pre_out = vec![0f32; n_pre * 2];
+                self.stretch.process(&pre_in, &mut pre_out);
                 self.stretch_mode = true;
                 self.need_preroll = false;
             } else {
@@ -2614,6 +2633,50 @@ mod tests {
         for _ in 0..((secs * sr as f64) / 256.0).round() as usize { d.render(&mut buf, 1.0); }
     }
 
+    /// hot cue su un kick: il transiente non deve perdere energia, con e senza key lock
+    #[test]
+    fn hot_cue_keeps_the_kick_attack() {
+        let sr = 44100u32;
+        // kick = seno a 60 Hz con attacco immediato e coda di 150 ms, uno ogni mezzo secondo
+        let n = (sr as f64 * 60.0) as usize;
+        let mut data = vec![0f32; n * 2];
+        for b in 0..120 {
+            let s0 = (b as f64 * 0.5 * sr as f64) as usize;
+            for k in 0..(0.15 * sr as f64) as usize {
+                let t = k as f64 / sr as f64;
+                let v = ((2.0 * std::f64::consts::PI * 60.0 * t).sin() * (-t * 25.0).exp()) as f32 * 0.9;
+                if s0 + k < n { data[(s0 + k) * 2] = v; data[(s0 + k) * 2 + 1] = v; }
+            }
+        }
+        for keylock in [false, true] {
+            let mut d = Deck::new(sr, 0);
+            let track = Track { name: "k".into(), path: String::new(), data: Arc::new(data.clone()), sr, beats: (0..119).map(|k| k as f64 * 0.5).collect(), bpm: 120.0, key: None, downbeat: 0 };
+            d.load(Arc::new(track));
+            d.keylock = keylock;
+            d.quantize = true;
+            d.hot_cues[0] = Some(20.0);
+            d.set_pos_sec(7.3);
+            d.playing = true;
+            run_blocks(&mut d, 0.5, sr);
+            d.hot_cue_press(0);
+            let mut out = Vec::new();
+            let mut buf = vec![0f32; 512];
+            for _ in 0..32 { buf.iter_mut().for_each(|x| *x = 0.0); d.render(&mut buf, 1.0); out.extend_from_slice(&buf); }
+            // primi 20 ms di uscita dopo il salto, contro lo stesso kick in riproduzione continua
+            let w = (0.020 * sr as f64) as usize * 2;
+            let peak = out[..w].iter().fold(0f32, |m, v| m.max(v.abs()));
+            // riferimento: stesso kick attraversato in riproduzione continua, senza salto
+            let mut c = Deck::new(sr, 0);
+            c.load(Arc::new(Track { name: "k".into(), path: String::new(), data: Arc::new(data.clone()), sr, beats: vec![], bpm: 120.0, key: None, downbeat: 0 }));
+            c.keylock = keylock; c.set_pos_sec(19.0); c.playing = true;
+            let mut cont = Vec::new();
+            for _ in 0..((1.2 * sr as f64) / 256.0) as usize { buf.iter_mut().for_each(|x| *x = 0.0); c.render(&mut buf, 1.0); cont.extend_from_slice(&buf); }
+            let a0 = (1.0 * sr as f64) as usize * 2;
+            let base = cont[a0..a0 + w].iter().fold(0f32, |m, v| m.max(v.abs()));
+            assert!(peak > base * 0.95, "keylock={keylock}: il kick perde l'attacco, picco {peak} contro {base} in riproduzione continua");
+        }
+    }
+
     /// beatjump: salta di battiti interi restando in fase, e porta con se' il loop
     #[test]
     fn beatjump_keeps_phase_and_moves_loop() {
@@ -2711,6 +2774,17 @@ mod tests {
     }
 
     /// i valori del loop sono battiti puliti (4, 2, 1/2...) anche segnando IN e OUT a mano su una griglia irregolare
+    #[test]
+    fn loop_halve_and_double_stay_on_powers_of_two() {
+        let mut d = grid_deck(44100);
+        for (start, halved, doubled) in [(4.0, 2.0, 8.0), (3.0, 2.0, 4.0), (6.0, 4.0, 8.0), (5.0, 4.0, 8.0), (0.75, 0.5, 1.0), (0.03125, 0.03125, 0.0625), (64.0, 32.0, 64.0)] {
+            d.loop_beats = start; d.loop_step(false);
+            assert_eq!(d.loop_beats, halved, "dimezzare {start}");
+            d.loop_beats = start; d.loop_step(true);
+            assert_eq!(d.loop_beats, doubled, "raddoppiare {start}");
+        }
+    }
+
     #[test]
     fn loop_lengths_are_clean_beat_values() {
         let sr = 44100;

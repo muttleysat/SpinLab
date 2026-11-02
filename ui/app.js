@@ -99,12 +99,26 @@ function setUiMode(m) {
   } else { uiMode = m; uiPut("spinlab.ui", m); }
   fitUI();
 }
+/* waveform verticali (solo desktop): fra i fader del volume, con le manopole di filtro/EQ/FX spostate nel deck al posto delle waveform orizzontali */
+let vwOn = uiGet("spinlab.vwave") === "1", vwReady = false; // vwReady: fitUI parte prima che i deck siano costruiti
+function setVWave(on) {
+  document.body.classList.toggle("vwave", on);
+  const b = $("#vwBtn"); if (b) { b.classList.toggle("on", vwOn); b.setAttribute("aria-pressed", String(vwOn)); }
+  if (!vwReady) return;
+  DK.forEach((D) => {
+    if (!D?.kcol) return;
+    if (on && D.kcol.parentNode !== D.vslot) D.vslot.appendChild(D.kcol);
+    else if (!on && D.kcol.parentNode !== D.strip) D.strip.prepend(D.kcol);
+  });
+}
 function fitUI() {
   const lay = uiLayout(), ck = lay === "cockpit" || lay === "proto", mob = UI_MOBILE.includes(lay);
   document.body.classList.toggle("cockpit", ck);
   document.body.classList.toggle("proto", lay === "proto");
   document.body.classList.toggle("mob", mob);
   UI_MOBILE.forEach((m) => document.body.classList.toggle("m-" + m, lay === m));
+  setVWave(lay === "desktop" && vwOn);
+  document.body.classList.toggle("vw-ok", lay === "desktop");
   uiK = ck || mob ? 1 : Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
   document.documentElement.style.setProperty("--k", uiK.toFixed(4));
   const lbl = $("#uiBtnLbl"); if (lbl) lbl.textContent = UI_NAMES[lay];
@@ -231,6 +245,7 @@ function deckHTML(i) {
       <button class="rbtn2 rg" data-r="keybtn" title="Tonalità: key lock, Camelot, semitoni">KEY</button>
     </div>
   </div>
+  <div class="vslot"></div>
 </div>`;
 }
 
@@ -253,12 +268,14 @@ function stripHTML(i) {
 function buildDecks() {
   $("#sideL").innerHTML = deckHTML(0);
   $("#sideR").innerHTML = deckHTML(1);
-  $("#strips").innerHTML = [0, 1].map(stripHTML).join("");
+  $("#strips").innerHTML = [0, 1].map(stripHTML).join("")
+    + `<div class="vwaves">${[0, 1].map((i) => `<div class="wv vwv" data-i="${i}"><canvas class="vzoom" data-i="${i}"></canvas></div>`).join("")}</div>`;
   [0, 1].forEach((i) => bindDeck(i));
   // crossfader
   const xf = $("#crossfader");
   makeFader(xf, { value: 0.5, def: 0.5, onChange: (v) => inv("mixer_cmd", { cmd: "crossfader", a: v }) });
   initDecks();
+  vwReady = true; setVWave(document.body.classList.contains("vwave"));
 }
 
 function initDecks() {
@@ -293,6 +310,7 @@ function bindDeck(i) {
     play: r("play"), cue: r("cue"), sync: r("sync"), pfl: r("pfl"), pfl2: sr("pfl2"), range: r("range"), tempo: r("tempo"), tempoval: r("tempoval"),
     lsz: r("lsz"), hot: $$("[data-hot]", el), modebtn: r("mode"), pval: r("pval"), pdn: r("pdn"), pup: r("pup"), qbtn: r("qbtn"), qpill: r("qpill"), slipbtn: r("slipbtn"), prow: $(".prow", el), grid: r("grid"), meterL: sr("meterL"), meterR: sr("meterR"), eject: r("eject"), vol: sr("vol"), fxkind: sr("fxkind"), fxon: sr("fxon"),
     knobs: $$("[data-k]", st), plat: $("canvas.plat", el), zoomCv: $("canvas.zoom", el), over: $("canvas.over", el),
+    vzoom: $(`canvas.vzoom[data-i="${i}"]`), vslot: $(".vslot", el), kcol: $(".kcol", st),
   };
   const D = DK[i];
   D.play.onclick = () => dc(i, "play");
@@ -436,8 +454,15 @@ function bindDeck(i) {
     s.pos = Math.min(d.dur, Math.max(0, s.pos + (da / (2 * Math.PI)) * REV_SEC));
     return s.pos;
   });
-  D.zoomCv.addEventListener("wheel", (e) => { e.preventDefault(); d.zoom = Math.min(40, Math.max(1.5, d.zoom * (e.deltaY > 0 ? 1.15 : 1 / 1.15))); }, { passive: false });
-  D.zoomCv.addEventListener("dblclick", () => (d.zoom = 7));
+  // waveform verticale (vista scratch): il tempo scorre verso il basso, trascinare in giu' avanza
+  scrubber(D.vzoom, (e) => ({ y: e.clientY, pos: currentPos(i) }), (e, s) => {
+    const secsPerPx = d.zoom / D.vzoom.getBoundingClientRect().height;
+    return Math.min(d.dur, Math.max(0, s.pos + (e.clientY - s.y) * secsPerPx));
+  });
+  for (const cv of [D.zoomCv, D.vzoom]) {
+    cv.addEventListener("wheel", (e) => { e.preventDefault(); d.zoom = Math.min(40, Math.max(1.5, d.zoom * (e.deltaY > 0 ? 1.15 : 1 / 1.15))); }, { passive: false });
+    cv.addEventListener("dblclick", () => (d.zoom = 7));
+  }
 }
 
 /* finestrelle del deck: griglia/quantize e tonalita' */
@@ -605,7 +630,7 @@ function zoomTile(i, n, H, pps, dim) {
 }
 
 function drawZoom(i, pos) {
-  const c = DK[i].zoomCv; if (!c.width) return;
+  const c = DK[i].zoomCv; if (!c.width || c.offsetParent === null) return;
   const g = c.getContext("2d"), W = c.width, H = c.height, d = decks[i], pal = PAL[i];
   g.globalAlpha = 1; g.clearRect(0, 0, W, H);
   if (!d.wave) return;
@@ -642,6 +667,47 @@ function drawZoom(i, pos) {
     }
   }
   g.fillStyle = "#fff"; g.shadowColor = "#fff"; g.shadowBlur = 8; g.fillRect(Math.round(W / 2) - 1, 0, 2, H); g.shadowBlur = 0;
+}
+
+/* waveform verticale: futuro in alto, il punto di ascolto a 3/4 dell'altezza, il gia' suonato (scurito) sotto. Righe ricalcolate a ogni
+   fotogramma: sono poche centinaia, niente tessere come nella versione orizzontale */
+function drawVert(i, pos) {
+  const c = DK[i].vzoom; if (!c.width || c.offsetParent === null) return;
+  const g = c.getContext("2d"), W = c.width, H = c.height, d = decks[i], pal = PAL[i];
+  g.globalAlpha = 1; g.clearRect(0, 0, W, H);
+  if (!d.wave) return;
+  const win = d.zoom, pps = H / win, ph = Math.round(H * 0.75), mid = W / 2, amp = mid * 0.96 / 255, rate = d.wave.rate;
+  const yOf = (t) => ph - (t - pos) * pps;
+  for (let y = 0; y < H; y++) {
+    const t = pos + (ph - y) / pps, k0 = Math.floor(t * rate), k1 = Math.max(k0, Math.floor((t + 1 / pps) * rate));
+    if (k1 < 0) continue;
+    const hl = bandMax(d.wave.lo, k0, k1), hm = bandMax(d.wave.mid, k0, k1), hh = bandMax(d.wave.hi, k0, k1);
+    if (hl + hm + hh === 0) continue;
+    g.globalAlpha = y > ph ? 0.55 : 1;
+    g.fillStyle = pal.lo; g.fillRect(mid - hl * amp, y, hl * amp * 2, 1);
+    g.fillStyle = pal.mid; g.fillRect(mid - hm * amp * 0.62, y, hm * amp * 1.24, 1);
+    g.fillStyle = pal.hi; g.fillRect(mid - hh * amp * 0.36, y, hh * amp * 0.72, 1);
+  }
+  g.globalAlpha = 1;
+  const t0 = pos - ph / pps, t1 = pos + (H - ph) / pps; // tempo in fondo e in cima
+  let lo = 0, hi = d.beats.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (d.beats[m] < t0) lo = m + 1; else hi = m; }
+  const th = Math.max(1, Math.round(H / 400));
+  for (let b = lo; b < d.beats.length && d.beats[b] <= t1; b++) {
+    const y = Math.round(yOf(d.beats[b])), bar = (((b - d.downbeat) % 4) + 4) % 4 === 0;
+    g.fillStyle = bar ? "rgba(255,255,255,.9)" : "rgba(255,255,255,.25)"; g.fillRect(0, y, W, bar ? th * 2 : th);
+  }
+  const s = d.snap;
+  const mark = (t, color) => { const y = yOf(t); if (y >= 0 && y < H) { g.fillStyle = color; g.fillRect(0, y - th, W, th * 2); g.beginPath(); g.moveTo(0, y - 7 * th); g.lineTo(0, y + 7 * th); g.lineTo(9 * th, y); g.fill(); } };
+  if (s) {
+    mark(s.cue, "#ffb020"); s.hot_cues.forEach((t, k) => t != null && mark(t, HC[k % 4]));
+    if (s.loop_on || s.loop_out > s.loop_in) {
+      const y0 = yOf(s.loop_out), y1 = yOf(s.loop_in);
+      g.fillStyle = s.loop_on ? "rgba(53,224,138,.22)" : "rgba(255,255,255,.07)"; g.fillRect(0, y0, W, y1 - y0);
+      g.fillStyle = s.loop_on ? "#35e08a" : "#8a96b4"; g.fillRect(0, y0, W, th * 2); g.fillRect(0, y1 - th * 2, W, th * 2);
+    }
+  }
+  g.fillStyle = "#fff"; g.shadowColor = "#fff"; g.shadowBlur = 8; g.fillRect(0, ph - th, W, th * 2); g.shadowBlur = 0;
 }
 
 function buildOver(i, W, H) {
@@ -871,7 +937,8 @@ async function poll() {
 function setMeter(el, lv) { [...el.children].forEach((c, k) => c.style.setProperty("--v", Math.min(100, (lv[k] ?? lv[0]) * 100) + "%")); }
 
 const setText = (el, t) => { if (el.textContent !== t) el.textContent = t; };
-const loopLabel = (b) => (b >= 1 ? String(Math.round(b * 100) / 100).replace(/\.0+$/, "") : "1/" + Math.round(1 / b));
+// sotto il battito: 1/n solo se 1/b e' (quasi) intero, altrimenti il decimale (0,75 non e' 1/1)
+const loopLabel = (b) => (b >= 1 || Math.abs(1 / b - Math.round(1 / b)) > 0.02 ? String(Math.round(b * 100) / 100).replace(/\.0+$/, "") : "1/" + Math.round(1 / b));
 
 function updateDeckUI(i, s) {
   const D = DK[i], d = decks[i];
@@ -943,7 +1010,7 @@ function frame(t) {
   for (let i = 0; i < activeDecks; i++) {
     const s = decks[i].snap;
     const pos = smoothPos(i) - (decks[i].scrub == null && s?.playing ? (audioLatency + visOffset) * (1 + s.tempo_pct / 100) : 0);
-    const a = performance.now(); drawZoom(i, pos); const b = performance.now(); drawOver(i, pos); const c = performance.now(); drawPlatter(i, pos); const d = performance.now();
+    const a = performance.now(); drawZoom(i, pos); drawVert(i, pos); const b = performance.now(); drawOver(i, pos); const c = performance.now(); drawPlatter(i, pos); const d = performance.now();
     perf.zoom += b - a; perf.over += c - b; perf.plat += d - c;
   }
   perfPush(perf.draw, performance.now() - t0); perf.n++;
@@ -1679,6 +1746,7 @@ $("#uiMode").onchange = () => setUiMode($("#uiMode").value);
 // Sul telefono elenca solo i modelli dell'orientamento attuale; l'altro gruppo si raggiunge ruotando il telefono
 const UI_CHOICES = [["auto", "Automatica", "verticale A, orizzontale B"], ["stack", "A · Stack verticale", "una mano"], ["proto", "B · Cockpit orizzontale", "due pollici"],
   ["cockpit", "B · Cockpit compatto", "senza piatti"], ["focus", "C · Focus + Platter", "esecuzione dal vivo"], ["spaces", "D · Mappa degli spazi", "amministrazione"], ["desktop", "Desktop", "tutto insieme"]];
+$("#vwBtn").onclick = () => { vwOn = !vwOn; uiPut("spinlab.vwave", vwOn ? "1" : "0"); fitUI(); };
 $("#uiBtn").onclick = (e) => {
   const cur = uiChoice(), v = uiOrient() === "v", phone = uiPhone();
   const list = phone ? UI_CHOICES.filter(([m]) => m === "auto" || (v ? UI_MOBILE : UI_LAND).includes(m)) : UI_CHOICES;
