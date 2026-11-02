@@ -479,8 +479,14 @@ impl Deck {
             self.loop_on = false;
         }
     }
+    /// OUT: chiude il loop che si sta definendo. Con un loop gia' attivo la testina gira dentro il loop, e prenderla come nuova fine
+    /// lo farebbe collassare su se stesso (4 battiti -> 1, senza piu' modo di allungarlo): come sui CDJ, OUT in loop ne esce
     pub fn loop_out_here(&mut self) {
         if self.track.is_none() { return; }
+        if self.loop_on {
+            self.loop_on = false;
+            return;
+        }
         let o = self.snap(self.pos_sec()) * self.sr as f64;
         if o > self.loop_in + 64.0 {
             self.loop_out = o;
@@ -2774,6 +2780,23 @@ mod tests {
     }
 
     /// i valori del loop sono battiti puliti (4, 2, 1/2...) anche segnando IN e OUT a mano su una griglia irregolare
+    /// OUT con il loop attivo ne esce senza toccare i punti; un nuovo OUT (dopo IN) lo ridefinisce
+    #[test]
+    fn loop_out_while_looping_exits_instead_of_collapsing() {
+        let sr = 44100; let mut d = grid_deck(sr);
+        d.set_pos_sec(10.0); d.loop_in_here(); run_blocks(&mut d, 2.0, sr); d.loop_out_here();
+        assert!(d.loop_on && d.loop_beats == 4.0);
+        let out = d.loop_out;
+        for k in 0..4 { run_blocks(&mut d, 0.37 + 0.11 * k as f64, sr); d.loop_out_here(); d.loop_toggle(); }
+        assert!(d.loop_on && d.loop_out == out && d.loop_beats == 4.0, "il loop non deve accorciarsi: {} battiti", d.loop_beats);
+        d.loop_out_here();
+        assert!(!d.loop_on && d.loop_out == out, "OUT in loop ne esce senza cambiare i punti");
+        run_blocks(&mut d, 3.0, sr);
+        assert!(d.pos_sec() > out / sr as f64 + 1.0, "uscito dal loop il brano prosegue oltre la fine: {}", d.pos_sec());
+        d.loop_step(false); d.loop_step(true); d.loop_step(true);
+        assert_eq!(d.loop_beats, 8.0);
+    }
+
     #[test]
     fn loop_halve_and_double_stay_on_powers_of_two() {
         let mut d = grid_deck(44100);
