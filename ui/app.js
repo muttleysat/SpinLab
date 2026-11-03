@@ -1568,6 +1568,7 @@ document.addEventListener("pointermove", (e) => {
   if (!drag.folder) el?.closest(".pad")?.classList.add("drop");
   if (!drag.folder) el?.closest(".dpad")?.classList.add("drop");
   const pl = el?.closest(".plitem"); pl?.classList.add("drop");
+  if (!drag.folder) el?.closest(".amq[data-k]")?.classList.add("dropbefore");
   if (!drag.folder && lib.playlist !== null && !lib.sort) el?.closest("#tracks tbody tr")?.classList.add("dropbefore");
 });
 document.addEventListener("pointerup", async (e) => {
@@ -1583,7 +1584,9 @@ document.addEventListener("pointerup", async (e) => {
     refreshPlaylists(); if (lib.playlist === +pl.dataset.pl) refreshLib();
     return;
   }
-  if (dpEl) loadDrum(+dpEl.dataset.k, trackById(d.id).path);
+  const amEl = el?.closest("#pn-automix");
+  if (amEl) { const q = el.closest(".amq[data-k]"); amAddTracks(d.ids, q ? +q.dataset.k : null); }
+  else if (dpEl) loadDrum(+dpEl.dataset.k, trackById(d.id).path);
   else if (padEl) loadPad(+padEl.dataset.p, trackById(d.id).path);
   else if (deck) loadTrack(+deck.dataset.i, trackById(d.id).path);
   else if (pl) { await inv("playlist_add", { id: +pl.dataset.pl, tracks: d.ids }); refreshPlaylists(); }

@@ -14,6 +14,9 @@ const AM = {
   opt: { bars: 16, style: "bass", order: "list", loop: false },
 };
 try { Object.assign(AM.opt, JSON.parse(localStorage.getItem("spinlab.automix") || "{}")); } catch (e) { /* senza memoria locale restano i valori di partenza */ }
+// la coda modificata a mano si ricorda tra una sessione e l'altra (solo se l'hai toccata tu; «ripristina» la dimentica)
+const amSaveQueue = () => { try { if (AM.edited) localStorage.setItem("spinlab.amqueue", JSON.stringify(AM.queue)); else localStorage.removeItem("spinlab.amqueue"); } catch (e) { /* non e' grave */ } };
+try { const q = JSON.parse(localStorage.getItem("spinlab.amqueue") || "null"); if (Array.isArray(q)) { AM.queue = q.filter((t) => t && t.path); AM.edited = true; } } catch (e) { /* coda non leggibile: si riparte da zero */ }
 const amSave = () => { try { localStorage.setItem("spinlab.automix", JSON.stringify(AM.opt)); } catch (e) { /* non e' grave */ } };
 
 const amSnap = (i) => decks[i]?.snap || {};
@@ -86,15 +89,15 @@ function amSyncPreview() {
   const rows = (typeof lib !== "undefined" && lib.rows) || [];
   const pl = [0, 1].map((i) => (amSnap(i).playing && amSnap(i).loaded ? amSnap(i).path : "")).join("|");
   const sig = [rows.length, rows[0]?.id, rows[rows.length - 1]?.id, AM.opt.order, AM.opt.loop, lib.last, pl].join("/");
-  if (sig === AM.sig || (AM.edited && AM.queue.length)) { if (!AM.edited) AM.sig = sig; return; }
+  if (sig === AM.sig || AM.edited) { if (!AM.edited) AM.sig = sig; return; }
   AM.sig = sig; AM.queue = amBuildQueue().q; AM.idx = 0;
 }
 function amStart() {
-  if (!((typeof lib !== "undefined" && lib.rows) || []).length) { toast("AUTOMIX: scegli prima una cartella o una playlist con dei brani"); return; }
+  if (!((typeof lib !== "undefined" && lib.rows) || []).length) { toast("AUTOMIX: scegli prima una cartella o una playlist con dei brani"); amMsg("Nessun brano nella libreria: apri una cartella o una playlist"); amRender(); return; }
   amSyncPreview();
   const playing = [0, 1].find((i) => amSnap(i).playing && amSnap(i).loaded);
   if (playing != null) { const pth = amSnap(playing).path; AM.queue = AM.queue.filter((t) => t.path !== pth); }
-  if (!AM.queue.length) { toast("AUTOMIX: la coda e' vuota"); return; }
+  if (!AM.queue.length) { toast("AUTOMIX: la coda e' vuota"); amMsg("La coda e' vuota: trascina dei brani qui o premi «ripristina»"); amRender(); return; }
   AM.idx = 0; AM.mix = null; AM.ramp = null; AM.on = true; AM.busy = false;
   AM.cur = playing ?? [0, 1].find((i) => !amSnap(i).loaded) ?? 0; AM.nxt = 1 - AM.cur;
   amMsg(playing != null ? "In corso: il prossimo brano parte alla fine di quello che suona" : "Avvio…");
@@ -116,11 +119,12 @@ function amAdoptManual() {
   const s = amSnap(AM.nxt), d = decks[AM.nxt];
   if (!s.loaded || s.playing || d.loading || !s.path) return;
   const next = AM.queue[AM.idx];
-  if ((next && next.path === s.path) || s.path === AM.lastPre) return;   // quello preparato da AUTOMIX stesso non e' una scelta tua
+  if ((next && next.path === s.path) || s.path === AM.lastPre || s.path === AM.adopted) return;   // quello preparato da AUTOMIX stesso non e' una scelta tua
   const known = (typeof lib !== "undefined" && lib.rows.find((t) => t.path === s.path)) || { id: -1, path: s.path, title: s.name, artist: "", bpm: s.bpm_orig };
   const at = AM.queue.findIndex((t, k) => k >= AM.idx && t.path === s.path);
   if (at >= 0) AM.queue.splice(at, 1);
   AM.queue.splice(AM.idx, 0, known);
+  AM.adopted = s.path;   // una sola volta per caricamento: se poi lo togli o lo sposti, non viene rimesso in testa a ogni controllo
 }
 
 /* ---------------------------------------------------------------- calcoli sul brano che suona */
@@ -279,9 +283,9 @@ function amSkip() {
 /* ---------------------------------------------------------------- pannello */
 function amRender() {
   const go = $("#amGo"); if (!go) return;
-  go.textContent = AM.on ? "FERMA AUTOMIX" : "AVVIA AUTOMIX"; go.classList.toggle("on", AM.on);
-  $("#amSkip").disabled = !AM.on;
-  $("#amStatus").textContent = AM.on ? AM.msg : AM.msg || "";
+  const gt = AM.on ? "FERMA AUTOMIX" : "AVVIA AUTOMIX"; if (go.textContent !== gt) go.textContent = gt;   // riscrivere lo stesso testo ogni 250 ms faceva perdere i clic su WebKit go.classList.toggle("on", AM.on);
+  if ($("#amSkip").disabled === AM.on) $("#amSkip").disabled = !AM.on;
+  const st = $("#amStatus"), sm = AM.msg || ""; if (st.textContent !== sm) st.textContent = sm;
   amSyncPreview();
   const cur = amSnap(AM.cur), list = [], SHOW = 40, base = AM.on ? AM.idx : 0;
   const row = (t, k) => `<div class="amq${k === 0 ? " next" : ""}" data-k="${base + k}"><b>${k + 1}.</b><em title="${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}">${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}</em><span>${t.bpm ? Math.round(t.bpm) : "–"} ${esc(t.key || "")}</span>`
@@ -304,14 +308,56 @@ function amRender() {
 // modifica della coda con i pulsanti sulle righe
 function amEdit(act, k) {
   const Q = AM.queue, floor = AM.on ? AM.idx : 0;
-  if (act === "reset") { AM.edited = false; AM.sig = ""; return; }
+  if (act === "reset") { AM.edited = false; AM.sig = ""; amSaveQueue(); return; }
   if (k < floor || k >= Q.length) return;
   if (act === "del") Q.splice(k, 1);
   else if (act === "top") Q.splice(floor, 0, Q.splice(k, 1)[0]);
   else if (act === "up" && k > floor) [Q[k - 1], Q[k]] = [Q[k], Q[k - 1]];
   else if (act === "dn" && k < Q.length - 1) [Q[k + 1], Q[k]] = [Q[k], Q[k + 1]];
-  AM.edited = true;
+  AM.edited = true; amSaveQueue();
   amRender();
+}
+
+// sposta il brano in posizione `from` davanti a quello in posizione `to` (to = lunghezza della coda: in fondo)
+function amMove(from, to) {
+  const Q = AM.queue, floor = AM.on ? AM.idx : 0;
+  if (from < floor || from >= Q.length) return;
+  const it = Q.splice(from, 1)[0];
+  if (to > from) to--;
+  Q.splice(Math.min(Q.length, Math.max(floor, to)), 0, it);
+  AM.edited = true; amSaveQueue(); amRender();
+}
+// aggiunge alla coda i brani trascinati dalla libreria o da una playlist (ids), davanti alla riga `to` o in fondo
+function amAddTracks(ids, to) {
+  const rows = (typeof lib !== "undefined" && lib.rows) || [], floor = AM.on ? AM.idx : 0;
+  const add = ids.map((id) => rows.find((t) => t.id === id)).filter((t) => t && t.path);
+  if (!add.length) return;
+  AM.queue.splice(Math.min(AM.queue.length, Math.max(floor, to ?? AM.queue.length)), 0, ...add);
+  AM.edited = true; amSaveQueue(); amRender();
+  toast(add.length > 1 ? `${add.length} brani aggiunti alla coda AUTOMIX` : "Brano aggiunto alla coda AUTOMIX");
+}
+// trascinamento delle righe della coda per cambiarne l'ordine
+let amDrag = null;
+const amClearDrop = () => document.querySelectorAll(".amq.dropbefore").forEach((x) => x.classList.remove("dropbefore"));
+function bindAmDrag() {
+  $("#amQueue").addEventListener("pointerdown", (e) => {
+    const r = e.target.closest(".amq[data-k]"); if (!r || e.button !== 0 || e.target.closest("[data-act]")) return;
+    amDrag = { k: +r.dataset.k, label: r.querySelector("em")?.textContent || "", x: e.clientX, y: e.clientY, on: false };
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!amDrag) return;
+    if (!amDrag.on && Math.hypot(e.clientX - amDrag.x, e.clientY - amDrag.y) > 6) { amDrag.on = true; getSelection()?.removeAllRanges(); const g = $("#ghost"); g.textContent = amDrag.label; g.hidden = false; }
+    if (!amDrag.on) return;
+    const g = $("#ghost"); g.style.left = e.clientX + 12 + "px"; g.style.top = e.clientY + 8 + "px";
+    amClearDrop(); document.elementFromPoint(e.clientX, e.clientY)?.closest(".amq[data-k]")?.classList.add("dropbefore");
+  });
+  document.addEventListener("pointerup", (e) => {
+    if (!amDrag) return; const d = amDrag; amDrag = null;
+    $("#ghost").hidden = true; amClearDrop();
+    if (!d.on) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY), r = el?.closest(".amq[data-k]");
+    if (r) amMove(d.k, +r.dataset.k); else if (el?.closest("#pn-automix")) amMove(d.k, AM.queue.length);
+  });
 }
 
 function bindAutomix() {
@@ -321,8 +367,9 @@ function bindAutomix() {
   $("#amQueue").addEventListener("click", (e) => { const a = e.target.closest("[data-act]"); if (!a) return; const r = a.closest("[data-k]"); amEdit(a.dataset.act, r ? +r.dataset.k : -1); });
   const bind = (id, key, num) => { const e = $(id); e.value = String(AM.opt[key]); e.onchange = () => { AM.opt[key] = num ? +e.value : e.value; amSave(); }; };
   bind("#amBars", "bars", true); bind("#amStyle", "style"); bind("#amOrder", "order");
-  $("#amOrder").addEventListener("change", () => { AM.edited = false; AM.sig = ""; });
+  $("#amOrder").addEventListener("change", () => { AM.edited = false; AM.sig = ""; amSaveQueue(); });
   $("#amLoop").checked = !!AM.opt.loop; $("#amLoop").onchange = () => { AM.opt.loop = $("#amLoop").checked; amSave(); };
   setInterval(() => { amTick().catch((e) => { AM.busy = false; amMsg("Errore: " + (e?.message || e)); }); amRampStep(); amRender(); }, 250);
 }
+bindAmDrag();
 bindAutomix();
