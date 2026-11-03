@@ -31,7 +31,7 @@ L'app segue la rotazione del telefono (`fullUser`, rispetta il blocco della rota
 
 ## Scelta dell'interfaccia
 
-Dal pulsante **MODO** nella barra (lettera del modello, accanto all'ingranaggio, sempre visibile) o in **Impostazioni › INTERFACCIA**. Sul telefono la scelta è per orientamento: in orizzontale B · Cockpit orizzontale, B · Cockpit compatto o Desktop; in verticale A, C o D. Ruotando il telefono si passa dall'una all'altra. Per B:
+Su Android, dal pulsante **MODO** nella barra (lettera del modello, accanto all'ingranaggio) o in **Impostazioni › INTERFACCIA**. Su computer (Mac, Windows) pulsante e scheda non ci sono e la vista è sempre quella desktop. Sul telefono la scelta è per orientamento: in orizzontale B · Cockpit orizzontale, B · Cockpit compatto o Desktop; in verticale A, C o D. Ruotando il telefono si passa dall'una all'altra. Per B:
 
 | Scelta | Cosa mostra |
 | --- | --- |
