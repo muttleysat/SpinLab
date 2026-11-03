@@ -236,6 +236,7 @@ function deckHTML(i) {
       <div class="transport"><button class="rbtn cue" data-r="cue">CUE</button><button class="rbtn play" data-r="play">${IC.play}</button></div>
     </div>
     <div class="platter"><canvas class="plat"></canvas>
+      <button class="pbtn bl an" data-r="anchor" title="ANCHOR: porta il marker della griglia più vicino esattamente sulla testina (per correggere la griglia dove si sposta)">&#9875;</button>
       <button class="pbtn bl" data-r="grid" title="Griglia: correzioni, anchor, FLUIDA/FISSA">GRID</button>
       <button class="pbtn qb" data-r="qpill" title="QUANTIZE: cue, loop, roll e hot cue si agganciano ai battiti della griglia">QUANT</button>
       <button class="pbtn br" data-r="pfl" title="Preascolto in cuffia (PFL)">${IC.head}</button></div>
@@ -310,7 +311,7 @@ function bindDeck(i) {
     el, strip: st, r, sr,
     art: r("art"), title: r("title"), artist: r("artist"), stm: r("stm"), key: r("key"), bpm: r("bpm"), remain: r("remain"), time: r("time"), beat: r("beat"),
     play: r("play"), cue: r("cue"), sync: r("sync"), pfl: r("pfl"), pfl2: sr("pfl2"), range: r("range"), tempo: r("tempo"), tempoval: r("tempoval"),
-    lsz: r("lsz"), hot: $$("[data-hot]", el), modebtn: r("mode"), pval: r("pval"), pdn: r("pdn"), pup: r("pup"), qbtn: r("qbtn"), qpill: r("qpill"), slipbtn: r("slipbtn"), prow: $(".prow", el), grid: r("grid"), meterL: sr("meterL"), meterR: sr("meterR"), eject: r("eject"), vol: sr("vol"), fxkind: sr("fxkind"), fxon: sr("fxon"),
+    lsz: r("lsz"), hot: $$("[data-hot]", el), modebtn: r("mode"), pval: r("pval"), pdn: r("pdn"), pup: r("pup"), qbtn: r("qbtn"), qpill: r("qpill"), slipbtn: r("slipbtn"), prow: $(".prow", el), grid: r("grid"), anchor: r("anchor"), meterL: sr("meterL"), meterR: sr("meterR"), eject: r("eject"), vol: sr("vol"), fxkind: sr("fxkind"), fxon: sr("fxon"),
     knobs: $$("[data-k]", st), plat: $("canvas.plat", el), zoomCv: $("canvas.zoom", el), over: $("canvas.over", el),
     vzoom: $(`canvas.vzoom[data-i="${i}"]`), vslot: $(".vslot", el), kcol: $(".kcol", st),
   };
@@ -410,6 +411,7 @@ function bindDeck(i) {
   $$("[data-loop]", el).forEach((b) => (b.onclick = () => dc(i, "loop_" + b.dataset.loop)));
   // griglia e tonalita': finestrelle
   D.grid.onclick = (e) => { e.stopPropagation(); openPop(i, "grid", D.grid); };
+  D.anchor.onclick = async (e) => { e.stopPropagation(); const g = await inv("grid_cmd", { deck: i, cmd: "anchor_here", a: 0 }); if (g) { decks[i].beats = g.beats; decks[i].downbeat = g.downbeat; } };
   D.r("keybtn").onclick = (e) => { e.stopPropagation(); openPop(i, "key", D.r("keybtn")); };
 
   // scrubbing: tieni premuto il mouse sulla forma d'onda o sul piatto e trascina. Il deck viene "tenuto" (muto e fermo)

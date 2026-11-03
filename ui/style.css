@@ -157,6 +157,7 @@ canvas.plat { position: absolute; inset: 0; width: 100%; height: 100%; touch-act
 .pbtn.tl { left: 2px; top: 2px; } .pbtn.bl { left: 2px; bottom: 2px; width: 34px; height: 34px; font-size: 10px; color: var(--dim); } .pbtn.br { right: 2px; bottom: 2px; }
 .pbtn.br.on { background: #ffb020; color: #001018; border-color: #ffb020; box-shadow: 0 0 12px #ffb02088; }
 .pbtn.bl.on { color: var(--c); border-color: var(--c); }
+.pbtn.bl.an { bottom: 40px; font-size: 16px; color: var(--c); }
 .pbtn.qb { left: 44px; bottom: 7px; width: auto; height: 24px; border-radius: 12px; padding: 0 10px; font-size: 10px; letter-spacing: .8px; color: var(--dim); }
 .pbtn.qb.on { color: #001018; background: var(--c); border-color: var(--c); box-shadow: 0 0 10px color-mix(in srgb, var(--c) 70%, transparent); }
 .rbtn.play.armed { animation: armed .4s infinite alternate; border-color: #ffb020; color: #ffb020; }
