@@ -142,7 +142,7 @@ async fn load_track(
         let data = decode::decode_file(&p, sr)?;
         let decode_ms = t_dec.elapsed().as_millis();
         let a = match cached {
-            Some(c) => analysis::Analysis { beats: c.beats, bpm: c.bpm, downbeat: c.downbeat, key: c.key, wave: c.wave, loudness: c.loudness, peak: c.peak },
+            Some(c) => analysis::Analysis { weights: analysis::beat_weights(&data, sr, &c.beats), bpm_curve: analysis::bpm_curve(&c.beats, c.bpm), beats: c.beats, bpm: c.bpm, downbeat: c.downbeat, key: c.key, wave: c.wave, loudness: c.loudness, peak: c.peak },
             None => run_analysis(&handle, &l, &p, &data, sr, false),
         };
         Ok((
@@ -1049,6 +1049,10 @@ fn queue_analysis(app: &tauri::AppHandle, q: &Arc<AnalysisQueue>, lib: &Arc<Libr
 #[tauri::command]
 fn analyze_tracks(app: tauri::AppHandle, lib: State<'_, Arc<Library>>, q: State<'_, Arc<AnalysisQueue>>, ids: Vec<i64>) {
     let paths = lib.paths_of(&ids);
+    // richiesta esplicita sui brani scelti: si rifa' anche se l'analisi salvata e' valida
+    for p in &paths {
+        lib.analysis_forget(p);
+    }
     queue_analysis(&app, q.inner(), lib.inner(), paths);
 }
 

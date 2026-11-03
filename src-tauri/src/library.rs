@@ -63,10 +63,10 @@ pub struct Playlist {
     pub count: i64,
 }
 
-const COLS: &str = "t.id,t.path,t.title,t.artist,t.album,t.genre,t.year,t.bpm,t.key,t.duration,t.rating,t.tags,t.comment,\n    EXISTS(SELECT 1 FROM analysis a WHERE a.path=t.path AND a.version=2)";
+const COLS: &str = "t.id,t.path,t.title,t.artist,t.album,t.genre,t.year,t.bpm,t.key,t.duration,t.rating,t.tags,t.comment,\n    EXISTS(SELECT 1 FROM analysis a WHERE a.path=t.path AND a.version=8)";
 
 /// cambia quando cambia l'algoritmo di analisi: le analisi vecchie vengono rifatte (tenere allineato con COLS)
-pub const ANALYSIS_VERSION: i64 = 4;
+pub const ANALYSIS_VERSION: i64 = 8;
 
 fn row(r: &rusqlite::Row) -> rusqlite::Result<LibTrack> {
     Ok(LibTrack {
@@ -143,6 +143,11 @@ impl Library {
         )
         .ok()
     }
+    /// Dimentica l'analisi salvata: la prossima richiesta di analisi rifa' il brano da capo.
+    pub fn analysis_forget(&self, path: &str) {
+        let _ = self.db.lock().execute("DELETE FROM analysis WHERE path=?", params![path]);
+    }
+
     pub fn analysis_put(&self, path: &str, a: &crate::analysis::Analysis) {
         let Some((size, mtime)) = file_stamp(path) else { return };
         let beats = serde_json::to_string(&a.beats).unwrap_or_default();
@@ -433,7 +438,7 @@ mod tests {
         let lib = Library::open(&dir.join("t.db")).unwrap();
         assert!(lib.analysis_get(&path).is_none());
         let a = crate::analysis::Analysis {
-            beats: vec![0.5, 1.0, 1.5], bpm: 120.0, downbeat: 2, key: Some(crate::camelot::Key { pc: 9, minor: true }),
+            beats: vec![0.5, 1.0, 1.5], bpm: 120.0, downbeat: 2, weights: vec![0.75, 0.5, 1.0], bpm_curve: vec![120.0; 3], key: Some(crate::camelot::Key { pc: 9, minor: true }),
             wave: crate::analysis::Wave { rate: 400, lo: vec![1, 2], mid: vec![3, 4], hi: vec![5, 6] },
             loudness: -12.5, peak: 0.9,
         };

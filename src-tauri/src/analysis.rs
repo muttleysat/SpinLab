@@ -18,15 +18,51 @@ const LOW_HZ: f32 = 250.0;
 const CONST_RATIO: f32 = 0.6;
 /// sotto questo scarto quadratico (s) dalla retta di regressione dei battiti, la griglia diventa la retta (tempo fisso)
 const FIXED_RMS: f64 = 0.035;
+/// Dynamic Pulse Engine. Flux: un colpo e' un transiente (kick) se la velocita' di crescita dell'energia supera questa soglia,
+/// espressa in multipli del flusso tipico del brano; sotto, e' una nota sostenuta e non vale per agganciare la griglia.
+const FLUX_THRESHOLD: f32 = 1.5;
+/// Curva BPM: ogni battito tira il tempo corrente verso il proprio intervallo con peso (1 - SMOOTHING)
+/// finestra (s) e passo massimo relativo per secondo dell'inseguimento del periodo locale
+/// DP: peso della continuita' con l'intervallo precedente (segue accelerandi e rallentamenti) e dell'ancora al periodo globale (evita le ottave)
+const DP_LOCAL: f32 = 60.0;
+/// sotto questo rapporto dal periodo globale l'intervallo e' troppo veloce per essere un battito: si passa al mezzo tempo
+const DP_FAST_RATIO: f32 = 0.58;
+const LN2: f32 = std::f32::consts::LN_2;
+const DP_OCTAVE: f32 = 8.0;
+const DP_GLOBAL: f32 = 12.0;
+/// intervallo minimo che la DP puo' seguire, in frazione del periodo globale (accelerandi molto spinti arrivano a meno della meta')
+/// tetto della penalita' globale (ln^2 del rapporto): oltre non cresce, cosi' un accelerando spinto non costa un battito dopo l'altro
+const DP_GLOBAL_CAP: f32 = 0.25;
+const DP_MIN_RATIO: f32 = 0.3;
+const BPM_SMOOTHING: f64 = 0.7;
+/// se il BPM cambia di piu' del 5% fra due battiti la curva si adatta piu' in fretta
+const REACTIVE_CHANGE: f64 = 0.05;
+const REACTIVE_SMOOTHING: f64 = 0.5;
+/// smussamento della pendenza (BPM per battito) e suo limite, in frazione del BPM
+const ACC_SMOOTHING: f64 = 0.7;
+const ACC_MAX: f64 = 0.03;
+/// pesi gerarchici dei battiti: tempo forte, battito intermedio (terzo della battuta), battiti secondari
+/// peso con cui il battito rilevato tira la griglia rispetto alla progressione della curva, e scarto massimo (s) dal colpo rilevato
+const DRIFT_PULL: f64 = 0.5;
+const DRIFT_MAX: f64 = 0.02;
+const WEIGHT_DOWNBEAT: f32 = 1.0;
+const WEIGHT_MINOR: f32 = 0.5;
+/// scarto (s) oltre il quale un attacco non e' piu' coerente con la posizione data dai battiti vicini
+const OUTLIER_S: f64 = 0.05;
 const SMOOTH_HALF: usize = 3;
 const SMOOTH_SIGMA: f64 = 1.2;
 
+#[allow(dead_code)] // weights e bpm_curve: pronti per la UI, non ancora letti
 pub struct Analysis {
     /// posizioni dei battiti in secondi: ogni battito è agganciato al transitorio reale
     pub beats: Vec<f64>,
     pub bpm: f64,
     /// indice (0..3) del battito che apre la battuta
     pub downbeat: usize,
+    /// peso gerarchico di ogni battito (1,0 tempo forte, 0,75 intermedio, 0,5 secondario)
+    pub weights: Vec<f32>,
+    /// BPM istantaneo smussato in ogni battito (curva continua, vedi `bpm_curve`)
+    pub bpm_curve: Vec<f64>,
     pub key: Option<Key>,
     pub wave: Wave,
     /// loudness integrata in LUFS (ITU-R BS.1770) e picco massimo: servono alla normalizzazione del volume
@@ -58,7 +94,113 @@ pub fn analyze_progress(stereo: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) 
     progress(0.92);
     let (loudness, peak) = loudness(stereo, sr);
     progress(1.0);
-    Analysis { beats, bpm, downbeat, key, wave, loudness, peak }
+    let (weights, bpm_curve) = (beat_weights(stereo, sr, &beats), bpm_curve(&beats, bpm));
+    Analysis { beats, bpm, downbeat, weights, bpm_curve, key, wave, loudness, peak }
+}
+
+/// Gerarchia dei battiti (il "Dove"), dinamica: il peso dipende dall'energia del colpo, non dalla posizione nella battuta.
+/// L'energia e' l'RMS dei 50 ms che seguono il battito, rapportata al 90° percentile del brano: vicino al massimo il peso tende a 1,0
+/// (tempo forte), a meta' a 0,75, vicino al fondo a 0,5. `stereo` e' l'audio interleaved a due canali.
+pub fn beat_weights(stereo: &[f32], sr: u32, beats: &[f64]) -> Vec<f32> {
+    let frames = stereo.len() / 2;
+    let win = (sr as usize / 20).max(1);
+    let energy: Vec<f32> = beats
+        .iter()
+        .map(|&t| {
+            let s = ((t.max(0.0) * sr as f64) as usize).min(frames);
+            let e = (s + win).min(frames);
+            if e <= s {
+                return 0.0;
+            }
+            let sum: f32 = (s..e).map(|i| { let m = 0.5 * (stereo[2 * i] + stereo[2 * i + 1]); m * m }).sum();
+            (sum / (e - s) as f32).sqrt()
+        })
+        .collect();
+    let mut sorted = energy.clone();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let ref_e = sorted.get(sorted.len() * 9 / 10).copied().unwrap_or(0.0).max(1e-9);
+    energy
+        .iter()
+        .map(|&e| {
+            // 0,3 del riferimento -> 0,5 ; 0,6 -> 0,75 ; 0,9 e oltre -> 1,0
+            let x = ((e / ref_e - 0.3) / 0.6).clamp(0.0, 1.0);
+            WEIGHT_MINOR + (WEIGHT_DOWNBEAT - WEIGHT_MINOR) * x
+        })
+        .collect()
+}
+
+/// Stato della curva del tempo: BPM e "velocita' dell'accelerazione" (variazione di BPM per battito, la pendenza della curva).
+struct Tempo {
+    bpm: f64,
+    acc: f64,
+}
+
+impl Tempo {
+    fn new(bpm: f64) -> Self {
+        Tempo { bpm, acc: 0.0 }
+    }
+
+    /// intervallo previsto per il prossimo battito: il BPM medio fra ora e il battito dopo, cioe' la curva proseguita lungo la sua pendenza
+    fn next_interval(&self) -> f64 {
+        60.0 / (self.bpm + 0.5 * self.acc).max(1.0)
+    }
+
+    /// Aggiorna con l'intervallo misurato. La previsione `bpm + acc` e' la curva che continua ad accelerare: il battito la corregge con il peso
+    /// (1 - smoothing), quindi in un accelerando costante non c'e' ritardo. Cambi superiori al 5% fra due battiti rendono la curva piu' reattiva.
+    fn update(&mut self, iv: f64) {
+        if iv <= 1e-3 {
+            return;
+        }
+        let inst = 60.0 / iv;
+        if inst <= self.bpm * 0.6 || inst >= self.bpm * 1.6 {
+            return; // buco o breakdown: non e' un cambio di tempo
+        }
+        if (inst - self.bpm).abs() / self.bpm > REACTIVE_CHANGE {
+            // cambio repentino (stacco, cambio di tempo): non e' un'accelerazione, quindi niente pendenza; la curva si adatta in fretta
+            self.bpm = self.bpm * REACTIVE_SMOOTHING + inst * (1.0 - REACTIVE_SMOOTHING);
+            self.acc = 0.0;
+            return;
+        }
+        let s = BPM_SMOOTHING;
+        let new = (self.bpm + self.acc) * s + inst * (1.0 - s);
+        let lim = ACC_MAX * self.bpm;
+        self.acc = (self.acc * ACC_SMOOTHING + (new - self.bpm) * (1.0 - ACC_SMOOTHING)).clamp(-lim, lim);
+        self.bpm = new;
+    }
+}
+
+/// La griglia e' una progressione guidata dalla curva del tempo: ogni battito si posiziona a (precedente + intervallo della curva, pendenza
+/// compresa), quindi un accelerando sposta in avanti i battiti successivi in proporzione all'accelerazione accumulata. Il colpo rilevato lo
+/// tira con peso DRIFT_PULL e mai oltre DRIFT_MAX: la precisione sui transitori resta, ma il battito non scivola fuori tempo.
+fn drift_grid(beats: &[f64], bpm: f64) -> Vec<f64> {
+    if beats.len() < 2 {
+        return beats.to_vec();
+    }
+    let mut out = Vec::with_capacity(beats.len());
+    out.push(beats[0]);
+    let mut tempo = Tempo::new(bpm);
+    for i in 1..beats.len() {
+        let pred = out[i - 1] + tempo.next_interval();
+        let det = beats[i];
+        let t = (pred + DRIFT_PULL * (det - pred)).clamp(det - DRIFT_MAX, det + DRIFT_MAX).max(out[i - 1] + 0.05);
+        tempo.update(det - beats[i - 1]); // la curva impara dal colpo rilevato, non dalla propria uscita
+        out.push(t);
+    }
+    out
+}
+
+/// Curva del tempo (il "Quanto"): parte dal BPM globale e a ogni battito si lascia tirare verso il BPM istantaneo di quell'intervallo
+/// (smoothing 0,7, 0,5 se il cambio supera il 5%), tenendo conto della pendenza: negli accelerandi continui non resta indietro.
+pub fn bpm_curve(beats: &[f64], bpm: f64) -> Vec<f64> {
+    let mut tempo = Tempo::new(bpm);
+    let mut out = Vec::with_capacity(beats.len());
+    for i in 0..beats.len() {
+        if i > 0 {
+            tempo.update(beats[i] - beats[i - 1]);
+        }
+        out.push(tempo.bpm);
+    }
+    out
 }
 
 // ------------------------------------------------------------ loudness
@@ -375,20 +517,25 @@ fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64
 
     progress(0.5);
     // --- DP di Ellis: la tolleranza sull'intervallo lascia "fluttuare" la griglia
-    let lambda = 60.0f32;
+    // la penalita' sull'intervallo e' misurata rispetto a quello che ha portato al battito candidato (tempo locale), non solo al periodo
+    // globale: in un accelerando o dopo un rallentamento improvviso la griglia continua a seguire il tempo vero invece di perderlo
     let p = period;
     let mut cscore = vec![0f32; n];
     let mut back = vec![-1i32; n];
+    let mut ivl = vec![p; n];
     for t in 0..n {
         let lo = (t as f32 - 2.0 * p).ceil().max(0.0) as i64;
-        let hi = (t as f32 - p / 2.0).floor() as i64;
+        let hi = (t as f32 - p * DP_MIN_RATIO).floor() as i64;
         let mut bs = 0f32;
         let mut bi = -1i32;
         if hi >= lo {
             bs = f32::MIN;
             for q in lo..=hi {
-                let d = (t as i64 - q) as f32 / p;
-                let sc = cscore[q as usize] - lambda * d.ln().powi(2);
+                let d = (t as i64 - q) as f32;
+                let r = (d / ivl[q as usize]).ln();
+                // salto di ottava (stacco: il ritmo riparte al doppio o alla meta' della velocita'): costa DP_OCTAVE una tantum, non per battito
+                let pen = (r * r).min(DP_OCTAVE / DP_LOCAL + (r + LN2) * (r + LN2)).min(DP_OCTAVE / DP_LOCAL + (r - LN2) * (r - LN2));
+                let sc = cscore[q as usize] - DP_LOCAL * pen - DP_GLOBAL * (d / p).ln().powi(2).min(DP_GLOBAL_CAP);
                 if sc > bs {
                     bs = sc;
                     bi = q as i32;
@@ -401,6 +548,7 @@ fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64
         } else {
             cscore[t] = o[t] + bs;
             back[t] = bi;
+            ivl[t] = (t as i64 - bi as i64) as f32;
         }
     }
     let tail = (n as f32 - 1.5 * p).max(0.0) as usize;
@@ -413,6 +561,23 @@ fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64
     idx.reverse();
     if idx.len() < 8 {
         return (vec![], 60.0 * fps as f64 / period as f64, 0);
+    }
+    // Accelerandi spinti (oltre ~195 BPM): un battito non e' piu' un battito, il ritmo percepito passa al mezzo tempo. Nei tratti con
+    // intervalli sotto DP_FAST_RATIO del periodo si tiene un battito su due; il ritmo ripartito dopo lo stacco ricade sulla stessa griglia.
+    {
+        let thr = DP_FAST_RATIO * period;
+        let mut out = vec![idx[0]];
+        let mut i = 0;
+        while i + 1 < idx.len() {
+            if ((idx[i + 1] - idx[i]) as f32) < thr && i + 2 < idx.len() {
+                out.push(idx[i + 2]);
+                i += 2;
+            } else {
+                out.push(idx[i + 1]);
+                i += 1;
+            }
+        }
+        idx = out;
     }
     // Brano a tempo fisso: una sola griglia per tutto il pezzo. Il DP segue localmente l'impulso piu' forte e in molti brani dance salta fra la
     // grancassa e il contrattempo (mezzo battito) a meta' brano; con tempo costante la griglia e' unica e non puo' saltare.
@@ -474,13 +639,39 @@ fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64
     let mut strengths: Vec<f32> = refined.iter().flatten().map(|r| r.1).collect();
     strengths.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let thr = strengths.get(strengths.len() / 2).copied().unwrap_or(0.0) * 0.35;
+    // Energy Flux: la crescita di energia al battito (in 1 ms) va confrontata con quella media del brano; sotto FLUX_THRESHOLD volte il
+    // fondo e' una nota sostenuta, non un colpo, e non puo' agganciare la griglia (si interpola fra i colpi veri)
+    let flux_bg = (fine.on.iter().sum::<f32>() / fine.on.len().max(1) as f32).max(1e-6);
+    let ok: Vec<bool> = refined.iter().map(|r| r.map_or(false, |(_, v)| v >= thr && v >= FLUX_THRESHOLD * flux_bg)).collect();
+    let mut ok = ok;
+    // Conferma: un battito agganciato a un attacco che cade lontano dalla posizione che gli darebbero i due vicini (curva del tempo) e'
+    // una nota della melodia o un colpo di strumming fuori tempo, non un battito: perde l'aggancio e prende la posizione della curva
+    for i in 1..refined.len().saturating_sub(1) {
+        if ok[i] && ok[i - 1] && ok[i + 1] {
+            let pred = 0.5 * (refined[i - 1].unwrap().0 + refined[i + 1].unwrap().0);
+            if (refined[i].unwrap().0 - pred).abs() > OUTLIER_S {
+                ok[i] = false;
+            }
+        }
+    }
     let mut beats: Vec<f64> = coarse.clone();
-    let ok: Vec<bool> = refined.iter().map(|r| r.map_or(false, |(_, v)| v >= thr)).collect();
     for i in 0..beats.len() {
         if ok[i] {
             beats[i] = refined[i].unwrap().0;
         }
     }
+    // passo locale dei battiti confermati ai bordi (mediana dei primi / ultimi intervalli): e' la curva del tempo, e' piu' affidabile dei
+    // passi grezzi della DP dove la musica non ha ancora attacchi netti (intro, code)
+    let edge_iv = |from_start: bool| -> Option<f64> {
+        let idx: Vec<usize> = if from_start { (0..beats.len().saturating_sub(1)).collect() } else { (0..beats.len().saturating_sub(1)).rev().collect() };
+        let mut ivs: Vec<f64> = idx.into_iter().filter(|&j| ok[j] && ok[j + 1]).take(8).map(|j| beats[j + 1] - beats[j]).collect();
+        if ivs.len() < 3 {
+            return None;
+        }
+        ivs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        Some(ivs[ivs.len() / 2])
+    };
+    let (lead_iv, tail_iv) = (edge_iv(true), edge_iv(false));
     // battiti senza transitorio (breakdown): interpola tra i vicini agganciati
     for i in 0..beats.len() {
         if ok[i] {
@@ -490,8 +681,8 @@ fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64
         let b = (i + 1..beats.len()).find(|&j| ok[j]);
         match (a, b) {
             (Some(a), Some(b)) => beats[i] = beats[a] + (beats[b] - beats[a]) * (i - a) as f64 / (b - a) as f64,
-            (Some(a), None) => beats[i] = beats[a] + (coarse[i] - coarse[a]),
-            (None, Some(b)) => beats[i] = beats[b] - (coarse[b] - coarse[i]),
+            (Some(a), None) => beats[i] = match tail_iv { Some(iv) => beats[a] + iv * (i - a) as f64, None => beats[a] + (coarse[i] - coarse[a]) },
+            (None, Some(b)) => beats[i] = match lead_iv { Some(iv) => beats[b] - iv * (b - i) as f64, None => beats[b] - (coarse[b] - coarse[i]) },
             _ => {}
         }
     }
@@ -568,6 +759,11 @@ fn track_beats(mono: &[f32], sr: u32, progress: &mut dyn FnMut(f32)) -> (Vec<f64
     } else if cur < want * 0.6 {
         // griglia a doppio tempo: tieni un battito su due
         beats = beats.iter().step_by(2).copied().collect();
+    }
+
+    // --- deriva: la curva del tempo guida lo spazio fra i battiti (salvo tempo fisso, dove la griglia e' gia' la retta)
+    if rms >= FIXED_RMS {
+        beats = drift_grid(&beats, bpm);
     }
 
     // --- battuta: la fase (0..3) con più energia sui battiti = tempo forte
@@ -721,6 +917,77 @@ mod tests {
             .map(|&k| beats.iter().map(|&b| (b - k).abs()).fold(f64::MAX, f64::min))
             .collect();
         (ds.iter().sum::<f64>() / ds.len() as f64, ds.iter().cloned().fold(0.0, f64::max))
+    }
+
+    #[test]
+    fn pulse_weights_and_bpm_curve() {
+        // colpi forti, medi e deboli a 120 BPM: i pesi seguono l'energia
+        let sr = 44100u32;
+        let mut st = vec![0f32; sr as usize * 4 * 2];
+        for (k, amp) in [1.0f32, 0.6, 0.3, 1.0, 0.6, 0.3, 1.0, 0.6].iter().enumerate() {
+            let s0 = k * sr as usize / 2;
+            for i in 0..2000 { st[2 * (s0 + i)] = amp * 0.5; st[2 * (s0 + i) + 1] = amp * 0.5; }
+        }
+        let beats: Vec<f64> = (0..8).map(|k| k as f64 * 0.5).collect();
+        let w = beat_weights(&st, sr, &beats);
+        assert!(w[0] > 0.95 && w[1] > 0.6 && w[1] < 0.9 && w[2] < 0.6, "{w:?}");
+        // tempo che accelera da 120 a 140 BPM: la curva sale in modo continuo, senza salti, e resta fra i due
+        let mut beats = vec![0.0];
+        for i in 0..8 { let iv = if i < 2 { 0.5 } else { 60.0 / 140.0 }; beats.push(beats[i] + iv); }
+        let c = bpm_curve(&beats, 120.0);
+        assert!(c.windows(2).all(|w| w[1] >= w[0] - 1e-9));
+        assert!(c[2] < 125.0 && c[8] > 135.0 && c[8] <= 140.0 + 1e-9, "{c:?}");
+        // la deriva resta vicina ai colpi rilevati e non crea inversioni
+        let d = drift_grid(&beats, 120.0);
+        assert!(d.iter().zip(&beats).all(|(a, b)| (a - b).abs() <= DRIFT_MAX + 1e-9) && d.windows(2).all(|w| w[1] > w[0]));
+    }
+
+    #[test]
+    fn continuous_accelerando_is_followed() {
+        // accelerando lineare da 100 a 160 BPM su 120 battiti, con scarto di +-4 ms sui colpi rilevati
+        let (n, b0, b1) = (120usize, 100.0f64, 160.0f64);
+        let mut truth = vec![0.0f64];
+        for i in 0..n { let b = b0 + (b1 - b0) * i as f64 / n as f64; truth.push(truth[i] + 60.0 / b); }
+        let det: Vec<f64> = truth.iter().enumerate().map(|(i, t)| t + if i % 2 == 0 { 0.004 } else { -0.004 }).collect();
+        let curve = bpm_curve(&det, b0);
+        let grid = drift_grid(&det, b0);
+        for i in 40..n {
+            let b = b0 + (b1 - b0) * i as f64 / n as f64;
+            assert!((curve[i] - b).abs() < 2.5, "beat {i}: curva {:.2} vero {:.2}", curve[i], b);
+        }
+        let rms = |v: &[f64]| (v.iter().map(|e| e * e).sum::<f64>() / v.len() as f64).sqrt();
+        let e_grid: Vec<f64> = (10..n).map(|i| grid[i] - truth[i]).collect();
+        let e_det: Vec<f64> = (10..n).map(|i| det[i] - truth[i]).collect();
+        assert!(rms(&e_grid) < rms(&e_det), "griglia {:.4} s, rilevato {:.4} s", rms(&e_grid), rms(&e_det));
+        // nessuno scivolamento: lo scarto non si accumula verso la fine
+        assert!(grid[n].abs() > 0.0 && (grid[n] - truth[n]).abs() < 0.01);
+    }
+
+    #[test]
+    fn melody_notes_do_not_pull_the_grid() {
+        // kick a 110 BPM piu' una melodia fitta: attacchi di note forti (anche piu' dei kick) fuori dal tempo, con coda sostenuta
+        let sr = 44100u32;
+        let (mut audio, kicks) = synth(110.0, 0.0, 40.0, sr);
+        let n = audio.len() / 2;
+        let mut x = 0x1234_5678u64;
+        let mut t = 0.9;
+        while t < 38.0 {
+            x = x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            let f = 330.0 + (x >> 40) as f64 % 400.0;
+            let s0 = (t * sr as f64) as usize;
+            for j in 0..(sr as usize * 3 / 10) {
+                if s0 + j >= n { break; }
+                let ph = j as f64 / sr as f64;
+                let v = ((-ph * 6.0).exp() * (2.0 * std::f64::consts::PI * f * ph).sin() * 0.35) as f32;
+                audio[(s0 + j) * 2] += v;
+                audio[(s0 + j) * 2 + 1] += v;
+            }
+            t += 0.31 + ((x >> 20) % 100) as f64 * 0.0013;
+        }
+        let a = analyze(&audio, sr);
+        let err = alignment_error(&a.beats, &kicks);
+        assert!((a.bpm - 110.0).abs() < 1.0, "bpm {}", a.bpm);
+        assert!(err.0 < 0.012, "marker tirati dalla melodia: {:.1} ms", err.0 * 1000.0);
     }
 
     #[test]
@@ -972,8 +1239,9 @@ mod tests {
             Err(_) => std::env::var("SPIN_FILES").unwrap_or_default().split('|').filter(|f| !f.is_empty()).map(str::to_string).collect(),
         };
         for f in &list {
-            let d = match crate::decode::decode_file(f, 44100) { Ok(d) => d, Err(_) => continue };
-            let a = analyze(&d, 44100);
+            let sr: u32 = std::env::var("SPIN_SR").ok().and_then(|v| v.parse().ok()).unwrap_or(44100);
+            let d = match crate::decode::decode_file(f, sr) { Ok(d) => d, Err(_) => continue };
+            let a = analyze(&d, sr);
             out.insert(f.clone(), serde_json::json!({ "bpm": a.bpm, "downbeat": a.downbeat, "beats": a.beats }));
         }
         std::fs::write(std::env::var("SPIN_OUT").unwrap(), serde_json::to_string(&out).unwrap()).unwrap();
