@@ -196,11 +196,11 @@ Il colore del deck si ripete su numero, BPM, waveform, piatto e pulsante PLAY, c
 
 ## Stato nell'app
 
-Tutti e quattro i modelli sono nell'app. Sul telefono si sceglie **un modello per orientamento** dal pulsante **MODO** nella barra (lettera del modello, accanto all'ingranaggio) o da Impostazioni › INTERFACCIA: in verticale il menu offre A, C e D, in orizzontale B, B compatto e desktop. L'app ricorda le due scelte e ruotando il telefono passa dall'una all'altra; un modello orizzontale non finisce mai schiacciato in verticale.
+Tutti e quattro i modelli sono nell'app. Sul telefono si sceglie **un modello per orientamento** dal pulsante **MODO** nella barra (lettera del modello, accanto all'ingranaggio) o da Impostazioni › INTERFACCIA: in verticale il menu offre A, C e D, in orizzontale B, B compatto e desktop. L'app ricorda le due scelte e ruotando il telefono passa dall'una all'altra; un modello orizzontale non finisce mai schiacciato in verticale. Su computer (Mac, Windows) il pulsante MODO e la scheda INTERFACCIA non ci sono: la vista è sempre quella desktop, anche se era stata salvata una vista per telefono.
 
 | Scelta | Cosa mostra |
 | --- | --- |
-| Automatica | Sui telefoni Android: A in verticale, B compatto in orizzontale. Desktop su computer e tablet |
+| Automatica | Sui telefoni Android: A in verticale, B compatto in orizzontale. Desktop sui tablet Android |
 | A · Stack verticale | Due deck impilati, zona del pollice con filtri e crossfader, schede in basso |
 | B · Cockpit orizzontale | Il modello B come nel canvas: piatti, pad 2×2, riga SYNC + LOOP; mixer da 176 dp per lasciare spazio ai piatti |
 | B · Cockpit compatto | Il modello B alla misura reale dello schermo: sul telefono di serie senza piatti |

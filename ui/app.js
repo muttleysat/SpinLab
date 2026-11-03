@@ -71,7 +71,8 @@ let uiK = 1;
    Impostazioni > INTERFACCIA: in verticale A Stack (stack), C Focus (focus), D Mappa (spaces); in orizzontale B Cockpit (proto, coi piatti),
    B compatto (cockpit) o desktop. Ruotando il telefono si passa dall'una all'altra, e un modello orizzontale non finisce mai in verticale.
    I modelli per telefono sono alla misura reale dello schermo (scala 1, misure in dp) e si adattano; solo il desktop si scala in blocco.
-   Su computer e tablet c'e' una sola scelta (auto = desktop).
+   Sui tablet Android c'e' una sola scelta (auto = desktop). Su computer (Mac, Windows) sempre desktop: il pulsante MODO e la scheda
+   INTERFACCIA sono nascosti e una scelta salvata non conta, altrimenti ci si resterebbe chiusi dentro.
    `?cockpit` / `?proto` / `?stack` / `?focus` / `?spaces` nell'indirizzo forzano la scelta per provarla da browser */
 const UI_MOBILE = ["stack", "focus", "spaces"], UI_LAND = ["proto", "cockpit", "desktop"], UI_DEF = { v: "stack", h: "cockpit" };
 const UI_ANDROID = /Android/i.test(navigator.userAgent);
@@ -87,6 +88,7 @@ if (!uiPick.h && (uiMode === "proto" || uiMode === "cockpit")) uiPick.h = uiMode
 function uiLayout() {
   const q = location.search.match(/[?&](proto|cockpit|stack|focus|spaces)\b/);
   if (q) return q[1];
+  if (!UI_ANDROID) return "desktop";
   if (uiPhone()) { const o = uiOrient(), m = uiPick[o]; return (o === "v" ? UI_MOBILE : UI_LAND).includes(m) ? m : UI_DEF[o]; }
   return uiMode === "auto" ? "desktop" : uiMode;
 }
@@ -1742,6 +1744,7 @@ function setSettingsTab(t) {
   if (t === "ui") $("#uiMode").value = uiChoice();
 }
 $("#uiMode").onchange = () => setUiMode($("#uiMode").value);
+if (!UI_ANDROID) $("#uiBtn").hidden = $('.stabs [data-sp="ui"]').hidden = true; // le viste per telefono esistono solo su Android
 // pulsante MODO nella barra: cambio dell'interfaccia senza passare dalle impostazioni (come nei prototipi di Claude Design).
 // Sul telefono elenca solo i modelli dell'orientamento attuale; l'altro gruppo si raggiunge ruotando il telefono
 const UI_CHOICES = [["auto", "Automatica", "verticale A, orizzontale B"], ["stack", "A · Stack verticale", "una mano"], ["proto", "B · Cockpit orizzontale", "due pollici"],

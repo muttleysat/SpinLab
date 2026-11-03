@@ -49,6 +49,7 @@ svg { display: block; }
 .pathrow { display: flex; gap: 8px; } .pathrow input { flex: 1; min-width: 0; font-size: 12px; }
 button.ico { padding: 4px 7px; color: var(--dim); background: none; border-color: transparent; } button.ico:hover { color: var(--text); border-color: var(--line2); }
 .uibtn { display: flex; align-items: center; gap: 6px; border-color: var(--line2) !important; }
+.uibtn[hidden] { display: none; }
 .uibtn b { font-size: 10px; letter-spacing: 1.2px; font-weight: 600; }
 body.cockpit .uibtn { min-height: 30px; }
 
