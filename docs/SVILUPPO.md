@@ -4,7 +4,7 @@ Questo file NON fa parte del manuale per gli utenti (non finisce nella guida den
 
 ## Compilare il programma
 
-Serve: Git, Rust (rustup.rs) con gli strumenti C++ di Visual Studio, LLVM/clang e l'**SDK ASIO** di Steinberg (non incluso nel progetto per la sua licenza). L'SDK va estratto in `src-tauri/asio-sdk` (la cartella è ignorata da git, non va mai caricata nel repository) in modo che dentro ci siano direttamente `common`, `host`, `driver`…: il percorso in `src-tauri/.cargo/config.toml` è relativo, uguale su tutti i PC. Usare l'SDK 2.3.4 (o più recente) dal sito Steinberg. LLVM si cerca in `C:/Program Files/LLVM/bin`: se è altrove, cambiare `LIBCLANG_PATH` e `CLANG_PATH` nello stesso file. Serve anche FFmpeg nel PATH (formati audio meno comuni).
+Serve: Git, Rust (rustup.rs) con gli strumenti C++ di Visual Studio, LLVM/clang e l'**SDK ASIO** di Steinberg (non incluso nel progetto per la sua licenza). L'SDK va estratto in `src-tauri/asio-sdk` (la cartella è ignorata da git, non va mai caricata nel repository) in modo che dentro ci siano direttamente `common`, `host`, `driver`…: il percorso in `src-tauri/.cargo/config.toml` è relativo, uguale su tutti i PC. Usare l'SDK 2.3.4 (o più recente) dal sito Steinberg. LLVM viene trovato da solo in `C:/Program Files/LLVM`: se è altrove, impostare le variabili d'ambiente `LIBCLANG_PATH` e `CLANG_PATH` (non in quel file, che vale anche su macOS). Serve anche FFmpeg nel PATH (formati audio meno comuni).
 
 ```
 cargo install tauri-cli --version "^2"
