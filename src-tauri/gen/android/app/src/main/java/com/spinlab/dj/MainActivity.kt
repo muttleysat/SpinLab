@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
+import android.webkit.WebView
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.core.app.ActivityCompat
@@ -31,6 +32,12 @@ class MainActivity : TauriActivity() {
       WindowInsetsCompat.CONSUMED
     }
     askAudioPermission()
+  }
+
+  // l'orologio parla con la pagina: WatchBridge ne tiene il riferimento, SpinlabWatch e' l'oggetto che la pagina chiama
+  override fun onWebViewCreate(webView: WebView) {
+    WatchBridge.webView = webView
+    webView.addJavascriptInterface(WatchJs(applicationContext), "SpinlabWatch")
   }
 
   // la libreria legge i brani dal filesystem: serve il permesso di lettura dell'audio
