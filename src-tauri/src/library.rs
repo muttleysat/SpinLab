@@ -251,6 +251,16 @@ impl Library {
             params![path, title, artist, album, genre, year, bpm, dur],
         )
         .map_err(|e| e.to_string())?;
+        // il brano puo' essere stato tolto dalla libreria all'avvio (prune_orphans) mentre l'analisi e' rimasta in cache:
+        // ripristina bpm e tonalita' calcolati, altrimenti sembrerebbe da rianalizzare
+        if let Ok((abpm, pc, minor)) = db.query_row(
+            "SELECT bpm,key_pc,key_minor FROM analysis WHERE path=? AND version=?",
+            params![path, ANALYSIS_VERSION],
+            |r| Ok((r.get::<_, f64>(0)?, r.get::<_, Option<i64>>(1)?, r.get::<_, Option<i64>>(2)?.unwrap_or(0))),
+        ) {
+            let key = pc.map(|pc| crate::camelot::camelot_code(crate::camelot::Key { pc: pc as u8, minor: minor != 0 })).unwrap_or_default();
+            let _ = db.execute("UPDATE tracks SET bpm=?, key=? WHERE path=?", params![abpm, key, path]);
+        }
         db.query_row("SELECT id FROM tracks WHERE path=?", [path], |r| r.get(0)).map_err(|e| e.to_string())
     }
 
