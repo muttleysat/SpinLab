@@ -5,7 +5,18 @@
   const btn = document.getElementById("videoBtn");
   if (!btn) return;
   let manual = null;       // null = automatica, true/false = scelta dell'utente
-  let open = false, busy = false, timer = 0;
+  let open = false, busy = false, timer = 0, tick = 0, openedKey = "";
+  // schermo di uscita: si ricorda per nome e risoluzione (l'indice cambia quando si collega o scollega qualcosa)
+  const keyOf = (m) => `${m.name}|${m.width}x${m.height}`;
+  const savedKey = () => { try { return localStorage.getItem("spinlab.video_monitor_key") || ""; } catch (e) { return ""; } };
+  const pick = (mons) => { const k = savedKey(); const m = k ? mons.find((x) => keyOf(x) === k) : null; return m ? { index: m.index, key: k } : { index: null, key: "" }; };
+  const say = (t) => { try { if (typeof toast2 === "function") toast2(t); else if (typeof toast === "function") toast(t); } catch (e) {} };
+  async function openOut() {
+    let mons = []; try { mons = await inv("video_monitors"); } catch (e) {}
+    const t = pick(mons);
+    await inv("video_open", { monitor: t.index });
+    open = true; openedKey = t.key;
+  }
   try { const m = localStorage.getItem("spinlab.video_manual"); manual = m === "1" ? true : m === "0" ? false : null; } catch (e) {}
 
   const hasVideo = () => decks.slice(0, 2).some((d) => d.snap?.loaded && VEXT.test(d.snap.path || ""));
@@ -47,13 +58,19 @@
     document.body.classList.toggle("vmode", w);
     if (w && !open && !busy) {
       busy = true;
-      try {
-        let monitor = null;
-        try { const m = JSON.parse(localStorage.getItem("spinlab.video_monitor")); if (Number.isInteger(m)) monitor = m; } catch (e) {}
-        await inv("video_open", { monitor }); open = true;
-      } catch (e) { console.warn("video_open", e); }
+      try { await openOut(); } catch (e) { console.warn("video_open", e); }
       busy = false;
     } else if (!w && open && !busy) { try { await inv("video_close"); } catch (e) {} open = false; }
+    if (open && !busy && ++tick % 4 === 0) {
+      try {
+        const t = pick(await inv("video_monitors"));
+        if (t.key !== openedKey) {          // lo schermo scelto e' comparso o scomparso: l'uscita lo segue senza fermare audio e video
+          busy = true; await inv("video_open", { monitor: t.index }); busy = false;
+          say(t.key ? "Schermo esterno collegato: uscita video a schermo intero" : "Schermo esterno scollegato: l'uscita video passa in una finestra");
+          openedKey = t.key;
+        }
+      } catch (e) { busy = false; }
+    }
     if (w && open && !timer) timer = setInterval(send, 33);
     if ((!w || !open) && timer) { clearInterval(timer); timer = 0; }
   }
@@ -87,14 +104,31 @@
     btn.dataset.mode = manual === null ? "AUTO" : manual ? "ON" : "OFF";
     sync();
   };
+  let menu = null;
+  const closeMenu = () => { if (menu) { menu.remove(); menu = null; } };
   btn.oncontextmenu = async (e) => {
     e.preventDefault();
-    const mons = await inv("video_monitors");
-    const names = mons.map((m, i) => `${i}: ${m.name} ${m.width}x${m.height}${m.primary ? " (principale)" : ""}`).join("\n");
-    const a = prompt(`Schermo per l'uscita video (numero; vuoto = finestra normale):\n${names}`);
-    if (a === null) return;
-    try { localStorage.setItem("spinlab.video_monitor", a === "" ? "null" : String(+a)); } catch (e) {}
-    if (open) { await inv("video_close"); open = false; sync(); }
+    if (menu) { closeMenu(); return; }
+    let mons = []; try { mons = await inv("video_monitors"); } catch (err) {}
+    const cur = savedKey();
+    menu = document.createElement("div"); menu.className = "vmenu";
+    const item = (label, key) => {
+      const b = document.createElement("button"); b.textContent = label; if (key === cur) b.classList.add("sel");
+      b.onclick = async () => {
+        try { localStorage.setItem("spinlab.video_monitor_key", key); } catch (er) {}
+        closeMenu();
+        if (open && !busy) { busy = true; try { const t = pick(mons); await inv("video_open", { monitor: t.index }); openedKey = t.key; } catch (er) {} busy = false; }
+      };
+      menu.appendChild(b);
+    };
+    const h = document.createElement("div"); h.className = "vh"; h.textContent = "Uscita video su…"; menu.appendChild(h);
+    item("Finestra normale", "");
+    mons.forEach((m) => item(`${m.name} · ${m.width}×${m.height}${m.primary ? " (principale)" : ""}`, keyOf(m)));
+    document.body.appendChild(menu);
+    const r = btn.getBoundingClientRect();
+    menu.style.top = `${r.bottom + 6}px`; menu.style.right = `${Math.max(8, innerWidth - r.right)}px`;
+    setTimeout(() => document.addEventListener("click", closeMenu, { once: true }), 0);
   };
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
   btn.dataset.mode = manual === null ? "AUTO" : manual ? "ON" : "OFF";
 })();
