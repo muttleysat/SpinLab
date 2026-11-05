@@ -36,24 +36,30 @@ function apply(i, d, op) {
   const age = (performance.now() - gotAt) / 1000;
   const target = d.pos + (d.playing ? age * d.rate : 0);
   v.style.opacity = op;
-  v.playbackRate = Math.max(0.0625, Math.min(16, d.rate));
-  const drift = v.currentTime - target;
+  const setRate = (r) => { r = Math.max(0.0625, Math.min(16, r)); if (Math.abs(r - (s.rate || 0)) > 1e-4) { s.rate = r; v.playbackRate = r; } };
   if (v.readyState >= 1) {
-    const now = performance.now();
+    const now = performance.now(), raw = v.currentTime - target;
+    s.ema = s.ema === undefined || v.seeking ? raw : s.ema * 0.9 + raw * 0.1;   // scarto filtrato: i messaggi arrivano con qualche ms di variazione
+    const drift = s.ema;
     if (!d.playing) {
+      setRate(d.rate);
       if (!v.paused) v.pause();
-      if (!v.seeking && Math.abs(drift) > 0.04) { v.currentTime = Math.max(0, target); s.lastSeek = now; }
+      if (!v.seeking && Math.abs(raw) > 0.04) { v.currentTime = Math.max(0, target); s.lastSeek = now; }
     } else {
-      if (v.paused && !v.seeking) v.play().catch(() => {});
       s.maxDrift = Math.max(s.maxDrift, Math.abs(drift));
-      // Un salto costa centinaia di ms (si ricostruisce l'immagine dall'ultimo fotogramma intero): mai mentre ne sta finendo uno,
-      // e al massimo uno ogni 1,5 s. Sotto 0,6 s di scarto si recupera cambiando la velocita' di poco, senza saltare.
+      if (v.paused && !v.seeking) v.play().catch(() => {});
+      // Velocita' costante finche' lo scarto e' piccolo (cambiarla di continuo fa scattare il video). Si corregge con una velocita'
+      // leggermente diversa (±4%) solo se lo scarto supera 60 ms, fino a rientrare sotto 15 ms; sopra 0,6 s si salta (al massimo ogni 1,5 s).
       if (Math.abs(drift) > 0.6) {
-        if (!v.seeking && now - (s.lastSeek || 0) > 1500) { v.currentTime = Math.max(0, target); s.lastSeek = now; s.seeks++; }
-      } else if (!v.seeking && Math.abs(drift) > 0.03) {
-        v.playbackRate = d.rate * (1 - Math.max(-0.12, Math.min(0.12, drift * 0.8)));
+        setRate(d.rate);
+        if (!v.seeking && now - (s.lastSeek || 0) > 1500) { v.currentTime = Math.max(0, target); s.lastSeek = now; s.seeks++; s.ema = undefined; }
+      } else {
+        if (!s.fix && Math.abs(drift) > 0.06) s.fix = true;
+        if (s.fix && Math.abs(drift) < 0.015) s.fix = false;
+        setRate(s.fix ? d.rate * (1 - Math.sign(drift) * 0.04) : d.rate);
       }
     }
+    s.last = raw;
   }
 }
 
@@ -74,7 +80,7 @@ setInterval(() => {
   if (hud.style.display === "none") return;
   hud.textContent = [0, 1].map((i) => {
     const v = els[i], s = st[i], q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : {};
-    return `deck ${i + 1}: ${s.path ? s.path.split(/[\\/]/).pop() : "—"}\n  ${v.videoWidth}x${v.videoHeight} · fotogrammi saltati ${q.droppedVideoFrames ?? "?"}/${q.totalVideoFrames ?? "?"} · sfasamento max ${(s.maxDrift * 1000).toFixed(0)} ms · riallineamenti ${s.seeks}${s.err ? "\n  ERRORE " + s.err : ""}`;
+    return `deck ${i + 1}: ${s.path ? s.path.split(/[\\/]/).pop() : "—"}\n  ${v.videoWidth}x${v.videoHeight} · fotogrammi saltati ${q.droppedVideoFrames ?? "?"}/${q.totalVideoFrames ?? "?"} · sfasamento ora ${((s.ema ?? 0) * 1000).toFixed(0)} ms (max ${(s.maxDrift * 1000).toFixed(0)}) · velocita' ${(s.rate || 0).toFixed(3)} · riallineamenti ${s.seeks}${s.err ? "\n  ERRORE " + s.err : ""}`;
   }).join("\n") + `\nmessaggi dal programma: ${last ? "ok" : "nessuno"}`;
 }, 500);
 document.addEventListener("keydown", (e) => {
