@@ -7,7 +7,9 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.app.Activity
 import android.view.WindowManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -38,6 +40,7 @@ class MainActivity : TauriActivity() {
   override fun onWebViewCreate(webView: WebView) {
     WatchBridge.webView = webView
     webView.addJavascriptInterface(WatchJs(applicationContext), "SpinlabWatch")
+    webView.addJavascriptInterface(AppJs(this), "SpinlabApp")
   }
 
   // la libreria legge i brani dal filesystem: serve il permesso di lettura dell'audio
@@ -47,4 +50,9 @@ class MainActivity : TauriActivity() {
       ActivityCompat.requestPermissions(this, arrayOf(perm), 1)
     }
   }
+}
+
+/** Chiusura dell'app richiesta dalla pagina (doppia pressione di Indietro dalla schermata principale). */
+class AppJs(private val activity: Activity) {
+  @JavascriptInterface fun exit() { activity.runOnUiThread { activity.finishAffinity() } }
 }

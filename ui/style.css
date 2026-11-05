@@ -244,9 +244,9 @@ body.view-lib .deck { grid-template-rows: 54px minmax(0, 1fr); } body.view-lib #
 #stemBar .sbp { flex: none; color: var(--accent); font-variant-numeric: tabular-nums; }
 #stemBar i { display: block; height: 6px; border-radius: 3px; background: #172033; overflow: hidden; }
 #stemBar b { display: block; height: 100%; width: var(--v, 0%); background: linear-gradient(90deg, #b06cff, #18b6ff); box-shadow: 0 0 8px #18b6ff88; transition: width .3s; }
-#browser { display: grid; grid-template-rows: auto 1fr; overflow: hidden; position: relative; min-width: 0; }
+#browser { display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr); overflow: hidden; position: relative; min-width: 0; }
 .searchbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--dim); }
-.searchbar input { flex: 1; background: transparent; border: 0; padding: 4px 2px; font-size: 14px; color: var(--text); } .searchbar input:focus { outline: 0; }
+.searchbar input { flex: 1; min-width: 0; background: transparent; border: 0; padding: 4px 2px; font-size: 14px; color: var(--text); } .searchbar input:focus { outline: 0; }
 #resCount { color: var(--dim); font-size: 11px; white-space: nowrap; }
 .tablewrap { overflow: auto; position: relative; min-height: 0; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -670,6 +670,44 @@ body.mob #inspector { display: none; }
 :is(body.mob, body.cockpit) #tracks td.ld { grid-area: ld; display: flex; gap: 8px; justify-content: flex-end; }
 :is(body.mob, body.cockpit) #tracks .ld button { width: 46px; height: 46px; margin: 0; padding: 0; font-size: 16px; font-weight: 700; border-radius: 12px; border-width: 1.5px; }
 :is(body.mob, body.cockpit) #tracks .pv { width: 38px; height: 38px; line-height: 36px; font-size: 13px; }
+/* tira per aggiornare (cockpit.js): la barretta scende da sotto la barra di ricerca seguendo il dito */
+#ptr { position: absolute; left: 50%; top: 52px; z-index: 6; padding: 7px 16px; border-radius: 18px; background: #0d121c; border: 1px solid var(--line2); color: var(--dim); font-size: 12px; letter-spacing: .5px;
+  white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, calc(var(--d, 0px) - 44px)); transition: opacity .15s; }
+#ptr.on { opacity: 1; } #ptr.ready { color: var(--accent); border-color: var(--accent); }
+.tablewrap { overscroll-behavior: contain; }
+/* righe dei brani su schermi stretti (telefono in verticale, 360 dp): senza questo la riga era piu' larga dello schermo e il
+   pulsante per caricare sul deck 2 finiva fuori. Colonne e pulsanti piu' compatti, senza la scritta BPM */
+@media (max-width: 430px) {
+  :is(body.mob, body.cockpit) #tracks tbody tr { grid-template-columns: 38px minmax(0, 1fr) auto auto auto 94px; column-gap: 8px; padding: 8px 8px 8px 4px; }
+  :is(body.mob, body.cockpit) #tracks td:nth-child(5):not(:empty)::after { content: ""; }
+  :is(body.mob, body.cockpit) #tracks td.ld { gap: 6px; }
+  :is(body.mob, body.cockpit) #tracks .ld button { width: 44px; height: 44px; }
+  :is(body.mob, body.cockpit) #tracks .pv { width: 34px; height: 34px; line-height: 32px; }
+}
+/* libreria a fisarmonica (telefono in verticale, modelli A e C): vedi mobile.js */
+#sideBar, #sideGo { display: none; }
+body.mob:not(.m-spaces) #lower { grid-template-rows: auto minmax(0, 1fr); }
+body.mob:not(.m-spaces) #side { padding: 0; flex-direction: column; }
+body.mob:not(.m-spaces) #sideBar { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 6px 14px; border: 0; border-radius: 12px; background: transparent; text-align: left; flex: none; }
+body.mob:not(.m-spaces) #sideBar .sb-k { color: var(--dim); font-size: 10px; letter-spacing: 1.5px; flex: none; }
+body.mob:not(.m-spaces) #sideCur { flex: 1; min-width: 0; font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.mob:not(.m-spaces) #sideBar .sb-ar { color: var(--accent); font-size: 16px; flex: none; transition: transform .2s; }
+body.mob:not(.m-spaces).side-open #sideBar .sb-ar { transform: rotate(180deg); }
+/* chiusa: solo la barra; aperta: ESPLORA e PLAYLIST come due sezioni, ne resta aperta una sola, a tutta altezza */
+body.mob:not(.m-spaces):not(.side-open) :is(#tree, #plList) { display: none; }
+body.mob:not(.m-spaces) #side .side-title { display: none; }
+body.mob:not(.m-spaces).side-open #side .side-title { display: flex; flex: none; margin: 0; padding: 0 14px; min-height: 48px; font-size: 12px; border-top: 1px solid var(--line); cursor: pointer; }
+body.mob:not(.m-spaces).side-open #side .side-title:first-of-type { display: none; }   /* il primo titolo e' gia' la barra in alto */
+body.mob:not(.m-spaces).side-open #side { overflow: hidden; }
+body.mob:not(.m-spaces).side-open #side[data-sec="tree"] #tree, body.mob:not(.m-spaces).side-open #side[data-sec="pl"] #plList { display: block; flex: 1 1 0; min-height: 0; max-height: none; overflow: auto; padding: 0 6px; }
+body.mob:not(.m-spaces).side-open #side[data-sec="tree"] #plList, body.mob:not(.m-spaces).side-open #side[data-sec="pl"] #tree { display: none; }
+body.mob:not(.m-spaces).side-open #sideGo { display: block; flex: none; margin: 6px; min-height: 48px; border-radius: 12px; font-weight: 700; letter-spacing: 1px; color: #001018; background: var(--accent); border-color: var(--accent); }
+body.mob:not(.m-spaces).side-open #lower { grid-template-rows: minmax(0, 1fr) 0; }
+body.mob:not(.m-spaces).side-open #browser { display: none; }
+body.mob:not(.m-spaces) #scanStatus { margin: 0; padding: 0 14px; }
+body.mob:not(.m-spaces) #scanStatus:empty { display: none; }
+body.mob:not(.m-spaces) #stemBar { margin: 4px 14px 8px; }
+body.mob:not(.m-spaces) .tn, body.mob:not(.m-spaces) .plitem { min-height: 48px; }
 /* esplora e playlist: righe alte quanto un dito */
 :is(body.mob, body.cockpit) .tn { font-size: 15px; padding: 9px 8px; }
 :is(body.mob, body.cockpit) #search { font-size: 15px; }

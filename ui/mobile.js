@@ -354,6 +354,33 @@
   bubble.addEventListener("pointerup", () => { if (bd) { bd = null; save(); } });
   dbl((e) => !e.target.closest?.("#bubble .fader") && e.target.closest?.("#bubble"), () => { st.bubble = false; save(); applySpaces(); });
 
+  /* ---- libreria a fisarmonica: la barra in alto dice cosa si sta guardando; toccandola ESPLORA e PLAYLIST si aprono a tutta
+     altezza (una sezione alla volta), scegliendo si torna ai brani a tutta altezza. Prima lo spazio per le cartelle era 128 px */
+  (() => {
+    const side = $("#side"), sbar = $("#sideBar"), scur = $("#sideCur");
+    if (!side || !sbar) return;
+    const setSide = (o) => { B.classList.toggle("side-open", o); sbar.setAttribute("aria-expanded", String(o)); };
+    side.dataset.sec = "tree";
+    const label = () => {
+      if (lib.playlist !== null) return "Playlist · " + (lib.pls.find((p) => p.id === lib.playlist)?.name ?? "");
+      if (lib.folder) { const seg = lib.folder.split(/[\\/]+/).filter(Boolean); return seg.slice(-2).join(" › ") || lib.folder; }
+      return "Scegli una cartella o una playlist";
+    };
+    window.onLibSel = () => { scur.textContent = label(); };
+    window.onLibPick = (hasKids) => { if (!hasKids) setSide(false); };
+    sbar.addEventListener("click", () => setSide(!is("side-open")));
+    $("#sideGo").addEventListener("click", () => setSide(false));
+    $$("#side .side-title").forEach((t, i) => t.addEventListener("click", (e) => { if (!e.target.closest("button")) side.dataset.sec = i === 0 ? "tree" : "pl"; }));
+    // aprendo la libreria: senza una scelta si parte dalle cartelle, altrimenti dai brani
+    let was = false;
+    new MutationObserver(() => {
+      const now = is("lib-open");
+      if (now && !was) setSide(lib.playlist === null && !lib.folder);
+      was = now;
+    }).observe(B, { attributes: true, attributeFilter: ["class"] });
+    window.onLibSel();
+  })();
+
   /* ---- Indietro (cockpit.js): chiude il cassetto del mixer, poi dallo spazio torna alla panoramica */
   CK.back = { open: () => is("mix-open") || (is("m-spaces") && !st.ov), close: () => (is("mix-open") ? setMix(false) : overview()) };
 

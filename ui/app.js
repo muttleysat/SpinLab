@@ -1315,6 +1315,7 @@ function selectPlaylist(id) {
   lib.playlist = id; lib.sel.clear(); lib.sort = ""; lib.desc = false;
   $$("#tree .tn.on").forEach((n) => n.classList.remove("on"));
   setPlaceholder();
+  window.onLibSel?.();
   if (id !== null) inv("analyze_playlist", { id });
   refreshPlaylists(); refreshLib(); showInspector();
 }
@@ -1322,6 +1323,7 @@ function selectFolder(path) {
   lib.playlist = null; lib.folder = path; lib.sel.clear(); lib.sort = ""; lib.desc = false;
   try { localStorage.setItem("spinlab.folder", path); } catch (e) {}
   setPlaceholder();
+  window.onLibSel?.();
   $$("#tree .tn").forEach((n) => n.classList.toggle("on", n.dataset.path === path));
   refreshPlaylists(); refreshLib(); showInspector();
 }
@@ -1348,8 +1350,17 @@ $("#tree").addEventListener("click", async (e) => {
   const path = n.dataset.path;
   if (e.target.classList.contains("ar")) return toggleNode(path);
   selectFolder(path);
-  if (!tree.open.has(path)) toggleNode(path, true);
+  if (!tree.open.has(path)) await toggleNode(path, true);
+  window.onLibPick?.((tree.kids.get(path) || []).length > 0);   // telefono: senza sottocartelle si passa ai brani
 });
+/* Aggiorna tutto cio' che si vede nella libreria: le cartelle (l'albero tiene una copia dei figli che altrimenti non cambia mai),
+   le playlist e l'elenco dei brani, riletto dal disco. Si usa col gesto «tira verso il basso» sul telefono. */
+async function refreshAll() {
+  tree.kids.clear();
+  for (const p of [...tree.open]) { try { await loadKids(p); } catch (e) { tree.open.delete(p); } }
+  renderTree();
+  await Promise.all([refreshPlaylists(), refreshLib()]);
+}
 async function initTree() {
   tree.roots = await inv("fs_roots");
   renderTree();
@@ -1368,7 +1379,7 @@ async function initTree() {
 
 $("#search").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(refreshLib, 120); });
 $("#side").addEventListener("click", (e) => {
-  const it = e.target.closest(".plitem"); if (it) selectPlaylist(+it.dataset.pl);
+  const it = e.target.closest(".plitem"); if (it) { selectPlaylist(+it.dataset.pl); window.onLibPick?.(false); }
 });
 $("#side").addEventListener("contextmenu", (e) => {
   const it = e.target.closest(".plitem"); if (!it) return;
@@ -1549,6 +1560,8 @@ $("#tree").addEventListener("pointerdown", (e) => {
 });
 document.addEventListener("pointermove", (e) => {
   if (!drag) return;
+  // tocco dalla cima dell'elenco verso il basso: e' il gesto per aggiornare la lista, non un trascinamento
+  if (!drag.on && e.pointerType === "touch" && window.__ptrArm && e.clientY > drag.y) { drag = null; return; }
   if (!drag.on && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 6) {
     drag.on = true;
     getSelection()?.removeAllRanges(); // azzera l'eventuale selezione partita col trascinamento
