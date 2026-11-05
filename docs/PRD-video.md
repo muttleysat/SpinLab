@@ -24,7 +24,7 @@ Principio guida: **l'audio resta il master**. Il video segue sempre l'audio e no
 
 ## 3. Cosa esiste già (verificato nel codice)
 
-- 4 deck nel motore (`NUM_DECKS`) e analisi di BPM, griglia, tonalità e forma d'onda.
+- 4 deck nel motore (`NUM_DECKS`), ma **il modulo video usa solo 2 deck** (decisione di prodotto), e analisi di BPM, griglia, tonalità e forma d'onda.
 - Decodifica audio tramite **FFmpeg a riga di comando**, cercato accanto all'eseguibile (`ffmpeg.exe` come sidecar dell'installer) o nel PATH ([decode.rs](../src-tauri/src/decode.rs)).
 - Stem: tempo reale o preparati in anticipo, con misura della velocità del PC; file salvati in una cartella `stems` accanto al brano ([stems.rs](../src-tauri/src/stems.rs)).
 - Registrazione del master in WAV/MP3 ([recorder.rs](../src-tauri/src/recorder.rs)).
@@ -54,13 +54,27 @@ Priorità: **P0** necessario per la versione 1, **P1** subito dopo, **P2** riman
 ### 4.4 Transizioni e uscita
 - **V-11 (P0)** Una finestra di uscita video, a schermo intero su qualsiasi monitor/proiettore selezionato, separata dall'interfaccia.
 - **V-12 (P0)** Il crossfader audio comanda anche la miscela video fra i due deck assegnati, con almeno: dissolvenza, taglio, dissolvenza al nero.
-- **V-13 (P1)** Libreria di transizioni (wipe, zoom, glitch, pixel) con scelta dell'utente e durata; intensità legata alla posizione del fader.
-- **V-14 (P1)** Anteprima per ogni deck e per l'uscita nell'interfaccia, in bassa risoluzione.
-- **V-15 (P1)** Con più di due video attivi (4 deck) l'uscita usa i due deck assegnati al crossfader; gli altri restano nell'anteprima.
+- **V-13 (P1)** **Menu a tendina delle transizioni.** Nell'intestazione video (e nelle impostazioni) un menu a tendina elenca le transizioni; la scelta si cambia anche durante il set e si ricorda. Ogni voce ha un'anteprima animata, una durata (in battiti o in secondi) e, dove ha senso, una direzione. L'intensità segue la posizione del fader. Elenco della prima versione (tutte originali, calcolate con shader su GPU):
+  1. **Dissolvenza** morbida (di base) e **Taglio** netto.
+  2. **Dissolvenza al nero / al bianco** (flash).
+  3. **Wipe** in quattro direzioni, anche diagonale e con bordo sfumato.
+  4. **Zoom** a spinta: il video uscente si ingrandisce mentre entra l'altro.
+  5. **Glitch**: scarti di colore RGB, blocchi spostati e righe che saltano.
+  6. **Pixel**: l'immagine si scompone in blocchi sempre più grandi e si ricompone sull'altro video.
+  7. **Specchio / caleidoscopio** che ruota e si chiude sul nuovo video.
+  8. **Ondulazione**: distorsione ad onda come acqua, attraversata dal nuovo video.
+  9. **Cubo / pagina 3D** che gira da un video all'altro.
+  10. **Vortice**: i due video si avvolgono in una spirale.
+  11. **Stroboscopio sul ritmo**: alternanza veloce dei due video sui battiti.
+  12. **Ritmo (beat-sync)**: l'effetto scelto scatta sui battiti della griglia invece di seguire solo il fader.
+  Le transizioni a più battiti (7, 9, 10, 11) usano la griglia dei deck per partire e finire a tempo. Il formato è modulare: aggiungerne altre in futuro non richiede modifiche al resto del programma.
+- **V-14 (P1)** Anteprima per i due deck e per l'uscita nell'interfaccia, in bassa risoluzione.
+- **V-15 (scartato)** Gestione video su 4 deck: fuori ambito. Il video funziona solo sui **due deck** collegati al crossfader.
 - **V-16 (P2)** Logo/immagine di sfondo quando non c'è un video attivo.
 
 ### 4.4 bis Uscita su schermo esterno, brani senza video e modalità VIDEO
-- **V-24 (P0)** **Interruttore «VIDEO» nell'intestazione.** Spento (predefinito): nessun codice video attivo, nessuna finestra di uscita, nessun costo di CPU/RAM; l'app si comporta come oggi. Acceso: si abilitano i video sui deck, la finestra di uscita e le transizioni. L'impostazione si ricorda fra le sessioni.
+- **V-24 (P0)** **Modalità VIDEO automatica, con attivazione manuale.** La modalità si **attiva da sola** quando si carica un video su un deck e si **disattiva da sola** quando sui deck girano solo file audio. Un pulsante «VIDEO» nell'intestazione permette di attivarla (o disattivarla) a mano anche con soli brani audio, per mostrare le visualizzazioni generative sul proiettore. Se la modalità è disattivata, nessun codice video è attivo, non c'è finestra di uscita e non si usano CPU/RAM aggiuntive: l'app si comporta come oggi. Il programma non accende mai l'uscita su uno schermo esterno da solo: lo propone una volta e la scelta si ricorda. Lo stato manuale dell'interruttore si ricorda fra le sessioni.
+- **V-32 (P0)** **Titolo e artista sullo schermo.** La visualizzazione di uscita include il titolo e l'artista del brano in primo piano (anche sopra i video e le visualizzazioni), con comparsa e scomparsa morbide al cambio di brano; si possono disattivare e se ne sceglie la posizione e la dimensione. Il testo viene dai tag del file, con il nome del file come ripiego.
 - **V-25 (P0)** **Scelta dello schermo di uscita**: elenco dei monitor rilevati (HDMI, DisplayPort, USB-C, proiettore), a schermo intero senza bordi sul monitor scelto, con frequenza di aggiornamento nativa. La scelta si ricorda.
 - **V-26 (P0)** **Scollegamento/collegamento a caldo**: se lo schermo esterno si scollega, l'uscita passa a una finestra di anteprima senza fermare audio né video; se si ricollega, torna a schermo intero. Se non c'è uno schermo esterno, l'uscita resta in una finestra.
 - **V-27 (P0)** **Brano audio mescolato a un video (o a un altro audio).** Un deck con solo audio produce un'immagine di ripiego, scelta nelle impostazioni, e partecipa alle transizioni come qualunque altro deck: (a) **titolo, artista e copertina** dai tag, (b) **visualizzazione generativa** (vedi V-28), (c) **logo/immagine dell'utente**, (d) **nero**. Predefinito: (a).
@@ -71,6 +85,8 @@ Priorità: **P0** necessario per la versione 1, **P1** subito dopo, **P2** riman
   - Decodifica hardware quando il codec è supportato dal sistema, ripiego software in tutti gli altri casi: un file non è mai rifiutato solo perché manca l'accelerazione.
   - **Controllo al caricamento**: se un file non si legge o è troppo pesante per il PC (es. 4K HEVC su una macchina debole), il programma lo dice e propone la conversione automatica in un formato leggero e compatibile, in sottofondo, senza toccare l'originale.
   - Frame rate variabili e diversi da quello di uscita (23,976 / 25 / 29,97 / 50 / 60) gestiti senza strappi.
+
+- **V-33 (P1)** **Fader video separato (opzionale).** Predefinito: la miscela video segue il crossfader audio. Nelle impostazioni si può scollegare e assegnare a un controllo a parte (cursore a schermo o controllo MIDI): così l'audio può restare su un deck mentre il video passa all'altro. Con il fader separato, titolo e artista seguono il video visibile.
 
 ### 4.5 Registrazione
 - **V-17 (P1)** Registrare il set in **MP4 (H.264 + AAC)**: video miscelato (come sull'uscita) più audio del master, senza sfasamenti superiori a 40 ms per tutta la durata.
@@ -149,9 +165,9 @@ I requisiti minimi ufficiali si scrivono solo dopo aver misurato la fase 1 su al
 | Fase | Contenuto | Si considera finita quando |
 |---|---|---|
 | 0 — Prototipo | Un video su due deck, dissolvenza, finestra di uscita; misure su un PC Windows di fascia bassa e uno medio | Risolte le domande aperte 1 e 2; misure scritte |
-| 1 — Base | V-1, V-2, V-5, V-6, V-8–V-12, V-19–V-27, V-31 | Due video 720p suonano per 30 min senza interruzioni audio; sfasamento A/V < 40 ms |
+| 1 — Base | V-1, V-2, V-5, V-6, V-8–V-12, V-19–V-27, V-31, V-32 | Due video 720p suonano per 30 min senza interruzioni audio; sfasamento A/V < 40 ms |
 | 2 — Scratch e stem | V-7, cache e copia di lavoro, cartella centrale degli stem, tabella nel database | Scratch fluido su un video H.264 1080p; stem ritrovati dopo aver rinominato e spostato il file |
-| 3 — Transizioni e visualizzazioni | V-13–V-16, V-28–V-30 | Almeno 6 transizioni comandate dal fader, 10 visualizzazioni selezionabili, caricamento di animazioni dell'utente |
+| 3 — Transizioni e visualizzazioni | V-13–V-16, V-28–V-30, V-33 | Menu a tendina con almeno 12 transizioni comandate dal fader (anteprima per ognuna), 10 visualizzazioni selezionabili, caricamento di animazioni dell'utente |
 | 4 — Registrazione | V-17, V-18 | MP4 di 30 min riproducibile, audio e video sincronizzati |
 
 ## 10. Rischi
@@ -169,8 +185,8 @@ I requisiti minimi ufficiali si scrivono solo dopo aver misurato la fase 1 su al
 
 1. FFmpeg come processo esterno con pipe, o collegamento diretto alla libreria (più lavoro, più controllo e prestazioni)?
 2. Composizione: WebGL nella finestra di uscita o finestra grafica nativa in Rust?
-3. Il numero di deck con video è 2 o fino a 4?
-4. Le transizioni video seguono sempre il crossfader audio o si possono assegnare a un controllo separato?
+3. ~~Il numero di deck con video è 2 o fino a 4?~~ **Deciso: due deck.**
+4. ~~Transizioni e crossfader~~ **Deciso:** le transizioni seguono sempre il crossfader audio (un solo gesto per audio e video, come nei programmi DJ), con un'opzione avanzata «fader video separato» che, se attivata, assegna la miscela video a un controllo MIDI o a un cursore dedicato, per chi vuole mixare video e audio in tempi diversi. Vedi V-33.
 5. Quali encoder hardware garantire su Windows come requisito minimo (Media Foundation come base)?
 6. Dove deve stare la cartella centrale degli stem per chi ha più dischi?
 7. L'MP4 registrato deve includere la traccia degli stem separati o solo il master?
