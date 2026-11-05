@@ -36,6 +36,11 @@ fn main() {
             b = b.with_auto_device(ort::session::builder::AutoDevicePolicy::PreferCPU).unwrap();
         }
     }
+    // SPIN_OPT=0..3: livello di ottimizzazione del grafo (0 = nessuna)
+    if let Some(l) = std::env::var("SPIN_OPT").ok().and_then(|v| v.parse::<u8>().ok()) {
+        use ort::session::builder::GraphOptimizationLevel as G;
+        b = b.with_optimization_level([G::Disable, G::Level1, G::Level2, G::Level3][l.min(3) as usize]).unwrap();
+    }
     // SPIN_PROFILE=prefisso: profilo di ORT (JSON) con il tempo di ogni nodo
     if let Ok(p) = std::env::var("SPIN_PROFILE") {
         b = b.with_profiling(p).unwrap();

@@ -197,8 +197,16 @@ fn open(model: &Path) -> Result<Session, String> {
     // continui trasferimenti e compilazioni). Default quindi: CPU esplicita su macOS.
     // SPIN_STEM_EP=gpu prova comunque gli acceleratori (diagnostica), SPIN_STEM_EP=cpu li evita ovunque.
     let ep = std::env::var("SPIN_STEM_EP").map(|v| v.to_ascii_lowercase()).unwrap_or_default();
+    // Su Windows si parte subito dalla CPU (il tentativo DirectML falliva con "memoria insufficiente" 8007000E su RTX 3080 e,
+    // fatto qui, ritardava il primo segmento di ~10 s) e la GPU si prova in sottofondo: `probe_gpu_later` ci passa solo se
+    // risulta piu' veloce della CPU. Cosi' un PC con CPU debole e buona GPU la usa, e uno come questo non perde tempo.
     let default_cpu = cfg!(target_os = "macos") && ep != "gpu";
-    let force_cpu = ep == "cpu" || default_cpu;
+    let probe_later = cfg!(windows) && ep != "cpu" && ep != "gpu";
+    let force_cpu = ep == "cpu" || default_cpu || probe_later;
+    if probe_later && GPU.load(Ordering::SeqCst) == 0 {
+        GPU.store(2, Ordering::SeqCst);
+        probe_gpu_later(model.to_path_buf());
+    }
     if !force_cpu && GPU.load(Ordering::SeqCst) != 2 {
         let t = std::time::Instant::now();
         let mut last_err = String::new();
@@ -229,6 +237,43 @@ fn open(model: &Path) -> Result<Session, String> {
         GPU.store(2, Ordering::SeqCst);
     }
     open_with(model, None).inspect(|_| eprintln!("stem: sessione CPU pronta ({})", model.file_name().map_or(String::new(), |n| n.to_string_lossy().into_owned())))
+}
+
+/// Tempo (ms) dell'ultimo segmento fatto dalla CPU: serve a decidere se la GPU conviene.
+static CPU_SEG_MS: AtomicUsize = AtomicUsize::new(0);
+
+/// Prova la GPU in un thread a parte, dopo che la CPU ha fatto un paio di segmenti (cosi' non le ruba tempo all'inizio):
+/// se la sessione parte e un segmento dura meno del 70% di quello della CPU, sostituisce la sessione condivisa.
+fn probe_gpu_later(model: PathBuf) {
+    std::thread::spawn(move || {
+        for _ in 0..120 {
+            if CPU_SEG_MS.load(Ordering::SeqCst) > 0 {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(500));
+        }
+        std::thread::sleep(std::time::Duration::from_secs(3));
+        let cpu_ms = CPU_SEG_MS.load(Ordering::SeqCst);
+        if cpu_ms == 0 {
+            return;
+        }
+        let try_gpu = || -> Result<(Session, usize), String> {
+            let mut s = open_with(&model, Some(0))?;
+            run_segment(&mut s, vec![0f32; 2 * SEG])?; // il primo passaggio compila il grafo sul dispositivo
+            let t = std::time::Instant::now();
+            run_segment(&mut s, vec![0f32; 2 * SEG])?;
+            Ok((s, t.elapsed().as_millis() as usize))
+        };
+        match try_gpu() {
+            Ok((s, ms)) if ms * 10 < cpu_ms * 7 => {
+                eprintln!("stem: GPU {ms} ms a segmento contro {cpu_ms} ms della CPU: passo alla GPU");
+                *SESSION.lock() = Some(s);
+                GPU.store(1, Ordering::SeqCst);
+            }
+            Ok((_, ms)) => eprintln!("stem: GPU {ms} ms a segmento contro {cpu_ms} ms della CPU: resto sulla CPU"),
+            Err(e) => eprintln!("stem: prova GPU non riuscita ({e}): resto sulla CPU"),
+        }
+    });
 }
 
 /// Abbassa la priorita' del thread che chiama (e dei thread che crea, come quelli di ONNX Runtime): la separazione
@@ -643,7 +688,11 @@ pub fn seg_out(out: &[f32], clen: usize) -> SegOut {
 
 /// Esegue un segmento con la sessione condivisa.
 pub fn infer_segment(model: &Path, planar: Vec<f32>, clen: usize) -> Result<SegOut, String> {
+    let t = std::time::Instant::now();
     let out = with_session(model, |s| run_segment(s, planar))?;
+    if !gpu_in_use() {
+        CPU_SEG_MS.store(t.elapsed().as_millis().max(1) as usize, Ordering::SeqCst);
+    }
     Ok(seg_out(&out, clen))
 }
 
@@ -729,8 +778,10 @@ impl Hub {
                     continue;
                 }
                 let (planar, clen) = live.audio(j);
+                let t_seg = std::time::Instant::now();
                 match infer_segment(&model, planar, clen) {
                     Ok(out) => {
+                        eprintln!("stem: deck {} segmento {}/{} in {:.2} s", live.deck, j + 1, live.n, t_seg.elapsed().as_secs_f32());
                         if !live.alive.load(Ordering::SeqCst) {
                             continue;
                         }
