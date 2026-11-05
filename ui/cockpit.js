@@ -12,7 +12,10 @@
   handle.className = "lib-handle"; handle.type = "button"; handle.setAttribute("aria-label", "Libreria");
   top.insertBefore(handle, top.querySelector(".topr"));
   const setLib = (open) => {
+    const was = B.classList.contains("lib-open");
     B.classList.toggle("lib-open", open);
+    // chiudendo la libreria l'anteprima in cuffia si ferma: senza i brani davanti non c'e' piu' modo di capire cosa suona
+    if (was && !open && typeof pv !== "undefined" && pv.playing) { pv.playing = false; markPreview(); inv("preview_stop").catch(() => {}); }
     handle.textContent = open ? "LIBRERIA ▴" : "LIBRERIA ▾";
     setTimeout(resizeCanvases, 260);
   };
@@ -173,6 +176,44 @@
   };
   mx.addEventListener("pointerup", rel); mx.addEventListener("pointercancel", rel);
 
+  /* ---- tira verso il basso per aggiornare l'elenco dei brani (dalla cima dell'elenco); una barretta in alto dice cosa succede */
+  (() => {
+    const wrap = $(".tablewrap"), browser = $("#browser");
+    if (!wrap || !browser) return;
+    const ind = document.createElement("div");
+    ind.id = "ptr"; ind.setAttribute("role", "status"); browser.appendChild(ind);
+    const TH = 72;                                   // quanto si tira (px, dopo la resistenza) per attivare l'aggiornamento
+    let y0 = null, dy = 0, busy = false;
+    const show = (d, txt) => {
+      ind.style.setProperty("--d", d + "px");
+      ind.textContent = txt ?? (d >= TH ? "Rilascia per aggiornare" : "Tira per aggiornare");
+      ind.classList.toggle("on", d > 0 || busy);
+      ind.classList.toggle("ready", d >= TH);
+    };
+    wrap.addEventListener("touchstart", (e) => { y0 = (busy || e.touches.length !== 1 || wrap.scrollTop > 0) ? null : e.touches[0].clientY; dy = 0; window.__ptrArm = y0 !== null; }, { passive: true });
+    wrap.addEventListener("touchmove", (e) => {
+      if (y0 === null) return;
+      const d = e.touches[0].clientY - y0;
+      if (wrap.scrollTop > 0) { y0 = null; show(dy = 0); return; }     // la lista e' scesa: e' uno scorrimento normale
+      if (d <= 0) { if (dy) show(dy = 0); return; }
+      e.preventDefault();                                              // niente scorrimento mentre si tira
+      dy = Math.min(110, d * 0.5);                                     // un po' di resistenza
+      show(dy);
+    }, { passive: false });
+    const end = async () => {
+      window.__ptrArm = false;
+      if (y0 === null) return;
+      y0 = null;
+      if (dy >= TH && !busy) {
+        busy = true; show(52, "Aggiorno…");
+        try { await refreshAll(); } catch (e) { toast(String(e)); }
+        busy = false;
+      }
+      dy = 0; show(0);
+    };
+    wrap.addEventListener("touchend", end); wrap.addEventListener("touchcancel", end);
+  })();
+
   /* ---- Indietro di Android: chiude menu, finestre, pannello e libreria (uno alla volta) invece di uscire dall'app.
      L'attivita' Android torna indietro nella cronologia della WebView finche' ce n'e', poi chiude: con qualcosa aperto
      si tiene una voce di cronologia in piu', e la si toglie quando tutto si chiude in altro modo. Vale con ogni interfaccia. */
@@ -186,8 +227,28 @@
       else if ($("dialog[open]")) [...$$("dialog[open]")].pop().close();
       else if (B.classList.contains("pn-open")) setPn(false);
       else if (extra()?.open()) extra().close();
-      else if (B.classList.contains("lib-open")) setLib(false);
+      else if (B.classList.contains("lib-open")) {
+        // libreria aperta sulle cartelle: prima si torna ai brani, poi si chiude la libreria
+        if (B.classList.contains("side-open") && (lib.folder || lib.playlist !== null)) $("#sideBar").click();
+        else setLib(false);
+      }
     };
+    // Con l'ascoltatore ufficiale di Tauri il tasto Indietro lo decide la pagina. Prima si usava la cronologia del browser,
+    // che Chrome puo' saltare: allora Indietro usciva dall'app. Ora: chiude l'ultimo pannello aperto; dalla schermata principale
+    // chiede di premere ancora per uscire (entro 2 secondi), poi chiude.
+    const onBack = window.__TAURI__?.app?.onBackButtonPress;
+    if (typeof onBack === "function") {
+      let exitAt = 0;
+      onBack(() => {
+        if (anyOpen()) { closeTop(); return; }
+        const now = performance.now();
+        if (now - exitAt < 2200 && window.SpinlabApp) { window.SpinlabApp.exit(); return; }
+        exitAt = now;
+        toast2("Premi ancora Indietro per uscire");
+      });
+      return;
+    }
+    // senza l'ascoltatore (versioni vecchie di Tauri) resta il vecchio metodo con la cronologia
     let guard = false, dropping = false;
     const sync = () => {
       if (dropping) return;
