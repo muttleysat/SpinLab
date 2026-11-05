@@ -253,7 +253,8 @@ function loop(now) {
   if (e.h !== lastH) { lastH = e.h; sizeGL(); }                  // cambio di profilo (o di livello): la risoluzione di disegno si adegua subito
   if (now - lastDraw < 1000 / e.fps - 3) return;                 // tetto di fotogrammi al secondo del profilo
   lastDraw = now;
-  fpsN++; if (now - fpsT >= 1000) { fps = Math.round(fpsN * 1000 / (now - fpsT)); fpsN = 0; fpsT = now; adapt(e); }
+  fpsN++; if (now - fpsT >= 1000) { fps = Math.round(fpsN * 1000 / (now - fpsT)); fpsN = 0; fpsT = now; adapt(e);
+    try { T.event.emit("video-quality", { h: e.h, fps: e.fps, real: fps, off: adaptOff, calib: !!calib, cw: glc.width, ch: glc.height }); } catch (er) {} }
   const vq = (last.quality && last.quality.visH) || 540;         // visualizzazioni: dimensione secondo il profilo
   if (window.VideoVis && vis && vis.h !== vq && visTry !== vq) { visTry = vq; const nv = VideoVis.create(Math.round(vq * 16 / 9), vq); if (nv) vis = nv; }
   const decks = last.decks, has = [false, false];

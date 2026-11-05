@@ -111,6 +111,7 @@
       <h4>Profilo</h4>
       <label class="vp-sel">Qualità dell'uscita video <select id="vpSel"><option value="auto">Automatico</option>${Object.values(PROFILES).map((p) => `<option value="${p.id}">${p.name} (fino a ${p.h}p, ${p.fps} fps)</option>`).join("")}</select></label>
       <p>In uso: <b>${cur.name}</b> — fino a ${cur.h}p a ${cur.fps} fps${cur.simple ? ", solo transizioni leggere" : ", tutte le transizioni"}; registrazione ${cur.rec}.<br><span class="dim">${m === "auto" ? (last ? "Scelto in automatico: " + esc(last.why) : "In attesa della prima analisi del computer.") : "Forzato da te."}</span></p>
+      <p class="vp-live">Uscita in questo momento: <b id="vpLive">${esc(liveText(window.__vq))}</b></p>
       <div class="btns" style="justify-content:flex-start"><button id="vpCal">Ottimizza con un video in riproduzione</button><span class="vp-st">${esc(status)}</span></div>
       <p class="hint">All'avvio il programma analizza il computer e sceglie un profilo di partenza. «Ottimizza» lo affina sul campo: avvia un video su un deck, premi il pulsante e per circa 10 secondi il programma prova la qualità più alta e scende finché l'uscita è fluida, poi ricorda il risultato. Durante il set l'uscita scende da sola se il computer fatica e risale quando il carico cala.</p>
       <p class="hint">Il profilo limita risoluzione e fotogrammi al secondo dell'<b>uscita a schermo intero</b>: la differenza si nota su un proiettore o un monitor grande. In una piccola finestra di anteprima, o con un video a 25 fps, profili diversi sembrano uguali.</p>
@@ -120,6 +121,13 @@
     sel.onchange = () => { LS("spinlab.video_profile", sel.value === "auto" ? null : sel.value); render(); };
     mountEl.querySelector("#vpCal").onclick = calibrate;
   }
+  /** Testo della qualita' reale dell'uscita (quella che l'adattamento sta usando adesso, non solo il profilo scelto). */
+  function liveText(q) {
+    if (!q) return "uscita video non attiva (si accende quando carichi un video o premi VIDEO)";
+    const lv = q.off === 1 ? "1 livello" : `${q.off} livelli`;
+    return `${q.h}p a ${q.fps} fps (disegno reale ${q.real} fps)${q.off > 0 ? `, ridotta di ${lv} perché il computer fatica` : ""}${q.calib ? " — calibrazione in corso" : ""}`;
+  }
+  const live = () => { const e = mountEl && mountEl.querySelector("#vpLive"); if (e) e.textContent = liveText(window.__vq); };
   function mount(el) { mountEl = el; render(); }
   const setStatus = (t) => { status = t; const e = mountEl && mountEl.querySelector(".vp-st"); if (e) e.textContent = t; };
 
@@ -164,5 +172,5 @@
   }
   setTimeout(() => { auto(); setInterval(auto, 15000); }, 10000);
 
-  window.VideoPerf = { PROFILES, SIMPLE_TRANS, decide, measure, active, mount, manualId, last: () => last };
+  window.VideoPerf = { PROFILES, SIMPLE_TRANS, decide, measure, active, mount, live, liveText, manualId, last: () => last };
 })();

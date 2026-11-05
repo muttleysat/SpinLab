@@ -811,6 +811,9 @@ body.cockpit .uibtn b { display: none; } body.cockpit .lib-handle { min-width: 1
 
 /* modalita' VIDEO: menu delle transizioni, visibile solo quando la modalita' e' attiva */
 .vsel { display: none; height: 30px; max-width: 150px; margin-right: 6px; background: #101624; color: var(--dim); border: 1px solid #263148; border-radius: 8px; font-size: 12px; padding: 0 6px; }
+body.vmode .vq:not([hidden]) { display: inline-block; }
+.vq { display: none; margin-right: 6px; color: var(--dim); font-size: 11px; white-space: nowrap; }
+.vq.low { color: #ffb020; }
 body.vmode .vsel { display: inline-block; color: var(--accent); border-color: var(--accent); }
 
 .vmenu { position: fixed; z-index: 9998; min-width: 240px; background: #0f1522; border: 1px solid #263148; border-radius: 10px; padding: 6px; box-shadow: 0 10px 30px #000a; }

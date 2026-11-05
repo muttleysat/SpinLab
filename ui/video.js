@@ -53,6 +53,13 @@
     [...sel.options].forEach((o) => { const off = simple && !VideoPerf.SIMPLE_TRANS.includes(+o.value); o.disabled = off; o.title = off ? "Non disponibile con il profilo Bassa" : ""; });
     if (simple && !VideoPerf.SIMPLE_TRANS.includes(+sel.value)) sel.value = "0";
   }
+  const badge = document.getElementById("vqBadge");
+  window.__TAURI__.event.listen("video-quality", (e) => {
+    const q = window.__vq = { ...e.payload, at: performance.now() };
+    if (badge) { badge.hidden = false; badge.textContent = `${q.h}p ${q.fps}`; badge.classList.toggle("low", q.off > 0); badge.title = window.VideoPerf ? window.VideoPerf.liveText(q) : ""; }
+    if (window.VideoPerf) VideoPerf.live();
+  });
+  setInterval(() => { if (badge && window.__vq && performance.now() - window.__vq.at > 3000) { badge.hidden = true; window.__vq = null; if (window.VideoPerf) VideoPerf.live(); } }, 1500);
   window.__TAURI__.event.listen("video-adapt", (e) => say(String(e.payload || "")));
 
   async function sync() {
