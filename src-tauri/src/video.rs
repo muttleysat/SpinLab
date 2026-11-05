@@ -137,3 +137,106 @@ pub fn video_cleanup(keep: Vec<String>) {
         }
     }
 }
+
+// ---------------------------------------------------------------- configurazione automatica (rilevamento e misure)
+
+#[derive(Serialize)]
+pub struct HwInfo {
+    pub cpu: String,
+    pub cores: usize,
+    pub ram_gb: f64,
+    pub os: String,
+    /// encoder H.264 presenti in FFmpeg (hardware e software), nell'ordine di preferenza
+    pub encoders: Vec<String>,
+    pub ffmpeg: bool,
+}
+
+fn run_ffmpeg(args: &[&str]) -> Option<std::process::Output> {
+    let mut cmd = std::process::Command::new(crate::decode::ffmpeg_path());
+    cmd.args(args).stdin(std::process::Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    cmd.output().ok()
+}
+
+/// Rileva CPU, memoria, sistema e gli encoder H.264 disponibili (quelli hardware prima).
+#[tauri::command]
+pub async fn video_hw() -> HwInfo {
+    tauri::async_runtime::spawn_blocking(|| {
+        let mut sys = sysinfo::System::new();
+        sys.refresh_memory();
+        sys.refresh_cpu();
+        let cpu = sys.cpus().first().map(|c| c.brand().trim().to_string()).filter(|b| !b.is_empty()).unwrap_or_else(|| "sconosciuta".into());
+        let (mut encoders, mut ffmpeg) = (vec![], false);
+        if let Some(o) = run_ffmpeg(&["-hide_banner", "-encoders"]) {
+            ffmpeg = o.status.success();
+            let list = String::from_utf8_lossy(&o.stdout).to_string();
+            for e in ["h264_videotoolbox", "h264_nvenc", "h264_qsv", "h264_amf", "h264_mf", "libx264"] {
+                if list.lines().any(|l| l.split_whitespace().nth(1) == Some(e)) {
+                    encoders.push(e.to_string());
+                }
+            }
+        }
+        HwInfo {
+            cpu,
+            cores: std::thread::available_parallelism().map_or(1, |n| n.get()),
+            ram_gb: (sys.total_memory() as f64 / 1_073_741_824.0 * 10.0).round() / 10.0,
+            os: format!("{} {}", std::env::consts::OS, std::env::consts::ARCH),
+            encoders,
+            ffmpeg,
+        }
+    })
+    .await
+    .unwrap_or(HwInfo { cpu: String::new(), cores: 1, ram_gb: 0.0, os: String::new(), encoders: vec![], ffmpeg: false })
+}
+
+#[derive(Serialize)]
+pub struct BenchClip {
+    pub path: String,
+    pub encoder: String,
+    /// fotogrammi codificati al secondo (1080p): dice quanto regge la registrazione MP4
+    pub encode_fps: f64,
+}
+
+/// Crea un breve video di prova 1080p (3 s) con il miglior encoder disponibile e misura quanto e' stato veloce.
+/// La finestra lo riproduce per misurare la decodifica; poi lo si cancella con `video_bench_clean`.
+#[tauri::command]
+pub async fn video_bench_clip() -> Result<BenchClip, String> {
+    tauri::async_runtime::spawn_blocking(|| -> Result<BenchClip, String> {
+        let dir = proxy_dir();
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        let out = dir.join("bench-clip.mp4");
+        let _ = std::fs::remove_file(&out);
+        let encoders: [(&str, &[&str]); 5] = [
+            ("h264_videotoolbox", &["-b:v", "8M"]),
+            ("h264_nvenc", &["-b:v", "8M"]),
+            ("h264_qsv", &["-b:v", "8M"]),
+            ("h264_amf", &["-b:v", "8M"]),
+            ("libx264", &["-preset", "veryfast", "-crf", "23"]),
+        ];
+        let frames = 90.0;
+        for (name, extra) in encoders {
+            let t0 = std::time::Instant::now();
+            let mut args: Vec<&str> = vec!["-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=size=1920x1080:rate=30:duration=3", "-an", "-pix_fmt", "yuv420p", "-c:v", name];
+            args.extend_from_slice(extra);
+            let o = out.to_string_lossy().into_owned();
+            args.extend_from_slice(&["-movflags", "+faststart", &o]);
+            let ok = run_ffmpeg(&args).map_or(false, |r| r.status.success());
+            if ok && std::fs::metadata(&out).map_or(false, |m| m.len() > 0) {
+                return Ok(BenchClip { path: o, encoder: name.to_string(), encode_fps: frames / t0.elapsed().as_secs_f64().max(0.001) });
+            }
+            let _ = std::fs::remove_file(&out);
+        }
+        Err("nessun encoder H.264 disponibile (FFmpeg mancante?)".into())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+pub fn video_bench_clean() {
+    let _ = std::fs::remove_file(proxy_dir().join("bench-clip.mp4"));
+}

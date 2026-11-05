@@ -46,7 +46,17 @@
   const cleanup = () => { inv("video_cleanup", { keep: Object.values(proxies).filter(Boolean).filter((p, i, a) => decks.slice(0, 2).some((d) => proxies[d.snap?.path] === p)) }).catch(() => {}); };
   inv("video_cleanup", { keep: [] }).catch(() => {});   // all'avvio: copie rimaste da una chiusura anomala
 
+  // con un profilo «bassa» restano solo le transizioni leggere (le altre si vedono ma sono disattivate)
+  function applyProfileToMenu() {
+    if (!sel || !window.VideoPerf) return;
+    const simple = VideoPerf.active().simple;
+    [...sel.options].forEach((o) => { const off = simple && !VideoPerf.SIMPLE_TRANS.includes(+o.value); o.disabled = off; o.title = off ? "Non disponibile con il profilo Bassa" : ""; });
+    if (simple && !VideoPerf.SIMPLE_TRANS.includes(+sel.value)) sel.value = "0";
+  }
+  window.__TAURI__.event.listen("video-adapt", (e) => say(String(e.payload || "")));
+
   async function sync() {
+    applyProfileToMenu();
     const w = wanted();
     if (w) decks.slice(0, 2).forEach((d) => { if (d.snap?.loaded && VEXT.test(d.snap.path || "")) askProxy(d.snap.path); });
     // copie dei video non piu' sui deck: si cancellano
@@ -84,6 +94,7 @@
     const s = {
       xf: window.__lastXf ?? 0.5,
       trans: sel ? +sel.value : 0,
+      quality: window.VideoPerf ? (({ h, fps, visH, simple, level }) => ({ h, fps, visH, simple, level }))(VideoPerf.active()) : { h: 720, fps: 30, visH: 540, simple: false, level: 2 },
       vis: vsel ? +vsel.value : 0,
       decks: decks.slice(0, 2).map((d, i) => ({
         proxy: proxies[d.snap?.path] || "", beat: d.snap?.beat_phase ?? 0, bpm: d.snap?.bpm_now || 0, level: Math.max(d.snap?.level_l || 0, d.snap?.level_r || 0), hue: hueOf(d.snap?.key_now),  held: d.scrub != null || !!d.snap?.held, loaded: !!d.snap?.loaded, title: d.title_ || d.snap?.name || "", artist: d.meta?.artist || "", path: d.snap?.path || "", name: d.snap?.name || "", playing: !!d.snap?.playing,
@@ -124,6 +135,10 @@
     const h = document.createElement("div"); h.className = "vh"; h.textContent = "Uscita video su…"; menu.appendChild(h);
     item("Finestra normale", "");
     mons.forEach((m) => item(`${m.name} · ${m.width}×${m.height}${m.primary ? " (principale)" : ""}`, keyOf(m)));
+    if (window.VideoPerf) {
+      const sep = document.createElement("div"); sep.className = "vh"; sep.textContent = `Profilo: ${VideoPerf.active().name}`; menu.appendChild(sep);
+      const b = document.createElement("button"); b.textContent = "Prestazioni video…"; b.onclick = () => { closeMenu(); VideoPerf.openPanel(); }; menu.appendChild(b);
+    }
     document.body.appendChild(menu);
     const r = btn.getBoundingClientRect();
     menu.style.top = `${r.bottom + 6}px`; menu.style.right = `${Math.max(8, innerWidth - r.right)}px`;

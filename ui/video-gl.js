@@ -215,6 +215,10 @@ void main() {
         } catch (e) { VideoGL.error = String(e.message || e); return false; }
       },
       clear(i) { size[i] = [0, 0]; },
+      /** Aspetta che la scheda grafica finisca il disegno (serve alle misure: senza, il tempo misurato sarebbe solo quello di invio). */
+      sync() { gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); },
+      /** Nome della scheda grafica, se il sistema lo dice. */
+      info() { try { const e = gl.getExtension("WEBGL_debug_renderer_info"); return e ? String(gl.getParameter(e.UNMASKED_RENDERER_WEBGL)) : String(gl.getParameter(gl.RENDERER)); } catch (er) { return ""; } },
       /** p: { t: 0..1, type, time, beat, has: [bool, bool] } */
       draw(p) {
         gl.uniform2f(U.uRes, canvas.width, canvas.height);

@@ -31,6 +31,8 @@ libloading = "0.8"
 ort = { version = "=2.0.0-rc.15" }
 flacenc = "0.5.1"
 claxon = "0.4.3"
+# configurazione automatica del video: modello della CPU e memoria del computer
+sysinfo = { version = "0.30", default-features = false }
 
 # licenze: certificato firmato Ed25519 e impronta del computer; client HTTP interno (TLS rustls), usato anche per il modello degli stem su Android dove curl non esiste
 ed25519-dalek = "2"

@@ -145,6 +145,7 @@ void main() {
     gl.viewport(0, 0, w, h);
     return {
       canvas, w, h,
+      sync() { gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); },
       /** p: { scene 0..9, time, beat, bar, level, hue } */
       render(p) {
         gl.uniform2f(U.uRes, w, h); gl.uniform1f(U.uTime, p.time); gl.uniform1f(U.uBeat, p.beat || 0); gl.uniform1f(U.uBar, p.bar || 0);
