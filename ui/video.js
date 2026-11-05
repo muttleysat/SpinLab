@@ -41,11 +41,17 @@
     if (w && open && !timer) timer = setInterval(send, 33);
     if ((!w || !open) && timer) { clearInterval(timer); timer = 0; }
   }
+  const artSent = [null, null];
   function send() {
+    // copertina: si manda una volta sola al cambio di brano (e' pesante per il flusso a 30 messaggi al secondo)
+    decks.slice(0, 2).forEach((d, i) => {
+      const p = d.snap?.loaded ? d.snap.path : "";
+      if (p !== artSent[i]) { artSent[i] = p; (p ? getArt(p, 512) : Promise.resolve(null)).then((art) => window.__TAURI__.event.emit("video-art", { i, path: p, art })); }
+    });
     const s = {
       xf: window.__lastXf ?? 0.5,
       decks: decks.slice(0, 2).map((d, i) => ({
-        proxy: proxies[d.snap?.path] || "", held: d.scrub != null || !!d.snap?.held, loaded: !!d.snap?.loaded, path: d.snap?.path || "", name: d.snap?.name || "", playing: !!d.snap?.playing,
+        proxy: proxies[d.snap?.path] || "", held: d.scrub != null || !!d.snap?.held, loaded: !!d.snap?.loaded, title: d.title_ || d.snap?.name || "", artist: d.meta?.artist || "", path: d.snap?.path || "", name: d.snap?.name || "", playing: !!d.snap?.playing,
         // come per le onde: il suono esce dal dispositivo con un ritardo (buffer), quindi anche il video va ritardato di tanto
         pos: smoothPos(i) - (d.scrub == null && d.snap?.playing ? (audioLatency + visOffset) * (1 + (d.snap?.tempo_pct || 0) / 100) : 0), rate: 1 + (d.snap?.tempo_pct || 0) / 100, assign: d.snap?.xf_assign ?? i,
       })),

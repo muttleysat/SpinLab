@@ -7,13 +7,23 @@
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; font-family: system-ui, sans-serif; }
   video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; opacity: 0; }
+  .card { position: absolute; inset: 0; opacity: 0; display: grid; place-items: center; overflow: hidden; }
+  .card .bg { position: absolute; inset: -10%; background-size: cover; background-position: center; filter: blur(40px) brightness(.45) saturate(1.2); background-color: #10131c; }
+  .card .box { position: relative; display: flex; align-items: center; gap: 4vw; max-width: 90vw; }
+  .card .cov { height: 46vh; width: 46vh; object-fit: cover; border-radius: 1.2vh; box-shadow: 0 2vh 6vh #000a; background: #1b2030; }
+  .card .cov.none { display: none; }
+  .card .t { color: #fff; font-size: 6vh; font-weight: 700; line-height: 1.1; text-shadow: 0 .4vh 2vh #000a; }
+  .card .a { color: #cfd6e6; font-size: 3.6vh; margin-top: 1.2vh; }
   #title { position: absolute; left: 4vw; bottom: 6vh; color: #fff; text-shadow: 0 2px 12px #000c; font-size: 3.2vh; font-weight: 600; transition: opacity .6s; opacity: 0; max-width: 80vw; }
+  #title small { display: block; font-size: 2.2vh; font-weight: 400; color: #e2e8f5; margin-top: .4vh; }
   #hud { position: absolute; left: 8px; top: 8px; margin: 0; padding: 8px 10px; background: #000c; color: #7df0b6; font: 12px/1.45 Consolas, Menlo, monospace; border: 1px solid #1a82b8; border-radius: 6px; white-space: pre; display: none; }
 </style>
 </head>
 <body>
 <video id="v0" muted playsinline preload="auto"></video>
 <video id="v1" muted playsinline preload="auto"></video>
+<div class="card" id="c0"><div class="bg"></div><div class="box"><img class="cov none"><div><div class="t"></div><div class="a"></div></div></div></div>
+<div class="card" id="c1"><div class="bg"></div><div class="box"><img class="cov none"><div><div class="t"></div><div class="a"></div></div></div></div>
 <div id="title"></div>
 <pre id="hud"></pre>
 <script>
@@ -87,17 +97,38 @@ els.forEach((v, i) => v.addEventListener("seeked", () => {
   if (s.seekT0) { const l = (performance.now() - s.seekT0) / 1000; s.lat = Math.max(0.05, Math.min(1.5, (s.lat ?? l) * 0.6 + l * 0.4)); s.seekT0 = 0; }
 }));
 
+const cards = [document.getElementById("c0"), document.getElementById("c1")];
+const art = [{ path: "", art: null }, { path: "", art: null }];
+T.event.listen("video-art", (e) => { art[e.payload.i] = { path: e.payload.path, art: e.payload.art }; lastCard = ["", ""]; });
+let lastCard = ["", ""];
+function setCard(i, d, show) {
+  const c = cards[i];
+  c.style.opacity = show;
+  const key = d.path + "|" + d.title + "|" + d.artist + "|" + (art[i].path === d.path && art[i].art ? 1 : 0);
+  if (key === lastCard[i]) return;
+  lastCard[i] = key;
+  const a = art[i].path === d.path ? art[i].art : null;
+  c.querySelector(".t").textContent = d.title; c.querySelector(".a").textContent = d.artist;
+  const img = c.querySelector(".cov"); img.classList.toggle("none", !a); if (a) img.src = a;
+  c.querySelector(".bg").style.backgroundImage = a ? `url(${a})` : "none";
+}
+
 T.event.listen("video-state", (e) => {
   last = e.payload; gotAt = performance.now();
   const x = last.xf * Math.PI / 2, ga = Math.cos(x), gb = Math.sin(x);
   const op = last.decks.map((d) => (d.assign === 0 ? ga : d.assign === 1 ? gb : 1));
   const vid = last.decks.map((d) => d.loaded && VEXT.test(d.path || ""));
-  // dissolvenza: il video visibile e' quello del lato dominante; se l'altro deck e' solo audio il video resta pieno
-  const o = [vid[0] ? (vid[1] ? op[0] : 1) : 0, vid[1] ? (vid[0] ? op[1] : 1) : 0];
-  apply(0, last.decks[0], o[0]); apply(1, last.decks[1], o[1]);
-  // titolo del brano del lato dominante
-  const dom = op[0] >= op[1] ? 0 : 1, nm = last.decks[dom]?.loaded ? last.decks[dom].name : "";
-  if (nm !== lastTitle) { lastTitle = nm; titleEl.style.opacity = 0; setTimeout(() => { titleEl.textContent = nm; titleEl.style.opacity = nm ? 1 : 0; }, 350); }
+  // dissolvenza fra i deck: un deck solo audio mostra la sua scheda (copertina, titolo, artista); se l'altro deck e' vuoto resta pieno
+  const o = [0, 1].map((i) => (last.decks[1 - i].loaded ? op[i] : 1));
+  apply(0, last.decks[0], vid[0] ? o[0] : 0); apply(1, last.decks[1], vid[1] ? o[1] : 0);
+  [0, 1].forEach((i) => setCard(i, last.decks[i], last.decks[i].loaded && !vid[i] ? o[i] : 0));
+  // titolo e artista del lato dominante, sopra video e schede
+  const dom = op[0] >= op[1] ? 0 : 1, dd = last.decks[dom];
+  const nm = dd?.loaded ? dd.title + "\u0001" + dd.artist : "";
+  if (nm !== lastTitle) {
+    lastTitle = nm; titleEl.style.opacity = 0;
+    setTimeout(() => { titleEl.innerHTML = ""; if (nm) { titleEl.append(document.createTextNode(dd.title)); if (dd.artist) { const s = document.createElement("small"); s.textContent = dd.artist; titleEl.append(s); } } titleEl.style.opacity = nm && !(cards[dom].style.opacity > 0.5) ? 1 : 0; }, 350);
+  }
 });
 
 setInterval(() => {
