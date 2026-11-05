@@ -37,31 +37,48 @@ function apply(i, d, op) {
   const target = d.pos + (d.playing ? age * d.rate : 0);
   v.style.opacity = op;
   const setRate = (r) => { r = Math.max(0.0625, Math.min(16, r)); if (Math.abs(r - (s.rate || 0)) > 1e-4) { s.rate = r; v.playbackRate = r; } };
+  // salto: dopo un salto il video impiega un po' a ripartire (ricostruisce l'immagine). Si misura quanto ('seeked') e al salto
+  // si punta in avanti di quel tempo, cosi' quando riparte e' gia' al punto giusto invece di restare indietro e saltare di nuovo.
+  const seek = (t, fast) => {
+    s.seekT0 = performance.now();
+    t = Math.max(0, t);
+    if (fast && v.fastSeek) v.fastSeek(t); else v.currentTime = t;
+  };
   if (v.readyState >= 1) {
     const now = performance.now(), raw = v.currentTime - target;
     s.ema = s.ema === undefined || v.seeking ? raw : s.ema * 0.9 + raw * 0.1;   // scarto filtrato: i messaggi arrivano con qualche ms di variazione
     const drift = s.ema;
-    if (!d.playing) {
+    const lat = s.lat ?? 0.35;
+    if (!d.playing || d.held) {
+      // fermo o in scrub: il video segue la testina il prima possibile, senza limiti di frequenza (conta solo l'ultimo punto richiesto)
       setRate(d.rate);
       if (!v.paused) v.pause();
-      if (!v.seeking && Math.abs(raw) > 0.04) { v.currentTime = Math.max(0, target); s.lastSeek = now; }
+      if (!v.seeking && Math.abs(raw) > 0.04) seek(target, d.held);
+      s.ema = undefined;
     } else {
       s.maxDrift = Math.max(s.maxDrift, Math.abs(drift));
       if (v.paused && !v.seeking) v.play().catch(() => {});
-      // Velocita' costante finche' lo scarto e' piccolo (cambiarla di continuo fa scattare il video). Si corregge con una velocita'
-      // leggermente diversa (±4%) solo se lo scarto supera 60 ms, fino a rientrare sotto 15 ms; sopra 0,6 s si salta (al massimo ogni 1,5 s).
-      if (Math.abs(drift) > 0.6) {
+      if (now < (s.grace || 0)) { setRate(d.rate); }                        // appena dopo un salto: non si giudica lo scarto
+      else if (Math.abs(drift) > 0.5) {
         setRate(d.rate);
-        if (!v.seeking && now - (s.lastSeek || 0) > 1500) { v.currentTime = Math.max(0, target); s.lastSeek = now; s.seeks++; s.ema = undefined; }
+        if (!v.seeking && now - (s.lastSeek || 0) > 800) {
+          seek(target + lat * d.rate, false); s.lastSeek = now; s.seeks++; s.ema = undefined; s.grace = now + lat * 1000 + 400;
+        }
       } else {
         if (!s.fix && Math.abs(drift) > 0.06) s.fix = true;
         if (s.fix && Math.abs(drift) < 0.015) s.fix = false;
-        setRate(s.fix ? d.rate * (1 - Math.sign(drift) * 0.04) : d.rate);
+        // correzione: 4% (8% se lo scarto e' grande) piu' veloce o piu' lento
+        setRate(s.fix ? d.rate * (1 - Math.sign(drift) * (Math.abs(drift) > 0.25 ? 0.08 : 0.04)) : d.rate);
       }
     }
     s.last = raw;
   }
 }
+
+els.forEach((v, i) => v.addEventListener("seeked", () => {
+  const s = st[i];
+  if (s.seekT0) { const l = (performance.now() - s.seekT0) / 1000; s.lat = Math.max(0.05, Math.min(1.5, (s.lat ?? l) * 0.6 + l * 0.4)); s.seekT0 = 0; }
+}));
 
 T.event.listen("video-state", (e) => {
   last = e.payload; gotAt = performance.now();
@@ -80,7 +97,7 @@ setInterval(() => {
   if (hud.style.display === "none") return;
   hud.textContent = [0, 1].map((i) => {
     const v = els[i], s = st[i], q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : {};
-    return `deck ${i + 1}: ${s.path ? s.path.split(/[\\/]/).pop() : "—"}\n  ${v.videoWidth}x${v.videoHeight} · fotogrammi saltati ${q.droppedVideoFrames ?? "?"}/${q.totalVideoFrames ?? "?"} · sfasamento ora ${((s.ema ?? 0) * 1000).toFixed(0)} ms (max ${(s.maxDrift * 1000).toFixed(0)}) · velocita' ${(s.rate || 0).toFixed(3)} · riallineamenti ${s.seeks}${s.err ? "\n  ERRORE " + s.err : ""}`;
+    return `deck ${i + 1}: ${s.path ? s.path.split(/[\\/]/).pop() : "—"}\n  ${v.videoWidth}x${v.videoHeight} · fotogrammi saltati ${q.droppedVideoFrames ?? "?"}/${q.totalVideoFrames ?? "?"} · sfasamento ora ${((s.ema ?? 0) * 1000).toFixed(0)} ms (max ${(s.maxDrift * 1000).toFixed(0)}) · velocita' ${(s.rate || 0).toFixed(3)} · riallineamenti ${s.seeks} · ritardo salto ${((s.lat ?? 0) * 1000).toFixed(0)} ms${s.err ? "\n  ERRORE " + s.err : ""}`;
   }).join("\n") + `\nmessaggi dal programma: ${last ? "ok" : "nessuno"}`;
 }, 500);
 document.addEventListener("keydown", (e) => {

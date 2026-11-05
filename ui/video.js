@@ -30,7 +30,7 @@
     const s = {
       xf: window.__lastXf ?? 0.5,
       decks: decks.slice(0, 2).map((d, i) => ({
-        loaded: !!d.snap?.loaded, path: d.snap?.path || "", name: d.snap?.name || "", playing: !!d.snap?.playing,
+        held: d.scrub != null || !!d.snap?.held, loaded: !!d.snap?.loaded, path: d.snap?.path || "", name: d.snap?.name || "", playing: !!d.snap?.playing,
         // come per le onde: il suono esce dal dispositivo con un ritardo (buffer), quindi anche il video va ritardato di tanto
         pos: smoothPos(i) - (d.scrub == null && d.snap?.playing ? (audioLatency + visOffset) * (1 + (d.snap?.tempo_pct || 0) / 100) : 0), rate: 1 + (d.snap?.tempo_pct || 0) / 100, assign: d.snap?.xf_assign ?? i,
       })),
