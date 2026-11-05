@@ -1077,37 +1077,55 @@ $$("#nav button").forEach((b) => (b.onclick = () => {
 
 /* ---- registrazione dell'uscita master (WAV o MP3), con il file scelto prima di partire */
 let recOn = false;
-const recExt = () => ($("#recFmt").value.startsWith("mp3") ? "mp3" : "wav");
+const recExt = () => { const v = $("#recFmt").value; return v === "mp4" ? "mp4" : v.startsWith("mp3") ? "mp3" : "wav"; };
+const recVidShow = () => { const on = $("#recFmt").value === "mp4"; $("#recVid").hidden = !on; $("#recVidHint").hidden = !on; };
 function openRecDialog() {
   let fmt = "wav16", dir = ""; try { fmt = localStorage.getItem("spinlab.rec_fmt") || fmt; dir = localStorage.getItem("spinlab.rec_dir") || ""; } catch (e) {}
   $("#recFmt").value = fmt; $("#recPath").value = ""; $("#recErr").textContent = ""; $("#recGo").disabled = true;
+  try { $("#recVq").value = localStorage.getItem("spinlab.rec_vq") || "profile"; } catch (e) {}
+  recVidShow();
   $("#recDlg").dataset.dir = dir;
   $("#recDlg").showModal();
 }
 $("#recFmt").onchange = () => {
-  const p = $("#recPath"); if (p.value) p.value = p.value.replace(/\.(wav|mp3)$/i, "." + recExt());
+  const p = $("#recPath"); if (p.value) p.value = p.value.replace(/\.(wav|mp3|mp4)$/i, "." + recExt());
+  recVidShow();
   try { localStorage.setItem("spinlab.rec_fmt", $("#recFmt").value); } catch (e) {}
 };
 $("#recPick").onclick = async () => {
   const d = new Date(), z = (n) => String(n).padStart(2, "0"), ext = recExt();
   const name = `SpinLab ${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}.${z(d.getMinutes())}.${ext}`;
   const dir = $("#recDlg").dataset.dir;
-  const f = await T.dialog.save({ defaultPath: dir ? dir.replace(/[\\/]$/, "") + "\\" + name : name, filters: [{ name: ext === "mp3" ? "MP3" : "WAV", extensions: [ext] }] });
+  const f = await T.dialog.save({ defaultPath: dir ? dir.replace(/[\\/]$/, "") + "\\" + name : name, filters: [{ name: ext === "mp3" ? "MP3" : ext === "mp4" ? "MP4 (video)" : "WAV", extensions: [ext] }] });
   if (!f) return;
-  const p = /\.(wav|mp3)$/i.test(f) ? f.replace(/\.(wav|mp3)$/i, "." + ext) : f + "." + ext;
+  const p = /\.(wav|mp3|mp4)$/i.test(f) ? f.replace(/\.(wav|mp3|mp4)$/i, "." + ext) : f + "." + ext;
   $("#recPath").value = p; $("#recGo").disabled = false;
   try { localStorage.setItem("spinlab.rec_dir", p.replace(/[\\/][^\\/]*$/, "")); } catch (e) {}
 };
 $("#recCancel").onclick = () => $("#recDlg").close();
 $("#recGo").onclick = async () => {
-  try { await inv("rec_start", { path: $("#recPath").value, format: $("#recFmt").value }); $("#recDlg").close(); }
-  catch (e) { $("#recErr").textContent = String(e); }
+  const go = $("#recGo"); go.disabled = true;
+  try {
+    if ($("#recFmt").value === "mp4") {
+      try { localStorage.setItem("spinlab.rec_vq", $("#recVq").value); } catch (e) {}
+      $("#recErr").textContent = "Avvio dell'uscita video…";
+      await VideoRec.start($("#recPath").value, $("#recVq").value);
+    } else await inv("rec_start", { path: $("#recPath").value, format: $("#recFmt").value });
+    $("#recDlg").close();
+  } catch (e) { $("#recErr").textContent = String(e && e.message || e); }
+  go.disabled = !$("#recPath").value;
 };
 async function stopRecording() {
   try {
+    if (window.VideoRec && VideoRec.active()) {
+      toast2("Salvataggio del video in corso… può servire qualche secondo");
+      const m = await VideoRec.stop();
+      toast2(`Registrazione salvata: ${m.path} (${mmss(m.secs)}, ${(m.bytes / 1048576).toFixed(1)} MB)` + (m.dropped + m.skipped ? ` — attenzione: ${m.dropped + m.skipped} fotogrammi persi, il computer non teneva il ritmo` : ""));
+      return;
+    }
     const r = await inv("rec_stop");
     toast2(`Registrazione salvata: ${r.path} (${mmss(r.secs)}, ${(r.bytes / 1048576).toFixed(1)} MB)` + (r.dropped ? ` — attenzione: ${r.dropped} blocchi persi, il disco era troppo lento` : ""));
-  } catch (e) { toast(String(e)); }
+  } catch (e) { toast(String(e && e.message || e)); }
 }
 $("#recInd").onclick = stopRecording;
 function toast2(msg) { // messaggio di conferma (non e' un errore)

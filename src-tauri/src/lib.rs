@@ -535,6 +535,7 @@ fn rec_start(app: State<'_, App>, rec: State<'_, RecState>, path: String, format
     let sr = app.mixer.lock().sr;
     let (r, tap) = recorder::start(std::path::Path::new(&path), recorder::Format::parse(&format), sr)?;
     app.mixer.lock().rec = Some(tap);
+    video::mark_audio_start();
     *g = Some(r);
     Ok(())
 }
@@ -1389,7 +1390,7 @@ pub fn run() {
             stems_queue, stems_queue_playlist, stems_queue_path, stems_have, stems_cfg, stems_cfg_set, stems_bench_cmd, stems_delete, deck_stems, stems_auto, track_art,
             drum_load, drum_cmd, drum_save, midi_ports, midi_out_info, midi_out_select, midi_send, midi_map_get, midi_map_set, audio_current, rec_start, rec_stop,
             license_status, license_activate, license_refresh, license_deactivate,
-            video::video_monitors, video::video_open, video::video_close, video::video_proxy, video::video_cleanup, video::video_hw, video::video_bench_clip, video::video_bench_clean, video::video_bench_decode
+            video::video_monitors, video::video_open, video::video_close, video::video_proxy, video::video_cleanup, video::video_hw, video::video_bench_clip, video::video_bench_clean, video::video_bench_decode, video::video_rec_prepare, video::video_rec_start, video::video_rec_frame, video::video_rec_stop, video::video_rec_mux
         ])
         .run(tauri::generate_context!())
         .expect("errore avvio SpinLab");

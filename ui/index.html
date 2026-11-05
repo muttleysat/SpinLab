@@ -227,7 +227,10 @@ SOFTWARE.</pre></details>
   <p class="hint" style="margin-top:0">Registra tutto quello che esce dal master: deck con effetti, campionatore e batteria.</p>
   <label>Formato<select id="recFmt">
     <option value="wav16">WAV 16 bit (qualità CD)</option><option value="wav24">WAV 24 bit</option>
-    <option value="mp3-320">MP3 320 kbps</option><option value="mp3-256">MP3 256 kbps</option><option value="mp3-192">MP3 192 kbps</option><option value="mp3-128">MP3 128 kbps</option></select></label>
+    <option value="mp3-320">MP3 320 kbps</option><option value="mp3-256">MP3 256 kbps</option><option value="mp3-192">MP3 192 kbps</option><option value="mp3-128">MP3 128 kbps</option>
+    <option value="mp4">MP4 con video (H.264 + AAC)</option></select></label>
+  <label id="recVid" hidden>Qualità del video<select id="recVq"><option value="profile">Come il profilo video in uso</option><option value="480">480p · 24 fps</option><option value="720">720p · 30 fps</option><option value="1080">1080p · 30 fps</option><option value="1080p60">1080p · 60 fps (se il computer regge)</option></select></label>
+  <p class="hint" id="recVidHint" hidden>Registra l'immagine così com'è sull'uscita video (transizioni, visualizzazioni, titolo) insieme all'audio del master. L'uscita video si accende da sola durante la registrazione. Al termine il file viene preparato: può servire qualche secondo.</p>
   <label>Salva in<div class="pathrow"><input id="recPath" readonly placeholder="Scegli dove salvare il file…"><button id="recPick">Scegli…</button></div></label>
   <div id="recErr" class="warn"></div>
   <div class="btns"><button id="recCancel">Annulla</button><button id="recGo" class="primary" disabled>● Avvia registrazione</button></div>
@@ -297,6 +300,7 @@ SOFTWARE.</pre></details>
 <script src="video-vis.js"></script>
 <script src="video-perf.js"></script>
 <script src="video.js"></script>
+<script src="video-rec.js"></script>
 <script src="midi.js"></script>
 <script src="automix.js"></script>
 <script src="cockpit.js"></script>

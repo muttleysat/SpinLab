@@ -20,7 +20,8 @@
   try { const m = localStorage.getItem("spinlab.video_manual"); manual = m === "1" ? true : m === "0" ? false : null; } catch (e) {}
 
   const hasVideo = () => decks.slice(0, 2).some((d) => d.snap?.loaded && VEXT.test(d.snap.path || ""));
-  const wanted = () => (manual === null ? hasVideo() : manual);
+  let forceRec = false;     // la registrazione MP4 tiene accesa l'uscita anche senza video sui deck
+  const wanted = () => forceRec || (manual === null ? hasVideo() : manual);
 
   // menu delle transizioni (la scelta si ricorda)
   const sel = document.getElementById("vtrans");
@@ -61,6 +62,8 @@
   });
   setInterval(() => { if (badge && window.__vq && performance.now() - window.__vq.at > 3000) { badge.hidden = true; window.__vq = null; if (window.VideoPerf) VideoPerf.live(); } }, 1500);
   window.__TAURI__.event.listen("video-adapt", (e) => say(String(e.payload || "")));
+
+  window.VideoMode = { force(on) { forceRec = !!on; return sync(); }, isOpen: () => open };
 
   async function sync() {
     applyProfileToMenu();
