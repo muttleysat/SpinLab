@@ -2,7 +2,7 @@
 
 ![ASIO Compatible - ASIO is a registered trademark of Steinberg Media Technologies GmbH](../ui/assets/asio-logo-bw.png)
 
-SpinLab DJ è un programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, registrazione del master e supporto per qualsiasi controller MIDI. Questo manuale spiega come usarlo, come collegare un controller e come risolvere i problemi più comuni.
+SpinLab DJ è un programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, uscita video per schermi e proiettori, registrazione del master e supporto per qualsiasi controller MIDI. Questo manuale spiega come usarlo, come collegare un controller e come risolvere i problemi più comuni.
 
 > I tasti e i comandi sono descritti come compaiono sullo schermo. Passando il mouse sopra quasi ogni pulsante compare un suggerimento.
 
@@ -178,6 +178,110 @@ AUTOMIX suona da solo i brani della libreria, uno dopo l'altro, con transizioni 
 
 ---
 
+## Video
+
+SpinLab può mostrare un'immagine su uno schermo esterno o su un proiettore mentre suoni: i **video** che carichi sui deck, oppure, per i brani senza video, la **copertina con titolo e artista** o una **visualizzazione animata** a tempo di musica. I due deck si mescolano con il crossfader, con una transizione che scegli tu.
+
+Il video non cambia il modo di suonare: l'audio comanda sempre. Un video si carica, si ferma, si sposta e si scratcha come un brano, e la griglia dei battiti, il BPM, la tonalità e gli stem funzionano sul suo audio come per qualunque altro file.
+
+### Attivare la modalità VIDEO
+
+La modalità si accende **da sola** quando carichi un video su un deck e si spegne quando sui deck restano solo brani audio. Con la modalità spenta il programma non usa risorse per il video e non apre nessuna finestra.
+
+Il pulsante **VIDEO**, in alto vicino all'orologio, la forza a mano: a ogni clic passi alla scelta successiva tra **automatica**, **sempre accesa** (utile per vedere le visualizzazioni anche con soli brani audio) e **sempre spenta**. Quando è accesa il pulsante si illumina e accanto compaiono i menu delle transizioni e delle visualizzazioni e l'indicazione della qualità in uso.
+
+### Formati supportati
+
+La libreria riconosce **mp4, m4v, mov, mkv, webm, avi, ts, mpg, mpeg**. I video scaricati da YouTube e convertiti in **mp4 (H.264)** sono il caso più semplice e funzionano senza altro.
+
+- L'**immagine** viene riprodotta dal motore web del programma: i formati che il sistema (Windows o macOS) non sa leggere non si vedono. H.264 è sempre il più sicuro; per altri codec (H.265, VP9, AV1…) dipende dal computer.
+- L'**audio** si decodifica come quello di un brano. Per i formati meno comuni serve FFmpeg, come per i brani: vedi **Soluzione dei problemi**.
+- L'uscita è limitata a 1080p: i video 4K, se il sistema li legge, vengono mostrati a una risoluzione più bassa, e l'HDR non è gestito.
+
+### L'uscita su schermo o proiettore
+
+La finestra di uscita si apre da sola con la modalità VIDEO. Per mandarla su un monitor esterno, un proiettore o un televisore (HDMI, DisplayPort, USB-C), fai **clic destro sul pulsante VIDEO** e scegli lo schermo dall'elenco; **Finestra normale** la tiene in una finestra sul monitor del programma. La scelta si ricorda.
+
+- Se lo schermo scelto si **scollega** mentre suoni, l'uscita passa in una finestra normale e compare un avviso: musica e video non si fermano. Quando lo **ricolleghi** torna a schermo intero.
+- Nella finestra di uscita, **H** mostra o nasconde le misure (fotogrammi saltati, sfasamento rispetto all'audio, qualità in uso) ed **Esc** la chiude.
+
+### Transizioni
+
+Il menu a tendina accanto al pulsante VIDEO sceglie l'effetto con cui il **crossfader** passa da un deck all'altro. L'effetto segue la posizione del fader: a sinistra si vede il deck 1, a destra il deck 2, in mezzo la transizione. Si può cambiare anche durante il set.
+
+Le transizioni sono: **Dissolvenza**, **Taglio**, **Dissolvenza al nero**, **Flash bianco**, **Wipe**, **Zoom a spinta**, **Glitch**, **Pixel**, **Caleidoscopio**, **Ondulazione**, **Cubo 3D**, **Vortice** e **Stroboscopio sul ritmo**. L'ultima alterna i due deck a tempo con la **griglia dei battiti**, quindi funziona meglio con brani la cui griglia è giusta.
+
+Se un solo deck ha qualcosa da mostrare, si vede quello senza effetti. Con la qualità **Bassa** (vedi sotto) restano disponibili solo le prime cinque, le più leggere; le altre compaiono disattivate.
+
+### Brani senza video: scheda e visualizzazioni
+
+Un deck che ha un brano senza video partecipa comunque alla miscela. Il secondo menu accanto al pulsante VIDEO sceglie cosa mostrare:
+
+- **Scheda del brano**: la copertina (se il file ne ha una) con titolo e artista, su uno sfondo che ne riprende i colori.
+- **Dieci visualizzazioni**: Anelli, Tunnel, Onde luminose, Griglia al neon, Stelle, Plasma, Barre, Esagoni, Fluido e Raggi. Pulsano sul **battito** della griglia, reagiscono al **livello** del deck e prendono il colore dalla **tonalità** del brano.
+
+Le visualizzazioni sono animazioni astratte create per SpinLab. Si possono usare anche senza nessun video, con la modalità VIDEO accesa a mano, per riempire uno schermo mentre suoni solo musica.
+
+### Titolo e artista
+
+Sopra i video e le visualizzazioni, in basso a sinistra, compaiono **titolo** e **artista** del brano del lato dominante del crossfader, con una comparsa morbida al cambio di brano. Sulle visualizzazioni una leggera ombra scura in basso tiene il testo leggibile. La scheda del brano contiene già titolo e artista.
+
+### Scratch, salti e la copia di lavoro
+
+I video comuni hanno un'immagine completa solo ogni qualche secondo: per mostrare un punto qualsiasi il programma deve ricostruirla, e questo rallenta scratch e salti. Per questo, quando carichi un video, SpinLab ne prepara in sottofondo una **copia di lavoro** leggera (480p) in cui ogni fotogramma è completo:
+
+- Il video parte subito dall'originale; quando la copia è pronta la sostituisce senza che tu faccia nulla.
+- La copia sta in una cartella temporanea e si **cancella da sola** quando il video lascia il deck. All'avvio il programma elimina quelle rimaste da una chiusura anomala. L'originale non viene mai modificato.
+- Serve FFmpeg. Una copia occupa circa 85 MB per un video di quattro minuti e si prepara in pochi secondi.
+
+### Stem sui video
+
+Gli stem dei video si creano come per i brani: tasto destro sul video nella libreria o in una playlist → **Crea stem**. Si calcolano sull'audio e restano salvati per gli usi futuri. Per le modalità e la preparazione vedi **Stem**.
+
+### Qualità e prestazioni
+
+In **Impostazioni → VIDEO** scegli la qualità dell'uscita:
+
+| Profilo | Risoluzione e fotogrammi | Transizioni |
+|---|---|---|
+| **Bassa** | fino a 480p, 24 fps | solo le cinque più leggere |
+| **Media** | fino a 720p, 30 fps | tutte |
+| **Alta** | fino a 1080p, 30 fps | tutte |
+| **Massima** | fino a 1080p, 60 fps | tutte |
+
+- **Automatico** (consigliato). Qualche secondo dopo l'avvio, a deck fermi, il programma analizza il computer (processore, memoria, scheda grafica, velocità della grafica, della decodifica e della codifica video) e sceglie un profilo di partenza. La misura si ripete da sola solo se cambia l'hardware o se la prima è fallita.
+- **Ottimizza con un video in riproduzione.** Avvia un video su un deck, premi il pulsante e per circa 10 secondi il programma prova la qualità più alta e scende finché l'uscita è fluida; il risultato diventa il profilo automatico.
+- **Durante il set.** Se il computer fatica, l'uscita scende da sola di un livello e compare un avviso; se il carico cala per un po', risale. L'audio non viene mai toccato.
+- **Scelta a mano.** Un profilo scelto da menu resta valido finché non torni su **Automatico**: finché è forzato, la misura non lo cambia.
+
+Per sapere a che qualità sei, guarda l'etichetta accanto al pulsante VIDEO (per esempio «1080p 60», arancione se l'uscita è stata ridotta dal carico) oppure la riga **Uscita in questo momento** nella scheda VIDEO. La scheda mostra anche i dati dell'analisi del computer.
+
+Il profilo limita risoluzione e fotogrammi al secondo dell'uscita **a schermo intero**: su una piccola finestra, o con un video a 25 fps, profili diversi sembrano uguali.
+
+### Cosa non c'è ancora
+
+- La **registrazione in MP4** del set: per ora si registra solo l'audio (vedi **Registrare il master**).
+- Il video su più di due deck e un fader video separato dal crossfader.
+- Il video sulle versioni per telefono.
+
+I video musicali e i filmati sono coperti da diritti d'autore: ciò che proietti, registri o pubblichi è responsabilità tua.
+
+### Se qualcosa non va con il video
+
+**Lo schermo resta nero o compare un errore.** Il formato non è letto dal sistema. Premi **H** nella finestra di uscita: se vedi un errore sul deck, converti il video in mp4 (H.264).
+
+**Il video va a scatti o si riallinea di continuo.** Attendi qualche secondo dopo il caricamento: la copia di lavoro deve finire (in **H** compare «copia di lavoro: sì»). Se dopo non basta, abbassa la qualità in **Impostazioni → VIDEO** o premi **Ottimizza**.
+
+**Il video non è a tempo con la musica.** Una differenza fissa tra audio e immagine si regola con il cursore **Allineamento della grafica** (**Impostazioni → AUDIO**), lo stesso delle waveform.
+
+**Non vedo lo schermo esterno nell'elenco.** Collegalo prima di aprire il menu e controlla che il sistema lo riconosca. Due monitor identici (stesso nome e stessa risoluzione) non si distinguono: SpinLab sceglie il primo.
+
+**Le transizioni sono disattivate o ce n'è una sola.** Con il profilo **Bassa** restano solo le più leggere. Scegli un altro profilo nelle Impostazioni.
+
+**Nel pannello compaiono misure a zero o «non misurata».** La prima analisi non è riuscita (di solito manca FFmpeg o la scheda grafica non è stata letta). Riavvia il programma: si ripete da sola; oppure scegli un profilo a mano.
+
+---
+
 ## Registrare il master
 
 **RECORD** in alto apre la finestra di registrazione. Registra tutto ciò che esce dal master: deck con effetti, campionatore e batteria.
@@ -311,6 +415,8 @@ Leggi il messaggio sotto «Applica». Cause frequenti: un altro programma tiene 
 **Il Learn assegna da solo.** Il controller sta mandando messaggi senza che tu tocchi niente (rumore, sensori). Il Learn dei controlli continui aspetta un movimento vero. Se continua, usa **Ignora un tasto…**.
 
 **Un encoder muove due cose.** Guarda gli avvisi «⚠ anche …» nella lista: una vecchia assegnazione sullo stesso messaggio muove altre funzioni. Cancellala con la ✕.
+
+**Il video non si vede, va a scatti o non è a tempo.** Vedi [Video](#video), in particolare «Se qualcosa non va con il video».
 
 **Gli stem sono lenti o non partono.** Vedi **Impostazioni → STEM**: con «Solo stem preparati» prepara prima i brani (tasto destro → Crea stem). Il primo uso scarica il modello e richiede internet.
 
