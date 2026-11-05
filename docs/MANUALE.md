@@ -258,9 +258,25 @@ Per sapere a che qualità sei, guarda l'etichetta accanto al pulsante VIDEO (per
 
 Il profilo limita risoluzione e fotogrammi al secondo dell'uscita **a schermo intero**: su una piccola finestra, o con un video a 25 fps, profili diversi sembrano uguali.
 
+### Registrare il set in MP4
+
+Oltre all'audio, SpinLab può registrare **l'immagine dell'uscita video** (con transizioni, visualizzazioni, titolo e artista) e salvarla insieme al suono del master in un solo file **MP4** (video H.264, audio AAC).
+
+1. **RECORD** → nel menu **Formato** scegli **MP4 con video (H.264 + AAC)**.
+2. **Qualità del video**: *Come il profilo video in uso* (consigliato) oppure 480p 24 fps, 720p 30 fps, 1080p 30 fps, 1080p 60 fps. La qualità della registrazione è indipendente da quella dell'uscita: puoi proiettare a una risoluzione e registrare a un'altra. Il 1080p a 60 fps richiede un computer potente.
+3. Scegli dove salvare il file e premi **Avvia registrazione**. L'uscita video si accende da sola per tutta la durata (anche se sui deck ci sono solo brani audio: vedrai la scheda o la visualizzazione scelta).
+4. **Ferma** con un clic sull'indicatore **REC** o su **STOP REC**. Il file va preparato (si uniscono audio e video): può servire qualche secondo, e compare un avviso con il percorso e la dimensione.
+
+Cose da sapere:
+
+- Serve **FFmpeg** (come per le copie di lavoro); se manca, la registrazione non parte e un messaggio lo spiega.
+- La registrazione cattura quello che si vede sull'uscita, quindi richiede il **disegno WebGL** attivo (la modalità semplice senza WebGL non è registrabile).
+- Se il computer non tiene il ritmo, alcuni fotogrammi si perdono (il video si vede un po' a scatti) ma **l'audio non si interrompe**; a fine registrazione compare un avviso con il numero di fotogrammi persi.
+- Se qualcosa va storto dopo la registrazione (per esempio non riesce l'unione), l'audio resta salvato in un file temporaneo e il messaggio indica dove.
+- I file intermedi si cancellano da soli quando il file finale è pronto.
+
 ### Cosa non c'è ancora
 
-- La **registrazione in MP4** del set: per ora si registra solo l'audio (vedi **Registrare il master**).
 - Il video su più di due deck e un fader video separato dal crossfader.
 - Il video sulle versioni per telefono.
 
@@ -278,6 +294,8 @@ I video musicali e i filmati sono coperti da diritti d'autore: ciò che proietti
 
 **Le transizioni sono disattivate o ce n'è una sola.** Con il profilo **Bassa** restano solo le più leggere. Scegli un altro profilo nelle Impostazioni.
 
+**La registrazione MP4 non parte o il video è a scatti.** Controlla che FFmpeg sia disponibile e che l'uscita video mostri l'immagine (premi **H** nella finestra di uscita: «disegno: WebGL»). Con un computer lento scegli una qualità più bassa nel dialogo di registrazione.
+
 **Nel pannello compaiono misure a zero o «non misurata».** La prima analisi non è riuscita (di solito manca FFmpeg o la scheda grafica non è stata letta). Riavvia il programma: si ripete da sola; oppure scegli un profilo a mano.
 
 ---
@@ -286,7 +304,7 @@ I video musicali e i filmati sono coperti da diritti d'autore: ciò che proietti
 
 **RECORD** in alto apre la finestra di registrazione. Registra tutto ciò che esce dal master: deck con effetti, campionatore e batteria.
 
-1. Scegli il formato: WAV 16 o 24 bit, oppure MP3 a 128, 192, 256 o 320 kbps.
+1. Scegli il formato: WAV 16 o 24 bit, MP3 a 128, 192, 256 o 320 kbps, oppure **MP4 con video** (vedi [Registrare il set in MP4](#registrare-il-set-in-mp4)).
 2. Scegli dove salvare il file.
 3. **Avvia registrazione.** Compare l'indicatore **REC** con il tempo. Un clic sull'indicatore, o su **STOP REC**, ferma la registrazione.
 

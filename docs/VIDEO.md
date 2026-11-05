@@ -20,8 +20,9 @@ Stato: funzionante su macOS (provato su Apple M3 Pro); **non ancora provato su W
 12. [Configurazione, memoria e permessi](#configurazione-memoria-e-permessi)
 13. [Differenze fra Windows e macOS](#differenze-fra-windows-e-macos)
 14. [Come aggiungere una transizione o una visualizzazione](#come-aggiungere-una-transizione-o-una-visualizzazione)
-15. [Prove e diagnostica](#prove-e-diagnostica)
-16. [Limiti noti e cose da verificare](#limiti-noti-e-cose-da-verificare)
+15. [Registrazione MP4](#registrazione-mp4)
+16. [Prove e diagnostica](#prove-e-diagnostica)
+17. [Limiti noti e cose da verificare](#limiti-noti-e-cose-da-verificare)
 
 ## Idea generale
 
@@ -62,6 +63,7 @@ Architettura in due finestre, perché l'uscita è una finestra a parte da portar
 | `ui/video-out.html` | Finestra di uscita: sincronia, caricamento delle texture, ciclo di disegno, titolo, adattamento. |
 | `ui/video-gl.js` | Compositore WebGL e shader delle 13 transizioni. Isolato: non conosce deck né Tauri. |
 | `ui/video-vis.js` | Visualizzazioni generative (shader su un canvas a parte). |
+| `ui/video-rec.js` | Registrazione MP4 lato finestra principale: coordina audio, uscita video, unione. |
 | `ui/video-trans.js` | Nomi delle transizioni (`VIDEO_TRANS`) e delle immagini di ripiego (`VIDEO_VIS`), condivisi fra le due finestre. |
 | `src-tauri/tauri.conf.json`, `capabilities/default.json`, `Cargo.toml` | Protocollo `asset://`, finestra `video-out`, dipendenza `sysinfo`. Vedi [Configurazione](#configurazione-memoria-e-permessi). |
 
@@ -110,6 +112,11 @@ Tutti in `src-tauri/src/video.rs`, registrati in `lib.rs`.
 | `video_bench_clip` | — | `BenchClip` (`path`, `encoder`, `encode_fps`) | Crea un video di prova 1080p da 3 s (`testsrc2`) col primo encoder che funziona e misura i fotogrammi codificati al secondo. Non prova `h264_mf`. |
 | `video_bench_decode` | `path` | `f64` | Decodifica il video di prova 10 volte (900 fotogrammi) con `-hwaccel auto` e ritorna la velocità in multipli del tempo reale. |
 | `video_bench_clean` | — | `()` | Cancella il video di prova. |
+| `video_rec_prepare` | — | `RecPaths` (`audio`, `video`) | Prepara i percorsi temporanei della registrazione (WAV e MP4 senza audio) in `spinlab_video/`. |
+| `video_rec_start` | `width`, `height`, `fps` | `()` | Avvia FFmpeg per la codifica; i fotogrammi arrivano su stdin. Chiamato dalla finestra di uscita. |
+| `video_rec_frame` | corpo binario (JPEG), intestazione `x-lag-ms` | `()` | Un fotogramma; la coda è di 8, gli eccedenti si scartano. |
+| `video_rec_stop` | — | `RecVideoInfo` (`frames`, `dropped`, `secs`, `path`) | Chiude la codifica e aspetta FFmpeg. |
+| `video_rec_mux` | `audio`, `out`, `latency_ms` | `MuxResult` (`path`, `bytes`, `offset_ms`) | Unisce video e audio in MP4 e cancella i temporanei. |
 
 FFmpeg viene sempre lanciato come processo esterno (`decode::ffmpeg_path()`: `ffmpeg.exe` accanto all'eseguibile, altrimenti nel `PATH`), senza finestra su Windows (`CREATE_NO_WINDOW`).
 
@@ -125,6 +132,10 @@ Eventi Tauri (`__TAURI__.event`), tutti trasmessi a tutte le finestre.
 | `video-adapt` | uscita → principale | testo | quando l'adattamento scende o risale (il principale lo mostra come avviso) |
 | `video-calibrate` | principale → uscita | `{}` | l'utente preme «Ottimizza» |
 | `video-calibrated` | uscita → principale | `{ level }` (0..3) | la calibrazione ha trovato il livello |
+| `video-rec-start` | principale → uscita | `{ w, h, fps }` | inizio della registrazione MP4 |
+| `video-rec-ready` | uscita → principale | `{ ok, error? }` | la cattura è pronta (o l'errore) |
+| `video-rec-stop` | principale → uscita | `{}` | fine della registrazione |
+| `video-rec-done` | uscita → principale | `{ ok, frames, dropped, skipped, error? }` | la codifica è chiusa |
 
 ## Sincronia fra audio e video
 
@@ -320,6 +331,38 @@ Chiavi di `localStorage` (finestra principale; sono per-utente e si perdono se s
 2. In `video-vis.js`, aggiungi un ramo a `scene()` con il nuovo `uScene` (l'ultimo ramo senza `if` è la scena 9). Ritorna un `vec3`; usa `uBeat`, `uLevel`, `uHue`, `uTime`, `pulse` (`exp(-uBeat·5)`) e `lv` (livello).
 3. Tieni i cicli costanti e corti: gira a 960×540 (o `visH`) per ogni deck senza video.
 
+## Registrazione MP4
+
+Tre flussi, uniti alla fine. L'audio non passa mai da FFmpeg in tempo reale: si registra con il registratore esistente e si unisce dopo, così un problema del video non può rovinare l'audio.
+
+```
+ dialogo RECORD (app.js) ─▶ video-rec.js ─▶ accende l'uscita (VideoMode.force)
+                                       ├─▶ video_rec_prepare  (percorsi temporanei)
+                                       ├─▶ "video-rec-start"  ─▶ uscita: video_rec_start ─▶ FFmpeg (stdin = JPEG)
+                                       └─▶ rec_start (WAV 24 bit)  ← segna l'istante di partenza dell'audio
+ durante: uscita ─ per ogni fotogramma disegnato ─▶ video_rec_frame (JPEG) ─▶ coda (8) ─▶ FFmpeg
+ stop:    rec_stop (audio) ─▶ "video-rec-stop" ─▶ uscita: video_rec_stop ─▶ video_rec_mux ─▶ MP4 finale
+```
+
+**Cattura (finestra di uscita, `captureFrame`).** Dopo ogni `gl.draw()` il canvas WebGL si copia, centrato e senza deformarlo (bande nere), su un canvas 2D della misura scelta (16:9, dimensioni pari) e si codifica con `toBlob("image/jpeg", 0,85)`. Si cattura al ritmo dei fotogrammi scelti (`next += 1000/fps`; in forte ritardo si riparte da adesso) e al massimo 3 richieste sono in volo: oltre, il fotogramma si salta e si conta. Il corpo della richiesta è binario (`invoke` con `Uint8Array`), senza JSON.
+
+**Codifica (`rec_start_at`).** FFmpeg legge i JPEG da stdin come `image2pipe`/`mjpeg` con `-use_wallclock_as_timestamps 1` (il tempo di ogni fotogramma è quello di arrivo) e li porta a fotogrammi costanti con il filtro `fps=<f>` (i fotogrammi mancanti si ripetono), poi `scale` e `yuv420p`. Encoder: il primo che funziona fra `h264_videotoolbox`, `h264_nvenc`, `h264_qsv`, `h264_amf`, `h264_mf`, `libx264`, provato una volta con tre fotogrammi di prova (`rec_encoder`, in cache). Bitrate: 2,5 Mb/s fino a 480p, 5 Mb/s fino a 720p, 8 Mb/s oltre, ×1,5 sopra i 30 fps; `libx264` usa `-preset veryfast -crf 23`. Un fotogramma chiave ogni 2 secondi. Il registro di FFmpeg va in un file `.log` accanto al temporaneo e, se la codifica fallisce, l'ultima riga compare nell'errore.
+
+**Coda e thread.** `video_rec_frame` mette i byte in un canale limitato (8) e ritorna subito; un thread dedicato li scrive sulla pipe. Se FFmpeg è più lento, `try_send` fallisce, il fotogramma si scarta e `dropped` aumenta: la finestra di uscita non si blocca mai.
+
+**Sincronia: il calcolo dello spostamento (`mux_inner`).** Due correzioni:
+
+1. **Partenza diversa.** `start_diff = t_video − t_audio`, dove `t_audio` è l'istante in cui `rec_start` ha installato la presa audio (`mark_audio_start`) e `t_video` è l'arrivo del primo fotogramma **meno il ritardo di cattura** (`x-lag-ms`, tempo fra il disegno e l'invio: copia, JPEG, `arrayBuffer`).
+2. **Latenza del dispositivo audio.** L'immagine mostrata a `t` contiene l'istante `t − L` della musica (`L = audioLatency + visOffset`, la stessa compensazione usata dal video in riproduzione), mentre l'audio registrato a `t` contiene l'istante `t`: il video va spostato indietro di `L` sulla linea del tempo dell'audio.
+
+`shift = start_diff − L`. Se `shift ≥ 0` si ritarda il video (`-itsoffset shift`), altrimenti si ritarda l'audio di `−shift`. L'unione copia il video (`-c:v copy`) e codifica l'audio in AAC a 192 kb/s (`-c:a aac`, encoder nativo di FFmpeg), con `+faststart`.
+
+**Ciclo di vita e errori.** `video-rec.js` accende l'uscita per la sola durata della registrazione (`VideoMode.force`) e la riporta com'era. Se l'uscita non risponde entro 25 s allo stop, la codifica si chiude dal programma (`video_rec_stop`). Se l'unione fallisce, i file temporanei restano in `spinlab_video/` e il messaggio dice dove; se riesce, si cancellano. L'avvio della registrazione fallisce con un messaggio chiaro se manca WebGL, FFmpeg o un encoder.
+
+**Test.** `video::tests::record_video_and_mux_with_audio` (`cargo test --lib video::`) esegue la pipeline vera con FFmpeg: 60 JPEG a 30 al secondo e un WAV di 2 secondi diventano un MP4 con video `h264` e audio `aac` della durata giusta, e verifica che lo spostamento calcolato coincida con la partenza ritardata misurata. Si salta da solo se mancano `ffmpeg` e `ffprobe`.
+
+**Prestazioni.** Il costo principale è il JPEG nel motore web: a 720p 30 fps è comodo; a 1080p 60 fps su computer deboli salterà fotogrammi (che FFmpeg ripete). È per questo che la qualità della registrazione è separata da quella dell'uscita.
+
 ## Prove e diagnostica
 
 - **Misure in diretta:** nella finestra di uscita premi **H**. Per ogni deck: dimensione del video, fotogrammi saltati/totali, sfasamento attuale e massimo (ms), velocità, «copia di lavoro sì/no», riallineamenti, ritardo di salto; più visualizzazione, uscita in uso (`720p 30 fps` e livelli di riduzione), tipo di disegno (`WebGL` o `semplice` con il motivo) e fps.
@@ -329,6 +372,7 @@ Chiavi di `localStorage` (finestra principale; sono per-utente e si perdono se s
 - **Dati salvati:** il contenuto di `localStorage` sta in `~/Library/WebKit/<app>/WebsiteData/.../LocalStorage/localstorage.sqlite3` (valori in UTF‑16) su macOS.
 
 **Verificato a mano (macOS, Apple M3 Pro):** riproduzione e sincronia con copia di lavoro, scrub, tutte le transizioni, le schede e le visualizzazioni, titolo e artista, misure del pannello, cambio di profilo e calibrazione.
+**Verificato solo con test automatico (non nell'app):** la pipeline di registrazione MP4 (cattura da `video-out.html` e dialogo non provati a mano).
 **Non verificato:** Windows (WebView2, encoder, D3D), collegamento e scollegamento a caldo di un monitor reale, più formati/codec oltre a H.264, video lunghi e carico prolungato.
 
 ## Limiti noti e cose da verificare
@@ -336,7 +380,7 @@ Chiavi di `localStorage` (finestra principale; sono per-utente e si perdono se s
 - Il deck 0 è sempre A e il deck 1 sempre B: l'assegnazione «diretto» del motore (`xf_assign = 2`) non è gestita.
 - I formati leggibili sono quelli del motore web del sistema (H.264 sempre; altri dipendono dal computer). Per la compatibilità completa serve riprodurre con FFmpeg (domanda aperta 1 del PRD).
 - Niente HDR né 10 bit; tetto di 1080p.
-- La registrazione in MP4 non c'è (si registra solo l'audio).
+- Registrazione MP4: la cattura passa da JPEG nel motore web (costo di CPU) e richiede WebGL; a 1080p 60 fps su computer deboli perde fotogrammi. La sincronia è verificata sul calcolo (test) ma **non misurata con prove di lunga durata né su Windows**. Non c'è un timeout né la gestione dei processi FFmpeg orfani se il programma si chiude male.
 - Le soglie dei profili sono provvisorie e vanno tarate su PC Windows.
 - Il livello delle visualizzazioni è quello del canale **dopo il fader**: abbassando un deck la sua animazione si spegne anche se la musica continua.
 - La perdita del contesto WebGL (`webglcontextlost`) non è gestita.
