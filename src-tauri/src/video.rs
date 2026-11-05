@@ -36,7 +36,8 @@ pub fn video_monitors(app: AppHandle) -> Vec<MonitorInfo> {
 
 /// Apre (o riporta in primo piano) la finestra di uscita sul monitor indicato; `None` = finestra normale sullo schermo corrente.
 #[tauri::command]
-pub fn video_open(app: AppHandle, monitor: Option<usize>) -> Result<(), String> {
+pub async fn video_open(app: AppHandle, monitor: Option<usize>) -> Result<(), String> {
+    // async: su Windows creare una finestra da un comando sincrono (che gira nel thread principale) blocca tutto il programma
     if let Some(w) = app.get_webview_window(WINDOW) {
         let _ = w.close();
     }
@@ -81,7 +82,7 @@ pub fn video_is_open(app: AppHandle) -> bool {
 }
 
 #[tauri::command]
-pub fn video_close(app: AppHandle) {
+pub async fn video_close(app: AppHandle) {
     if let Some(w) = app.get_webview_window(WINDOW) {
         let _ = w.close();
     }

@@ -21,6 +21,17 @@ fn main() {
     let mut b = Session::builder(&env).unwrap().with_intra_threads(threads).unwrap();
     match ep {
         // NNAPI (provato su S26 Ultra: 37 s per segmento contro 2,6 della CPU) richiede la feature "nnapi" di ort
+        // dml: DirectML; SPIN_DML_DEVICE=n sceglie l'adattatore (altrimenti HighPerformance)
+        "dml" => {
+            let mut e = ort::ep::DirectML::default();
+            if let Some(d) = std::env::var("SPIN_DML_DEVICE").ok().and_then(|v| v.parse::<i32>().ok()) {
+                e = e.with_device_id(d);
+            } else {
+                e = e.with_performance_preference(ort::ep::directml::PerformancePreference::HighPerformance);
+            }
+            b = b.with_memory_pattern(false).unwrap().with_parallel_execution(false).unwrap();
+            b = b.with_execution_providers([e.build()]).unwrap();
+        }
         _ => {
             b = b.with_auto_device(ort::session::builder::AutoDevicePolicy::PreferCPU).unwrap();
         }
