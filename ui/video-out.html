@@ -14,18 +14,26 @@
   .card .cov.none { display: none; }
   .card .t { color: #fff; font-size: 6vh; font-weight: 700; line-height: 1.1; text-shadow: 0 .4vh 2vh #000a; }
   .card .a { color: #cfd6e6; font-size: 3.6vh; margin-top: 1.2vh; }
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: none; background: #000; }
+  /* con WebGL i video non si mostrano: sono solo sorgenti per le texture (restano nella pagina, minuscoli, cosi' il motore li decodifica) */
+  .gl #gl { display: block; }
+  .gl video { inset: auto !important; left: 0; top: 0; width: 2px !important; height: 2px !important; opacity: .01 !important; pointer-events: none; }
+  .gl .card { display: none; }
   #title { position: absolute; left: 4vw; bottom: 6vh; color: #fff; text-shadow: 0 2px 12px #000c; font-size: 3.2vh; font-weight: 600; transition: opacity .6s; opacity: 0; max-width: 80vw; }
   #title small { display: block; font-size: 2.2vh; font-weight: 400; color: #e2e8f5; margin-top: .4vh; }
   #hud { position: absolute; left: 8px; top: 8px; margin: 0; padding: 8px 10px; background: #000c; color: #7df0b6; font: 12px/1.45 Consolas, Menlo, monospace; border: 1px solid #1a82b8; border-radius: 6px; white-space: pre; display: none; }
 </style>
 </head>
 <body>
+<canvas id="gl"></canvas>
 <video id="v0" muted playsinline preload="auto"></video>
 <video id="v1" muted playsinline preload="auto"></video>
 <div class="card" id="c0"><div class="bg"></div><div class="box"><img class="cov none"><div><div class="t"></div><div class="a"></div></div></div></div>
 <div class="card" id="c1"><div class="bg"></div><div class="box"><img class="cov none"><div><div class="t"></div><div class="a"></div></div></div></div>
 <div id="title"></div>
 <pre id="hud"></pre>
+<script src="video-trans.js"></script>
+<script src="video-gl.js"></script>
 <script>
 /* PROTOTIPO — uscita video. Il video segue la posizione audio che manda la finestra principale; qui si misura quanto regge.
    H = mostra/nasconde le misure. Esc = chiude. */
@@ -36,13 +44,22 @@ const st = [{ path: "", err: "", maxDrift: 0, seeks: 0 }, { path: "", err: "", m
 const titleEl = document.getElementById("title"), hud = document.getElementById("hud");
 let last = null, lastTitle = "", gotAt = 0;
 
-els.forEach((v, i) => v.addEventListener("error", () => { st[i].err = v.error ? `codice ${v.error.code}: ${v.error.message || "formato non supportato da questo motore"}` : "errore"; }));
+// i video arrivano dal protocollo asset:// (origine diversa dalla pagina): WebGL puo' usarli solo con l'accesso incrociato (CORS)
+els.forEach((v) => { v.crossOrigin = "anonymous"; });
+els.forEach((v, i) => v.addEventListener("error", () => {
+  const s = st[i];
+  if (v.crossOrigin && !s.retried && v.src) {     // ritenta senza accesso incrociato: il video parte, ma senza WebGL (dissolvenza semplice)
+    s.retried = true; v.removeAttribute("crossorigin"); fallbackToDom("video non caricabile con accesso incrociato");
+    const cur = v.src; v.src = cur; return;
+  }
+  s.err = v.error ? `codice ${v.error.code}: ${v.error.message || "formato non supportato da questo motore"}` : "errore";
+}));
 
 function apply(i, d, op) {
   const v = els[i], s = st[i];
   const isVid = d && d.loaded && VEXT.test(d.path || "");
   if (!isVid) { v.style.opacity = 0; if (!v.paused) v.pause(); if (s.path) { s.path = ""; v.removeAttribute("src"); v.load(); } return; }
-  if (s.path !== d.path) { s.path = d.path; s.src = d.path; s.err = ""; s.maxDrift = 0; s.seeks = 0; s.lat = undefined; s.ema = undefined; v.src = T.core.convertFileSrc(d.path); }
+  if (s.path !== d.path) { s.path = d.path; s.src = d.path; s.err = ""; s.maxDrift = 0; s.seeks = 0; s.lat = undefined; s.ema = undefined; s.upT = undefined; s.fresh = false; v.src = T.core.convertFileSrc(d.path); }
   // la copia di lavoro (tutti fotogrammi interi: salti quasi gratuiti) sostituisce l'originale appena e' pronta, nello stesso punto
   if (d.proxy && s.src !== d.proxy) {
     const t = Math.max(0, v.currentTime || 0);
@@ -98,9 +115,65 @@ els.forEach((v, i) => v.addEventListener("seeked", () => {
 }));
 
 const cards = [document.getElementById("c0"), document.getElementById("c1")];
-const art = [{ path: "", art: null }, { path: "", art: null }];
-T.event.listen("video-art", (e) => { art[e.payload.i] = { path: e.payload.path, art: e.payload.art }; lastCard = ["", ""]; });
-let lastCard = ["", ""];
+const art = [{ path: "", art: null, img: null }, { path: "", art: null, img: null }];
+T.event.listen("video-art", (e) => {
+  const { i, path, art: data } = e.payload;
+  art[i] = { path, art: data, img: null };
+  if (data) { const im = new Image(); im.onload = () => { art[i].img = im; cardKey[i] = ""; lastCard[i] = ""; }; im.src = data; }
+  cardKey[i] = ""; lastCard[i] = "";
+});
+let lastCard = ["", ""], cardKey = ["", ""];
+
+// --- scheda del brano (deck solo audio): disegnata su un canvas 2D, che diventa texture; senza WebGL si usa la versione in HTML
+const cardCv = [0, 1].map(() => { const c = document.createElement("canvas"); c.width = 1280; c.height = 720; return c; });
+function wrap(ctx, text, maxW, maxLines) {
+  const words = String(text || "").split(/\s+/).filter(Boolean), lines = []; let cur = "";
+  for (const w of words) {
+    const t = cur ? cur + " " + w : w;
+    if (ctx.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*\S{0,3}$/, "") + "…"; }
+  return lines;
+}
+function drawCard(i, d) {
+  const c = cardCv[i], ctx = c.getContext("2d"), W = c.width, H = c.height, im = art[i].path === d.path ? art[i].img : null;
+  ctx.fillStyle = "#10131c"; ctx.fillRect(0, 0, W, H);
+  if (im) {   // sfondo: la copertina ridotta e ingrandita (sfocata) e scurita
+    const sm = document.createElement("canvas"); sm.width = 32; sm.height = 18;
+    const sc = sm.getContext("2d"), r = Math.max(32 / im.width, 18 / im.height);
+    sc.drawImage(im, (32 - im.width * r) / 2, (18 - im.height * r) / 2, im.width * r, im.height * r);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high"; ctx.drawImage(sm, 0, 0, W, H);
+    ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, W, H);
+  }
+  const textX = im ? 690 : 140, maxW = im ? 520 : W - 280;
+  if (im) {
+    const x = 110, y = 120, z = 480, rad = 18;
+    ctx.save(); ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
+    ctx.beginPath(); ctx.moveTo(x + rad, y); ctx.arcTo(x + z, y, x + z, y + z, rad); ctx.arcTo(x + z, y + z, x, y + z, rad); ctx.arcTo(x, y + z, x, y, rad); ctx.arcTo(x, y, x + z, y, rad); ctx.closePath();
+    ctx.fillStyle = "#1b2030"; ctx.fill(); ctx.shadowColor = "transparent"; ctx.clip();
+    const r = Math.max(z / im.width, z / im.height);
+    ctx.drawImage(im, x + (z - im.width * r) / 2, y + (z - im.height * r) / 2, im.width * r, im.height * r);
+    ctx.restore();
+  }
+  ctx.fillStyle = "#fff"; ctx.textBaseline = "alphabetic"; ctx.font = "700 54px system-ui, -apple-system, Segoe UI, sans-serif";
+  const tl = wrap(ctx, d.title, maxW, 3), lh = 62;
+  ctx.font = "400 34px system-ui, -apple-system, Segoe UI, sans-serif";
+  const al = d.artist ? wrap(ctx, d.artist, maxW, 2) : [];
+  const total = tl.length * lh + (al.length ? 14 + al.length * 42 : 0);
+  let y = (H - total) / 2 + 48;
+  ctx.font = "700 54px system-ui, -apple-system, Segoe UI, sans-serif"; ctx.fillStyle = "#fff";
+  tl.forEach((l) => { ctx.fillText(l, textX, y); y += lh; });
+  ctx.font = "400 34px system-ui, -apple-system, Segoe UI, sans-serif"; ctx.fillStyle = "#cfd6e6"; y += 14 - 8;
+  al.forEach((l) => { ctx.fillText(l, textX, y); y += 42; });
+}
+function ensureCard(i, d) {
+  const key = d.path + "|" + d.title + "|" + d.artist + "|" + (art[i].path === d.path && art[i].img ? 1 : 0);
+  if (key === cardKey[i]) return;
+  cardKey[i] = key; drawCard(i, d);
+  gl.upload(i, cardCv[i], cardCv[i].width, cardCv[i].height);
+}
+// versione in HTML (solo se WebGL non c'e')
 function setCard(i, d, show) {
   const c = cards[i];
   c.style.opacity = show;
@@ -113,6 +186,50 @@ function setCard(i, d, show) {
   c.querySelector(".bg").style.backgroundImage = a ? `url(${a})` : "none";
 }
 
+// --- WebGL: composizione e transizioni
+let GLON = false, gl = null, glReason = "", fps = 0, fpsN = 0, fpsT = performance.now();
+const glc = document.getElementById("gl");
+function sizeGL() {
+  if (!gl) return;
+  const dpr = window.devicePixelRatio || 1;
+  let w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  if (h > 1080) { w = Math.round(w * 1080 / h); h = 1080; }      // tetto di risoluzione (poi lo decide il profilo)
+  gl.resize(Math.max(2, w), Math.max(2, h));
+}
+function initGL() {
+  gl = window.VideoGL ? VideoGL.create(glc) : null;
+  if (!gl) { glReason = (window.VideoGL && VideoGL.error) || "WebGL non disponibile"; return; }
+  GLON = true; document.body.classList.add("gl"); sizeGL();
+}
+function fallbackToDom(why) { GLON = false; glReason = why; document.body.classList.remove("gl"); }
+addEventListener("resize", sizeGL);
+// un fotogramma nuovo per ogni video: si ricarica la texture solo quando serve
+els.forEach((v, i) => { if (v.requestVideoFrameCallback) { const cb = () => { st[i].fresh = true; v.requestVideoFrameCallback(cb); }; v.requestVideoFrameCallback(cb); } });
+function loop(now) {
+  requestAnimationFrame(loop);
+  fpsN++; if (now - fpsT >= 1000) { fps = Math.round(fpsN * 1000 / (now - fpsT)); fpsN = 0; fpsT = now; }
+  if (!GLON || !last) return;
+  const decks = last.decks, has = [false, false];
+  for (let i = 0; i < 2; i++) {
+    const d = decks[i];
+    if (!d.loaded) { gl.clear(i); st[i].upT = undefined; continue; }
+    if (VEXT.test(d.path || "")) {
+      const v = els[i], s = st[i];
+      if (v.readyState >= 2 && v.videoWidth > 0) {
+        const newFrame = v.requestVideoFrameCallback ? s.fresh : v.currentTime !== s.upT;
+        if (newFrame || s.upT === undefined) {
+          if (!gl.upload(i, v, v.videoWidth, v.videoHeight)) { fallbackToDom("texture rifiutata: " + VideoGL.error); return; }
+          s.upT = v.currentTime; s.fresh = false;
+        }
+      }
+      has[i] = s.upT !== undefined;
+    } else { ensureCard(i, d); has[i] = true; }
+  }
+  gl.draw({ t: Math.max(0, Math.min(1, last.xf)), type: last.trans | 0, time: now / 1000, beat: (last.xf < 0.5 ? decks[0] : decks[1]).beat || 0, has });
+}
+initGL();
+requestAnimationFrame(loop);
+
 T.event.listen("video-state", (e) => {
   last = e.payload; gotAt = performance.now();
   const x = last.xf * Math.PI / 2, ga = Math.cos(x), gb = Math.sin(x);
@@ -121,14 +238,14 @@ T.event.listen("video-state", (e) => {
   // dissolvenza fra i deck: un deck solo audio mostra la sua scheda (copertina, titolo, artista); se l'altro deck e' vuoto resta pieno
   const o = [0, 1].map((i) => (last.decks[1 - i].loaded ? op[i] : 1));
   apply(0, last.decks[0], vid[0] ? o[0] : 0); apply(1, last.decks[1], vid[1] ? o[1] : 0);
-  [0, 1].forEach((i) => setCard(i, last.decks[i], last.decks[i].loaded && !vid[i] ? o[i] : 0));
-  // titolo e artista del lato dominante, sopra video e schede
-  const dom = op[0] >= op[1] ? 0 : 1, dd = last.decks[dom];
+  if (!GLON) [0, 1].forEach((i) => setCard(i, last.decks[i], last.decks[i].loaded && !vid[i] ? o[i] : 0));
+  // titolo e artista del lato dominante, sopra i video (le schede li contengono gia')
+  const dom = op[0] >= op[1] ? 0 : 1, dd = last.decks[dom], showT = !!vid[dom];
   const nm = dd?.loaded ? dd.title + "\u0001" + dd.artist : "";
   if (nm !== lastTitle) {
     lastTitle = nm; titleEl.style.opacity = 0;
-    setTimeout(() => { titleEl.innerHTML = ""; if (nm) { titleEl.append(document.createTextNode(dd.title)); if (dd.artist) { const s = document.createElement("small"); s.textContent = dd.artist; titleEl.append(s); } } titleEl.style.opacity = nm && !(cards[dom].style.opacity > 0.5) ? 1 : 0; }, 350);
-  }
+    setTimeout(() => { titleEl.innerHTML = ""; if (nm) { titleEl.append(document.createTextNode(dd.title)); if (dd.artist) { const sm = document.createElement("small"); sm.textContent = dd.artist; titleEl.append(sm); } } titleEl.style.opacity = nm && showT ? 1 : 0; }, 350);
+  } else titleEl.style.opacity = nm && showT ? 1 : 0;
 });
 
 setInterval(() => {
@@ -136,7 +253,7 @@ setInterval(() => {
   hud.textContent = [0, 1].map((i) => {
     const v = els[i], s = st[i], q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : {};
     return `deck ${i + 1}: ${s.path ? s.path.split(/[\\/]/).pop() : "—"}\n  ${v.videoWidth}x${v.videoHeight} · fotogrammi saltati ${q.droppedVideoFrames ?? "?"}/${q.totalVideoFrames ?? "?"} · sfasamento ora ${((s.ema ?? 0) * 1000).toFixed(0)} ms (max ${(s.maxDrift * 1000).toFixed(0)}) · velocita' ${(s.rate || 0).toFixed(3)} · copia di lavoro ${s.src && s.src !== s.path ? "sì" : "no"} · riallineamenti ${s.seeks} · ritardo salto ${((s.lat ?? 0) * 1000).toFixed(0)} ms${s.err ? "\n  ERRORE " + s.err : ""}`;
-  }).join("\n") + `\nmessaggi dal programma: ${last ? "ok" : "nessuno"}`;
+  }).join("\n") + `\ndisegno: ${GLON ? "WebGL" : "semplice (" + (glReason || "?") + ")"} · transizione: ${(window.VIDEO_TRANS || [])[(last && last.trans) | 0] || "—"} · ${fps} fps · messaggi dal programma: ${last ? "ok" : "nessuno"}`;
 }, 500);
 document.addEventListener("keydown", (e) => {
   if (e.key === "h" || e.key === "H") hud.style.display = hud.style.display === "none" || !hud.style.display ? "block" : "none";

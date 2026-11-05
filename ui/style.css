@@ -808,3 +808,7 @@ body.cockpit .fxsel .pwr { height: 30px; } body.cockpit .fxsel .pwr i { width: 2
 :is(body.mob, body.cockpit) #toast, :is(body.mob, body.cockpit) #toast2 { pointer-events: none; max-width: 86vw; } body.mob #toast, body.mob #toast2 { bottom: 64px; }
 :is(body.mob, body.cockpit) .ptabs { touch-action: pan-y; } /* lo swipe a destra che chiude il cassetto arriva al gesto invece di diventare uno scorrimento */
 body.cockpit .uibtn b { display: none; } body.cockpit .lib-handle { min-width: 140px; } /* B: MODO con la sola lettera, come nei modelli verticali: la CPU non finisce sotto la maniglia */
+
+/* modalita' VIDEO: menu delle transizioni, visibile solo quando la modalita' e' attiva */
+.vsel { display: none; height: 30px; max-width: 150px; margin-right: 6px; background: #101624; color: var(--dim); border: 1px solid #263148; border-radius: 8px; font-size: 12px; padding: 0 6px; }
+body.vmode .vsel { display: inline-block; color: var(--accent); border-color: var(--accent); }

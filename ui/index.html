@@ -29,6 +29,7 @@
   <div class="topr">
     <div id="recInd" hidden title="Registrazione in corso: clic per fermarla"><i></i><b>REC</b><span id="recTime">00:00</span></div>
     <div class="cpu" title="Carico del thread audio: sopra il 70% (giallo) l'audio rischia di scattare, sopra il 90% (rosso) scatta"><span>CPU</span><i id="cpuBar"><b></b></i><em id="cpuPct">0%</em></div>
+    <select id="vtrans" class="vsel" title="Transizione video: l'effetto con cui il crossfader passa da un video all'altro"></select>
     <button id="videoBtn" class="mbtn" title="VIDEO: la modalità si attiva da sola quando carichi un video su un deck. Clic = forza acceso / spento / automatica. Clic destro = scegli lo schermo (HDMI, DisplayPort, proiettore)">VIDEO</button>
     <div class="clock" id="clock">--:--</div>
     <div class="hp" title="Cuffie: accendi il preascolto (PFL) dei canali e dosa fra un lato e l'altro con CUE MIX">
@@ -288,6 +289,7 @@ SOFTWARE.</pre></details>
 <div id="ctx" hidden></div>
 <div id="ghost" hidden></div>
 <script src="app.js"></script>
+<script src="video-trans.js"></script>
 <script src="video.js"></script>
 <script src="midi.js"></script>
 <script src="automix.js"></script>
