@@ -11,8 +11,23 @@
   const hasVideo = () => decks.slice(0, 2).some((d) => d.snap?.loaded && VEXT.test(d.snap.path || ""));
   const wanted = () => (manual === null ? hasVideo() : manual);
 
+  const proxies = {};      // percorso del video -> percorso della copia di lavoro (quando e' pronta) o "" se in preparazione / non riuscita
+  const askProxy = (path) => {
+    if (path in proxies) return;
+    proxies[path] = "";
+    inv("video_proxy", { path }).then((p) => { proxies[path] = p; }).catch((e) => { console.warn("video_proxy", e); });
+  };
+  const cleanup = () => { inv("video_cleanup", { keep: Object.values(proxies).filter(Boolean).filter((p, i, a) => decks.slice(0, 2).some((d) => proxies[d.snap?.path] === p)) }).catch(() => {}); };
+  inv("video_cleanup", { keep: [] }).catch(() => {});   // all'avvio: copie rimaste da una chiusura anomala
+
   async function sync() {
     const w = wanted();
+    if (w) decks.slice(0, 2).forEach((d) => { if (d.snap?.loaded && VEXT.test(d.snap.path || "")) askProxy(d.snap.path); });
+    // copie dei video non piu' sui deck: si cancellano
+    const used = new Set(decks.slice(0, 2).map((d) => d.snap?.path).filter(Boolean));
+    let changed = false;
+    for (const k of Object.keys(proxies)) if (!used.has(k)) { delete proxies[k]; changed = true; }
+    if (changed) cleanup();
     btn.classList.toggle("on", w);
     if (w && !open && !busy) {
       busy = true;
@@ -30,7 +45,7 @@
     const s = {
       xf: window.__lastXf ?? 0.5,
       decks: decks.slice(0, 2).map((d, i) => ({
-        held: d.scrub != null || !!d.snap?.held, loaded: !!d.snap?.loaded, path: d.snap?.path || "", name: d.snap?.name || "", playing: !!d.snap?.playing,
+        proxy: proxies[d.snap?.path] || "", held: d.scrub != null || !!d.snap?.held, loaded: !!d.snap?.loaded, path: d.snap?.path || "", name: d.snap?.name || "", playing: !!d.snap?.playing,
         // come per le onde: il suono esce dal dispositivo con un ritardo (buffer), quindi anche il video va ritardato di tanto
         pos: smoothPos(i) - (d.scrub == null && d.snap?.playing ? (audioLatency + visOffset) * (1 + (d.snap?.tempo_pct || 0) / 100) : 0), rate: 1 + (d.snap?.tempo_pct || 0) / 100, assign: d.snap?.xf_assign ?? i,
       })),

@@ -61,3 +61,79 @@ pub fn video_close(app: AppHandle) {
         let _ = w.close();
     }
 }
+
+// ---------------------------------------------------------------- copia di lavoro per lo scratch
+// Nei file comuni c'e' un fotogramma intero ogni qualche secondo: ogni salto (scratch, allineamento) costa centinaia di ms.
+// Si crea in sottofondo una copia 480p con tutti i fotogrammi interi (salti quasi gratuiti) in una cartella temporanea;
+// si cancella quando il video non e' piu' su nessun deck e, per le chiusure anomale, all'avvio.
+
+fn proxy_dir() -> std::path::PathBuf {
+    std::env::temp_dir().join("spinlab_video")
+}
+
+fn proxy_name(path: &str) -> String {
+    let (size, mtime) = std::fs::metadata(path)
+        .map(|m| (m.len(), m.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |d| d.as_secs())))
+        .unwrap_or((0, 0));
+    let mut h: u64 = 0xcbf29ce484222325;
+    for b in path.to_lowercase().bytes().chain(size.to_le_bytes()).chain(mtime.to_le_bytes()) {
+        h = (h ^ b as u64).wrapping_mul(0x100000001b3);
+    }
+    format!("{h:016x}.mp4")
+}
+
+/// Crea (o ritrova) la copia di lavoro di un video e ne ritorna il percorso. Prova gli encoder hardware del sistema prima di quello software.
+#[tauri::command]
+pub async fn video_proxy(path: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        let dir = proxy_dir();
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        let out = dir.join(proxy_name(&path));
+        if std::fs::metadata(&out).map_or(false, |m| m.len() > 0) {
+            return Ok(out.to_string_lossy().into_owned());
+        }
+        let part = out.with_extension("part.mp4");
+        let encoders: [&[&str]; 5] = [
+            &["-c:v", "h264_videotoolbox", "-b:v", "3M"],
+            &["-c:v", "h264_nvenc", "-b:v", "3M"],
+            &["-c:v", "h264_qsv", "-b:v", "3M"],
+            &["-c:v", "h264_amf", "-b:v", "3M"],
+            &["-c:v", "libx264", "-preset", "ultrafast", "-crf", "26"],
+        ];
+        for enc in encoders {
+            let mut cmd = std::process::Command::new(crate::decode::ffmpeg_path());
+            cmd.args(["-v", "error", "-y", "-i", &path, "-map", "0:v:0", "-an", "-vf", "scale=-2:480", "-g", "1", "-pix_fmt", "yuv420p"])
+                .args(enc)
+                .args(["-movflags", "+faststart", "-f", "mp4"])
+                .arg(&part)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null());
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                cmd.creation_flags(0x0800_0000);
+            }
+            if cmd.status().map_or(false, |s| s.success()) && std::fs::metadata(&part).map_or(false, |m| m.len() > 0) {
+                std::fs::rename(&part, &out).map_err(|e| e.to_string())?;
+                return Ok(out.to_string_lossy().into_owned());
+            }
+            let _ = std::fs::remove_file(&part);
+        }
+        Err("impossibile creare la copia di lavoro del video".into())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Cancella le copie di lavoro che non servono piu' (`keep` = quelle ancora in uso; vuoto = tutte).
+#[tauri::command]
+pub fn video_cleanup(keep: Vec<String>) {
+    if let Ok(rd) = std::fs::read_dir(proxy_dir()) {
+        for e in rd.flatten() {
+            let p = e.path().to_string_lossy().into_owned();
+            if !keep.contains(&p) {
+                let _ = std::fs::remove_file(e.path());
+            }
+        }
+    }
+}
