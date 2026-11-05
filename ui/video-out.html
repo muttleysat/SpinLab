@@ -19,6 +19,7 @@
   .gl #gl { display: block; }
   .gl video { inset: auto !important; left: 0; top: 0; width: 2px !important; height: 2px !important; opacity: .01 !important; pointer-events: none; }
   .gl .card { display: none; }
+  #shade { position: absolute; left: 0; right: 0; bottom: 0; height: 24vh; background: linear-gradient(to top, rgba(0,0,0,.6), rgba(0,0,0,0)); opacity: 0; transition: opacity .6s; pointer-events: none; }
   #title { position: absolute; left: 4vw; bottom: 6vh; color: #fff; text-shadow: 0 2px 12px #000c; font-size: 3.2vh; font-weight: 600; transition: opacity .6s; opacity: 0; max-width: 80vw; }
   #title small { display: block; font-size: 2.2vh; font-weight: 400; color: #e2e8f5; margin-top: .4vh; }
   #hud { position: absolute; left: 8px; top: 8px; margin: 0; padding: 8px 10px; background: #000c; color: #7df0b6; font: 12px/1.45 Consolas, Menlo, monospace; border: 1px solid #1a82b8; border-radius: 6px; white-space: pre; display: none; }
@@ -30,6 +31,7 @@
 <video id="v1" muted playsinline preload="auto"></video>
 <div class="card" id="c0"><div class="bg"></div><div class="box"><img class="cov none"><div><div class="t"></div><div class="a"></div></div></div></div>
 <div class="card" id="c1"><div class="bg"></div><div class="box"><img class="cov none"><div><div class="t"></div><div class="a"></div></div></div></div>
+<div id="shade"></div>
 <div id="title"></div>
 <pre id="hud"></pre>
 <script src="video-trans.js"></script>
@@ -255,6 +257,8 @@ T.event.listen("video-state", (e) => {
     lastTitle = nm; titleEl.style.opacity = 0;
     setTimeout(() => { titleEl.innerHTML = ""; if (nm) { titleEl.append(document.createTextNode(dd.title)); if (dd.artist) { const sm = document.createElement("small"); sm.textContent = dd.artist; titleEl.append(sm); } } titleEl.style.opacity = nm && showT ? 1 : 0; }, 350);
   } else titleEl.style.opacity = nm && showT ? 1 : 0;
+  // sulle visualizzazioni una leggera ombra in basso tiene leggibile il titolo anche con le animazioni chiare
+  document.getElementById("shade").style.opacity = nm && showT && !vid[dom] ? 1 : 0;
 });
 
 setInterval(() => {
