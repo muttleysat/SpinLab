@@ -18,6 +18,14 @@
     try { const v = localStorage.getItem("spinlab.video_trans"); if (v !== null && +v < VIDEO_TRANS.length) sel.value = v; } catch (e) {}
     sel.onchange = () => { try { localStorage.setItem("spinlab.video_trans", sel.value); } catch (e) {} };
   }
+  const vsel = document.getElementById("vvis");
+  if (vsel && window.VIDEO_VIS) {
+    vsel.innerHTML = VIDEO_VIS.map((n, i) => `<option value="${i}">${n}</option>`).join("");
+    try { const v = localStorage.getItem("spinlab.video_vis"); if (v !== null && +v < VIDEO_VIS.length) vsel.value = v; } catch (e) {}
+    vsel.onchange = () => { try { localStorage.setItem("spinlab.video_vis", vsel.value); } catch (e) {} };
+  }
+  // tonalita' Camelot (1A..12B) -> colore base delle visualizzazioni
+  const hueOf = (k) => { const n = parseInt(k, 10); return n >= 1 && n <= 12 ? (n - 1) / 12 : 0.6; };
   const proxies = {};      // percorso del video -> percorso della copia di lavoro (quando e' pronta) o "" se in preparazione / non riuscita
   const askProxy = (path) => {
     if (path in proxies) return;
@@ -59,8 +67,9 @@
     const s = {
       xf: window.__lastXf ?? 0.5,
       trans: sel ? +sel.value : 0,
+      vis: vsel ? +vsel.value : 0,
       decks: decks.slice(0, 2).map((d, i) => ({
-        proxy: proxies[d.snap?.path] || "", beat: d.snap?.beat_phase ?? 0, held: d.scrub != null || !!d.snap?.held, loaded: !!d.snap?.loaded, title: d.title_ || d.snap?.name || "", artist: d.meta?.artist || "", path: d.snap?.path || "", name: d.snap?.name || "", playing: !!d.snap?.playing,
+        proxy: proxies[d.snap?.path] || "", beat: d.snap?.beat_phase ?? 0, bpm: d.snap?.bpm_now || 0, level: Math.max(d.snap?.level_l || 0, d.snap?.level_r || 0), hue: hueOf(d.snap?.key_now),  held: d.scrub != null || !!d.snap?.held, loaded: !!d.snap?.loaded, title: d.title_ || d.snap?.name || "", artist: d.meta?.artist || "", path: d.snap?.path || "", name: d.snap?.name || "", playing: !!d.snap?.playing,
         // come per le onde: il suono esce dal dispositivo con un ritardo (buffer), quindi anche il video va ritardato di tanto
         pos: smoothPos(i) - (d.scrub == null && d.snap?.playing ? (audioLatency + visOffset) * (1 + (d.snap?.tempo_pct || 0) / 100) : 0), rate: 1 + (d.snap?.tempo_pct || 0) / 100, assign: d.snap?.xf_assign ?? i,
       })),

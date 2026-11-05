@@ -34,6 +34,7 @@
 <pre id="hud"></pre>
 <script src="video-trans.js"></script>
 <script src="video-gl.js"></script>
+<script src="video-vis.js"></script>
 <script>
 /* PROTOTIPO — uscita video. Il video segue la posizione audio che manda la finestra principale; qui si misura quanto regge.
    H = mostra/nasconde le misure. Esc = chiude. */
@@ -223,11 +224,19 @@ function loop(now) {
         }
       }
       has[i] = s.upT !== undefined;
+    } else if (vis && (last.vis | 0) > 0) {
+      // deck senza video con una visualizzazione scelta: si disegna a tempo con il battito e il livello del deck
+      const beatIdx = d.pos * (d.bpm || 0) / 60;
+      vis.render({ scene: (last.vis | 0) - 1, time: now / 1000, beat: d.beat || 0, bar: ((beatIdx % 4) + 4) % 4 / 4, level: d.level, hue: d.hue });
+      if (!gl.upload(i, vis.canvas, vis.w, vis.h)) { fallbackToDom("texture rifiutata: " + VideoGL.error); return; }
+      has[i] = true;
     } else { ensureCard(i, d); has[i] = true; }
   }
   gl.draw({ t: Math.max(0, Math.min(1, last.xf)), type: last.trans | 0, time: now / 1000, beat: (last.xf < 0.5 ? decks[0] : decks[1]).beat || 0, has });
 }
-initGL();
+let vis = null;
+function initVis() { vis = window.VideoVis ? VideoVis.create(960, 540) : null; }
+initGL(); initVis();
 requestAnimationFrame(loop);
 
 T.event.listen("video-state", (e) => {
@@ -240,7 +249,7 @@ T.event.listen("video-state", (e) => {
   apply(0, last.decks[0], vid[0] ? o[0] : 0); apply(1, last.decks[1], vid[1] ? o[1] : 0);
   if (!GLON) [0, 1].forEach((i) => setCard(i, last.decks[i], last.decks[i].loaded && !vid[i] ? o[i] : 0));
   // titolo e artista del lato dominante, sopra i video (le schede li contengono gia')
-  const dom = op[0] >= op[1] ? 0 : 1, dd = last.decks[dom], showT = !!vid[dom];
+  const dom = op[0] >= op[1] ? 0 : 1, dd = last.decks[dom], showT = !!vid[dom] || (GLON && !!vis && (last.vis | 0) > 0 && !!dd?.loaded);
   const nm = dd?.loaded ? dd.title + "\u0001" + dd.artist : "";
   if (nm !== lastTitle) {
     lastTitle = nm; titleEl.style.opacity = 0;
@@ -253,7 +262,7 @@ setInterval(() => {
   hud.textContent = [0, 1].map((i) => {
     const v = els[i], s = st[i], q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : {};
     return `deck ${i + 1}: ${s.path ? s.path.split(/[\\/]/).pop() : "—"}\n  ${v.videoWidth}x${v.videoHeight} · fotogrammi saltati ${q.droppedVideoFrames ?? "?"}/${q.totalVideoFrames ?? "?"} · sfasamento ora ${((s.ema ?? 0) * 1000).toFixed(0)} ms (max ${(s.maxDrift * 1000).toFixed(0)}) · velocita' ${(s.rate || 0).toFixed(3)} · copia di lavoro ${s.src && s.src !== s.path ? "sì" : "no"} · riallineamenti ${s.seeks} · ritardo salto ${((s.lat ?? 0) * 1000).toFixed(0)} ms${s.err ? "\n  ERRORE " + s.err : ""}`;
-  }).join("\n") + `\ndisegno: ${GLON ? "WebGL" : "semplice (" + (glReason || "?") + ")"} · transizione: ${(window.VIDEO_TRANS || [])[(last && last.trans) | 0] || "—"} · ${fps} fps · messaggi dal programma: ${last ? "ok" : "nessuno"}`;
+  }).join("\n") + `\nvisualizzazione: ${(window.VIDEO_VIS || [])[(last && last.vis) | 0] || "—"}${vis ? "" : " (non disponibile: " + (window.VideoVis && VideoVis.error) + ")"} · disegno: ${GLON ? "WebGL" : "semplice (" + (glReason || "?") + ")"} · transizione: ${(window.VIDEO_TRANS || [])[(last && last.trans) | 0] || "—"} · ${fps} fps · messaggi dal programma: ${last ? "ok" : "nessuno"}`;
 }, 500);
 document.addEventListener("keydown", (e) => {
   if (e.key === "h" || e.key === "H") hud.style.display = hud.style.display === "none" || !hud.style.display ? "block" : "none";
