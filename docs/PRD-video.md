@@ -68,7 +68,7 @@ Fonte: bozza precedente del PRD; da confermare (`[PENDING INPUT]` per la validaz
 | FR-11 | Il sistema deve adattare la qualità dell'uscita durante il set: scendere di livello se i fotogrammi al secondo calano e risalire quando il carico cala, avvisando l'utente. | Fatto |
 | FR-12 | Il sistema deve registrare il set in MP4 (H.264 + AAC), con l'immagine dell'uscita video e l'audio del master sincronizzati (sfasamento massimo 40 ms) e scelta di risoluzione e fotogrammi al secondo; la registrazione audio WAV/MP3 deve restare invariata. | Fatto (sincronia da misurare con prove di lunga durata) |
 | FR-13 | Il sistema deve riprodurre la massima varietà di formati e codec video (H.264, H.265, VP8/VP9, AV1, ProRes, DNxHD, MJPEG, HAP, immagini animate, canale alpha), con decodifica hardware quando disponibile e conversione automatica dei file troppo pesanti. | Parziale (H.264 provato; il resto dipende dal motore web del sistema) |
-| FR-14 | Il sistema deve permettere di scollegare la miscela video dal crossfader e assegnarla a un controllo separato (cursore a schermo o controllo MIDI). | Da fare |
+| FR-14 | Il sistema deve permettere di scegliere se la miscela video segue il crossfader (predefinito) o i fader del volume dei due canali (crossfader ignorato), per chi mixa con i canali. | Fatto |
 | FR-15 | Il sistema deve conservare gli stem in una cartella centrale configurabile, abbinati ai file per impronta del contenuto, con un indice nel database (sapere quali brani hanno gli stem, lo spazio occupato, ripulire gli orfani). | Da fare (proposta non ancora approvata) |
 
 ## 5. Requisiti non funzionali
@@ -120,7 +120,7 @@ Fonte: bozza precedente del PRD; da confermare (`[PENDING INPUT]` per la validaz
 | FR-11 | Adattamento durante il set | JTBD-05 |
 | FR-12 | Registrazione MP4 | JTBD-06 |
 | FR-13 | Massima compatibilità dei formati | JTBD-08 |
-| FR-14 | Fader video separato | JTBD-02 |
+| FR-14 | Miscela video che segue crossfader o fader dei canali | JTBD-02 |
 | FR-15 | Cartella centrale degli stem | JTBD-07 |
 
 **JTBD → FR**
@@ -165,7 +165,7 @@ Fonte: bozza precedente del PRD; da confermare (`[PENDING INPUT]` per la validaz
 
 **MVP (realizzato):** video sui deck con audio e griglia; sincronia; uscita su schermo con scelta; dissolvenza col crossfader (FR-01, FR-02, FR-05, FR-06 base).
 
-**Nice-to-Have:** fader video separato (FR-14); cartella centrale degli stem (FR-15); riproduzione con FFmpeg per la compatibilità totale (FR-13); video 4K e HDR (fuori ambito oggi).
+**Nice-to-Have:** cartella centrale degli stem (FR-15); riproduzione con FFmpeg per la compatibilità totale (FR-13); video 4K e HDR (fuori ambito oggi).
 
 **Roadmap per fasi**
 
@@ -176,7 +176,7 @@ Fonte: bozza precedente del PRD; da confermare (`[PENDING INPUT]` per la validaz
 | 2 — Scratch e stem | FR-03 | Fatto; FR-15 da fare |
 | 3 — Transizioni e visualizzazioni | FR-06 (13 transizioni), FR-07 | Fatto |
 | 4 — Registrazione | FR-12 | Fatto |
-| 5 — Consolidamento | Prove su Windows, taratura delle soglie, riproduzione con FFmpeg (FR-13), FR-14, FR-15, restringere `asset://` | Da fare |
+| 5 — Consolidamento | Prove su Windows, taratura delle soglie, riproduzione con FFmpeg (FR-13), FR-15, restringere `asset://` | Da fare |
 
 ## 10. Vincoli normativi e obbligatori
 

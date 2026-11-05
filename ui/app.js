@@ -244,6 +244,7 @@ function deckHTML(i) {
       <button class="rbtn2" data-r="range" title="Intervallo del pitch: clic per cambiarlo (4, 8, 16, 50, 100%)">±8</button>
       <div class="pf"><div class="fader v noFill" data-r="tempo" title="Pitch · doppio clic per azzerare"></div></div>
       <div class="pval" data-r="tempoval">0.0%</div>
+      <button class="rbtn2" data-r="tzero" title="Riporta il pitch a 0 in modo graduale (0,5% al secondo, senza scatti): un clic avvia, un altro clic lo ferma dove si trova. Muovere il pitch a mano lo interrompe">→0</button>
       <button class="rbtn2" data-r="sync" title="SYNC: tempo e fase seguono il deck guida. Resta acceso anche cambiando brano, finché non lo spegni (o muovi a mano il pitch di questo deck)">SYNC</button>
       <button class="rbtn2 rg" data-r="keybtn" title="Tonalità: key lock, Camelot, semitoni">KEY</button>
     </div>
@@ -311,7 +312,7 @@ function bindDeck(i) {
     el, strip: st, r, sr,
     art: r("art"), title: r("title"), artist: r("artist"), stm: r("stm"), key: r("key"), bpm: r("bpm"), remain: r("remain"), time: r("time"), beat: r("beat"),
     play: r("play"), cue: r("cue"), sync: r("sync"), pfl: r("pfl"), pfl2: sr("pfl2"), range: r("range"), tempo: r("tempo"), tempoval: r("tempoval"),
-    lsz: r("lsz"), hot: $$("[data-hot]", el), modebtn: r("mode"), pval: r("pval"), pdn: r("pdn"), pup: r("pup"), qbtn: r("qbtn"), qpill: r("qpill"), slipbtn: r("slipbtn"), prow: $(".prow", el), grid: r("grid"), anchor: r("anchor"), meterL: sr("meterL"), meterR: sr("meterR"), eject: r("eject"), vol: sr("vol"), fxkind: sr("fxkind"), fxon: sr("fxon"),
+    lsz: r("lsz"), hot: $$("[data-hot]", el), modebtn: r("mode"), pval: r("pval"), pdn: r("pdn"), pup: r("pup"), qbtn: r("qbtn"), qpill: r("qpill"), slipbtn: r("slipbtn"), prow: $(".prow", el), grid: r("grid"), anchor: r("anchor"), tzero: r("tzero"), meterL: sr("meterL"), meterR: sr("meterR"), eject: r("eject"), vol: sr("vol"), fxkind: sr("fxkind"), fxon: sr("fxon"),
     knobs: $$("[data-k]", st), plat: $("canvas.plat", el), zoomCv: $("canvas.zoom", el), over: $("canvas.over", el),
     vzoom: $(`canvas.vzoom[data-i="${i}"]`), vslot: $(".vslot", el), kcol: $(".kcol", st),
   };
@@ -321,6 +322,8 @@ function bindDeck(i) {
   ["pointerup", "pointerleave"].forEach((ev) => D.cue.addEventListener(ev, () => dc(i, "cue_release")));
   // SYNC e' un interruttore per deck: puo' essere acceso su tutti i deck e resta acceso (anche cambiando brano) finche' non lo spegni
   D.sync.onclick = () => dc(i, d.snap?.sync ? "sync_off" : "sync");
+  // rientro graduale del pitch verso 0: un clic avvia, un altro lo ferma dove si trova
+  D.tzero.onclick = () => dc(i, "tempo_ramp", d.snap?.tempo_ramp ? 0 : 1);
   const pfl = () => dc(i, "pfl", d.snap?.pfl ? 0 : 1);
   D.pfl.onclick = pfl; D.pfl2.onclick = pfl;
   D.eject.onclick = () => ejectDeck(i);
@@ -923,6 +926,7 @@ async function poll() {
   try {
     const tq = performance.now();
     const s = await inv("get_state");
+    window.__lastXf = s.crossfader;      // posizione del crossfader: la usa anche la miscela video (video.js)
     perfPush(perf.ipc, performance.now() - tq);
     if (!splash.ok.audio) splashStep("audio");
     const now = performance.now();
@@ -956,6 +960,8 @@ function updateDeckUI(i, s) {
   if (D._playing !== s.playing) { D._playing = s.playing; D.play.innerHTML = s.playing ? IC.pause : IC.play; }
   D.play.classList.toggle("on", s.playing);
   D.sync.classList.toggle("on", !!s.sync);
+  D.tzero.classList.toggle("on", !!s.tempo_ramp);
+  D.tzero.disabled = !s.tempo_ramp && Math.abs(s.tempo_pct) < 0.05;     // niente da riportare: il pitch e' gia' a 0
   D.pfl.classList.toggle("on", !!s.pfl); D.pfl2.classList.toggle("on", !!s.pfl);
   $(`#hpBtns button[data-pfl="${i}"]`).classList.toggle("on", !!s.pfl);
   setText(D.range, "±" + Math.round(s.range_pct));
@@ -1071,7 +1077,7 @@ $$("#nav button").forEach((b) => (b.onclick = () => {
     document.body.classList.toggle("view-lib", n === "lib");
     $$("#nav button").forEach((x) => x.classList.toggle("on", x === b || (x.dataset.nav !== "lib" && x.dataset.nav !== "mixer" && false)));
     requestAnimationFrame(resizeCanvases);
-  } else if (n === "rec") { if (recOn) stopRecording(); else openRecDialog(); }
+  } else if (n === "rec") { if (recOn || (window.VideoRec && VideoRec.active())) stopRecording(); else openRecDialog(); }
   else if (n === "settings") openAudioSettings();
 }));
 
@@ -1103,6 +1109,24 @@ $("#recPick").onclick = async () => {
   try { localStorage.setItem("spinlab.rec_dir", p.replace(/[\\/][^\\/]*$/, "")); } catch (e) {}
 };
 $("#recCancel").onclick = () => $("#recDlg").close();
+// Pulsante ● in alto: dopo la prima registrazione avvia subito con le impostazioni scelte (formato, qualita', cartella) e un nome automatico.
+// Se qualcosa manca o la partenza fallisce, si apre la finestra RECORD con il messaggio.
+async function quickRecord() {
+  let fmt = null, dir = null, vq = "profile", ready = false;
+  try { fmt = localStorage.getItem("spinlab.rec_fmt"); dir = localStorage.getItem("spinlab.rec_dir"); vq = localStorage.getItem("spinlab.rec_vq") || "profile"; ready = localStorage.getItem("spinlab.rec_ready") === "1"; } catch (e) {}
+  if (!ready || !fmt || !dir) return openRecDialog();
+  const d = new Date(), z = (n) => String(n).padStart(2, "0"), ext = fmt === "mp4" ? "mp4" : fmt.startsWith("mp3") ? "mp3" : "wav";
+  const path = `${dir.replace(/[\\/]$/, "")}${dir.includes("\\") ? "\\" : "/"}SpinLab ${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}.${z(d.getMinutes())}.${z(d.getSeconds())}.${ext}`;
+  try {
+    if (fmt === "mp4") { toast2("Avvio della registrazione con video…"); await VideoRec.start(path, vq); }
+    else await inv("rec_start", { path, format: fmt });
+    toast2("Registrazione avviata: " + path);
+  } catch (e) {
+    openRecDialog();
+    $("#recErr").textContent = String((e && e.message) || e);
+  }
+}
+
 $("#recGo").onclick = async () => {
   const go = $("#recGo"); go.disabled = true;
   try {
@@ -1111,6 +1135,7 @@ $("#recGo").onclick = async () => {
       $("#recErr").textContent = "Avvio dell'uscita video…";
       await VideoRec.start($("#recPath").value, $("#recVq").value);
     } else await inv("rec_start", { path: $("#recPath").value, format: $("#recFmt").value });
+    try { localStorage.setItem("spinlab.rec_fmt", $("#recFmt").value); localStorage.setItem("spinlab.rec_ready", "1"); } catch (e) {}   // da ora RECORD parte subito
     $("#recDlg").close();
   } catch (e) { $("#recErr").textContent = String(e && e.message || e); }
   go.disabled = !$("#recPath").value;
@@ -1127,7 +1152,7 @@ async function stopRecording() {
     toast2(`Registrazione salvata: ${r.path} (${mmss(r.secs)}, ${(r.bytes / 1048576).toFixed(1)} MB)` + (r.dropped ? ` — attenzione: ${r.dropped} blocchi persi, il disco era troppo lento` : ""));
   } catch (e) { toast(String(e && e.message || e)); }
 }
-$("#recInd").onclick = stopRecording;
+$("#recInd").onclick = () => ((recOn || (window.VideoRec && VideoRec.active())) ? stopRecording() : quickRecord());
 function toast2(msg) { // messaggio di conferma (non e' un errore)
   let t = document.getElementById("toast2");
   if (!t) { t = document.createElement("div"); t.id = "toast2"; document.body.appendChild(t); }
@@ -1135,7 +1160,7 @@ function toast2(msg) { // messaggio di conferma (non e' un errore)
 }
 function updateRec(s) {
   recOn = !!s.rec_on;
-  const ind = $("#recInd"); ind.hidden = !recOn;
+  const ind = $("#recInd"); ind.classList.toggle("idle", !recOn);
   if (recOn) { const t = Math.floor(s.rec_secs), h = Math.floor(t / 3600); setText($("#recTime"), (h ? h + ":" : "") + String(Math.floor(t / 60) % 60).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0")); }
   const nb = $('#nav button[data-nav="rec"]'); nb.classList.toggle("recording", recOn); setText(nb, recOn ? "■ STOP REC" : "RECORD");
 }
@@ -1860,7 +1885,7 @@ async function checkUpdates(silent) {
 }
 async function installUpdate() {
   const u = upd.update; if (!u || upd.busy) return;
-  const playing = decks.some((d) => d.snap?.playing), rec = !!$("#recInd") && !$("#recInd").hidden;
+  const playing = decks.some((d) => d.snap?.playing), rec = recOn;
   if ((playing || rec) && !confirm((rec ? "La registrazione è in corso. " : "Un brano sta suonando. ") + "L'installazione chiude SpinLab e interrompe l'audio. Continuare?")) return;
   upd.busy = true; $("#abUpd").disabled = true;
   let tot = 0, got = 0;

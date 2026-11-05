@@ -43,16 +43,41 @@ pub fn video_open(app: AppHandle, monitor: Option<usize>) -> Result<(), String> 
     let mut b = WebviewWindowBuilder::new(&app, WINDOW, WebviewUrl::App("video-out.html".into()))
         .title("SpinLab — Uscita video")
         .inner_size(960.0, 540.0)
-        .decorations(true);
+        .decorations(true)
+        // in finestra resta sopra le altre: il motore web non disegna una finestra completamente coperta (niente video, niente registrazione)
+        .always_on_top(true);
     if let Some(i) = monitor {
         if let Some(m) = app.available_monitors().map_err(|e| e.to_string())?.get(i) {
             let scale = m.scale_factor();
             let (p, s) = (m.position().to_logical::<f64>(scale), m.size().to_logical::<f64>(scale));
-            b = b.position(p.x, p.y).inner_size(s.width, s.height).decorations(false).fullscreen(true);
+            b = b.position(p.x, p.y).inner_size(s.width, s.height).decorations(false).fullscreen(true).always_on_top(false);
         }
     }
     b.build().map_err(|e| e.to_string())?;
     Ok(())
+}
+
+/// Scrive una riga nel registro di diagnostica del video (`spinlab_video/video.log`, in testo, solo sul computer): serve a capire dove si ferma
+/// un'operazione (apertura dell'uscita, registrazione...) senza dover chiedere schermate. Si azzera quando supera 1 MB.
+#[tauri::command]
+pub fn video_log(msg: String) {
+    use std::io::Write;
+    let dir = proxy_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    let f = dir.join("video.log");
+    if std::fs::metadata(&f).map_or(false, |m| m.len() > 1_000_000) {
+        let _ = std::fs::remove_file(&f);
+    }
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&f) {
+        let ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis());
+        let _ = writeln!(file, "{}.{:03} {}", ms / 1000, ms % 1000, msg);
+    }
+}
+
+/// L'uscita video e' aperta? Serve al programma principale: l'utente puo' averla chiusa con la x o con Esc.
+#[tauri::command]
+pub fn video_is_open(app: AppHandle) -> bool {
+    app.get_webview_window(WINDOW).is_some()
 }
 
 #[tauri::command]
@@ -131,6 +156,9 @@ pub fn video_cleanup(keep: Vec<String>) {
     if let Ok(rd) = std::fs::read_dir(proxy_dir()) {
         for e in rd.flatten() {
             let p = e.path().to_string_lossy().into_owned();
+            if e.file_name() == "video.log" {
+                continue; // il registro di diagnostica non e' una copia di lavoro
+            }
             if !keep.contains(&p) {
                 let _ = std::fs::remove_file(e.path());
             }
@@ -415,6 +443,21 @@ fn rec_stop_inner() -> Result<RecVideoInfo, String> {
     let _ = std::fs::remove_file(&r.log);
     *VLAST.lock() = Some((r.path.clone(), r.t0));
     Ok(RecVideoInfo { frames: r.frames, dropped: r.dropped.load(Ordering::Relaxed), secs: r.frames as f64 / r.fps.max(1) as f64, path: r.path.to_string_lossy().into_owned() })
+}
+
+/// Chiusura del programma: ferma la codifica di una registrazione video in corso (FFmpeg non deve restare in vita) e chiude l'uscita.
+pub fn shutdown(app: &AppHandle) {
+    if let Some(mut r) = VREC.lock().take() {
+        r.tx = None;
+        if let Some(w) = r.writer.take() {
+            let _ = w.join();
+        }
+        let _ = r.child.kill();
+        let _ = r.child.wait();
+    }
+    if let Some(w) = app.get_webview_window(WINDOW) {
+        let _ = w.destroy();
+    }
 }
 
 #[tauri::command]

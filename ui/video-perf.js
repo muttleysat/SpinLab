@@ -108,6 +108,9 @@
     const r = last?.res, hw = last?.hw, cur = active(), m = manualId();
     const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
     mountEl.innerHTML = `<div class="vp-body">
+      <h4>Miscela</h4>
+      <label class="vp-sel">La miscela video segue <select id="vpMix"><option value="xfader">il crossfader</option><option value="channels">i fader dei canali</option></select></label>
+      <p class="hint">Con <b>il crossfader</b> la transizione dipende solo da quello (come negli altri programmi). Con <b>i fader dei canali</b> il crossfader viene ignorato e il video passa da un deck all'altro in base al volume dei due canali: serve a chi mixa con i canali e lascia il crossfader fermo.</p>
       <h4>Profilo</h4>
       <label class="vp-sel">Qualità dell'uscita video <select id="vpSel"><option value="auto">Automatico</option>${Object.values(PROFILES).map((p) => `<option value="${p.id}">${p.name} (fino a ${p.h}p, ${p.fps} fps)</option>`).join("")}</select></label>
       <p>In uso: <b>${cur.name}</b> — fino a ${cur.h}p a ${cur.fps} fps${cur.simple ? ", solo transizioni leggere" : ", tutte le transizioni"}; registrazione ${cur.rec}.<br><span class="dim">${m === "auto" ? (last ? "Scelto in automatico: " + esc(last.why) : "In attesa della prima analisi del computer.") : "Forzato da te."}</span></p>
@@ -120,6 +123,7 @@
     const sel = mountEl.querySelector("#vpSel"); sel.value = m;
     sel.onchange = () => { LS("spinlab.video_profile", sel.value === "auto" ? null : sel.value); render(); };
     mountEl.querySelector("#vpCal").onclick = calibrate;
+    const mx = mountEl.querySelector("#vpMix"); mx.value = window.VideoMix ? VideoMix.mode : "xfader"; mx.onchange = () => { if (window.VideoMix) VideoMix.set(mx.value); };
   }
   /** Testo della qualita' reale dell'uscita (quella che l'adattamento sta usando adesso, non solo il profilo scelto). */
   function liveText(q) {
@@ -129,6 +133,7 @@
   }
   const live = () => { const e = mountEl && mountEl.querySelector("#vpLive"); if (e) e.textContent = liveText(window.__vq); };
   function mount(el) { mountEl = el; render(); }
+  const refresh = () => render();
   const setStatus = (t) => { status = t; const e = mountEl && mountEl.querySelector(".vp-st"); if (e) e.textContent = t; };
 
   // Calibrazione sul campo: l'uscita video parte dal livello piu' alto e scende finche' regge i fotogrammi al secondo (vedi video-out.html)
@@ -172,5 +177,5 @@
   }
   setTimeout(() => { auto(); setInterval(auto, 15000); }, 10000);
 
-  window.VideoPerf = { PROFILES, SIMPLE_TRANS, decide, measure, active, mount, live, liveText, manualId, last: () => last };
+  window.VideoPerf = { PROFILES, SIMPLE_TRANS, decide, measure, active, mount, live, liveText, refresh, manualId, last: () => last };
 })();

@@ -244,6 +244,18 @@ fn deck_cmd(app: State<'_, App>, deck: usize, cmd: String, a: f64, b: f64) {
                 m.decks[deck].sync = false;
             }
         }
+        // rientro graduale del pitch verso 0 (a > 0.5 avvia, altrimenti ferma dove e'): un deck che segue il sync lascia il sync, come
+        // quando si muove il pitch a mano
+        "tempo_ramp" => {
+            if a > 0.5 {
+                d.start_tempo_ramp(0.0);
+                if m.is_follower(deck) {
+                    m.decks[deck].sync = false;
+                }
+            } else {
+                d.cancel_tempo_ramp();
+            }
+        }
         "range" => d.set_range_pct(a),
         "keylock" => d.keylock = a > 0.5,
         "quantize" => d.quantize = a > 0.5,
@@ -1307,7 +1319,13 @@ async fn license_deactivate(app: State<'_, App>) -> Result<license::Status, Stri
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init()).on_window_event(|window, event| {
+        // chiudendo la finestra principale si chiude tutto: l'uscita video (una finestra a parte, magari a schermo intero su un altro
+        // monitor) non deve restare aperta tenendo vivo il programma
+        if window.label() == "main" && matches!(event, tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed) {
+            video::shutdown(window.app_handle());
+        }
+    });
     // gli aggiornamenti automatici esistono solo su desktop
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
@@ -1390,7 +1408,7 @@ pub fn run() {
             stems_queue, stems_queue_playlist, stems_queue_path, stems_have, stems_cfg, stems_cfg_set, stems_bench_cmd, stems_delete, deck_stems, stems_auto, track_art,
             drum_load, drum_cmd, drum_save, midi_ports, midi_out_info, midi_out_select, midi_send, midi_map_get, midi_map_set, audio_current, rec_start, rec_stop,
             license_status, license_activate, license_refresh, license_deactivate,
-            video::video_monitors, video::video_open, video::video_close, video::video_proxy, video::video_cleanup, video::video_hw, video::video_bench_clip, video::video_bench_clean, video::video_bench_decode, video::video_rec_prepare, video::video_rec_start, video::video_rec_frame, video::video_rec_stop, video::video_rec_mux
+            video::video_monitors, video::video_open, video::video_close, video::video_is_open, video::video_log, video::video_proxy, video::video_cleanup, video::video_hw, video::video_bench_clip, video::video_bench_clean, video::video_bench_decode, video::video_rec_prepare, video::video_rec_start, video::video_rec_frame, video::video_rec_stop, video::video_rec_mux
         ])
         .run(tauri::generate_context!())
         .expect("errore avvio SpinLab");

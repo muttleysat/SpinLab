@@ -25,7 +25,7 @@ Collegamenti: [PRD del video](PRD-video.md) (sezione «Gap Management») · [ASD
 | D-03 | Ambito dell'ASD: solo l'app o anche server licenze e strumenti | B | Sezioni 6–9 dell'ASD | Aperta |
 | D-04 | Piattaforme di destinazione (Windows, macOS, Android) | B | Prove, installer, ambito di molti requisiti | Aperta |
 | D-05 | Principi architetturali del progetto | B | ASD §5 e §3 | Aperta |
-| D-06 | Fader video separato dal crossfader (FR-14) | C | Niente di immediato | Aperta |
+| D-06 | Fader video separato dal crossfader (FR-14) | C | Niente di immediato | **Decisa**: scelta fra crossfader e fader dei canali |
 | D-07 | Cartella centrale degli stem con indice nel database (FR-15) | B | Modifica a stem e database | Aperta |
 | D-08 | Come ottenere la compatibilità completa dei formati (FR-13) | B | Promessa ai clienti sui formati | Aperta |
 | D-09 | Quale FFmpeg distribuire (licenza) | A | Installer; dichiarazioni di licenza | **Decisa (provvisoria): build LGPL inclusa**; da provare su Windows |
@@ -79,6 +79,8 @@ Collegamenti: [PRD del video](PRD-video.md) (sezione «Gap Management») · [ASD
 - **Impatto se si rimanda:** ASD §5 resta vuota e le sezioni NFR (§3) senza riferimento.
 
 ### D-06 — Fader video separato dal crossfader (FR-14)
+
+> **Decisa il 2026-11-05:** non un fader video a parte, ma una **scelta nelle impostazioni video**: la miscela segue **il crossfader** (predefinito) oppure **i fader del volume dei canali** (crossfader ignorato). Un «automatico» che combina le due cose è stato scartato perché poteva creare confusione. Realizzata in `video.js` (`videoMix`), Impostazioni → VIDEO → Miscela e clic destro sul pulsante VIDEO. Il testo sotto è l'analisi originale.
 
 - **Cosa decidere:** vuoi poter assegnare la miscela video a un controllo a parte (cursore a schermo o MIDI), così l'audio resta su un deck mentre il video passa all'altro?
 - **Opzioni:** (A) sì, nella prossima fase; (B) idea futura, resta nel PRD come «Nice-to-Have»; (C) tolto.
@@ -201,7 +203,7 @@ Collegamenti: [PRD del video](PRD-video.md) (sezione «Gap Management») · [ASD
 | 2026-11 | **Modalità VIDEO automatica**, con pulsante per forzarla | Nessun costo senza video | FR-09 |
 | 2026-11 | **Composizione con WebGL** nella finestra di uscita (opzione A), compositore isolato | Rapidità e portabilità; sostituibile con uno nativo | `video-gl.js`, ASD §6.2 |
 | 2026-11 | **Niente 4K né HDR** | Gli utenti useranno soprattutto video convertiti da YouTube | PRD §2 |
-| 2026-11 | **Transizioni sempre sul crossfader** audio | Un solo gesto per audio e video | FR-06 |
+| 2026-11 | **Transizioni sul crossfader**, con scelta alternativa dei **fader dei canali** (niente modalità automatica) | Chi mixa con i canali lascia il crossfader fermo; l'automatico poteva creare confusione | FR-06, FR-14 |
 | 2026-11 | **Scheda del brano o 10 visualizzazioni** per i deck senza video; titolo e artista sempre in basso a sinistra | Schermo mai vuoto | FR-07, FR-08 |
 | 2026-11 | **Copia di lavoro temporanea** per scratch e salti, cancellata quando il video lascia il deck | Niente spazio occupato; stem invece persistenti | FR-03 |
 | 2026-11 | **Configurazione automatica per hardware** con profili, calibrazione e adattamento; pannello in **Impostazioni → VIDEO** | Scalabilità su computer diversi | FR-10, FR-11 |

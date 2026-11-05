@@ -60,7 +60,8 @@ Ogni deck mostra due waveform: quella grande (zoom, scorre) e quella piccola (pa
 
 - **PLAY** e **CUE**. CUE tenuto premuto fa partire il brano dal punto di cue finché non rilasci.
 - **LOAD** carica il brano selezionato nella libreria; il tasto accanto svuota il deck.
-- **Il pitch** si regola con il fader a destra. **±8** (o il valore indicato) cambia l'escursione: 4, 8, 16, 50, 100%. Doppio clic sul fader lo riporta a zero.
+- **Il pitch** si regola con il fader a destra. **±8** (o il valore indicato) cambia l'escursione: 4, 8, 16, 50, 100%. Doppio clic sul fader lo riporta a zero di colpo.
+- **→0** (sotto il valore del pitch) lo riporta a zero **gradualmente**, senza scatti udibili: il pitch si avvicina a 0 a velocità costante di 0,5 punti percentuali al secondo (da +8% servono 16 secondi, da +2% quattro). Il pulsante si accende mentre il rientro è in corso e un secondo clic lo ferma dove si trova. Muovere il fader a mano, caricare un brano o accendere il SYNC lo interrompe; se il deck stava seguendo il SYNC, il SYNC si spegne, come quando si muove il pitch a mano. Il pulsante è spento quando il pitch è già a 0.
 - **SYNC** allinea tempo e fase al deck che fa da guida. Resta attivo anche dopo aver caricato un altro brano.
 
 ### Scrub
@@ -207,7 +208,7 @@ La finestra di uscita si apre da sola con la modalità VIDEO. Per mandarla su un
 
 ### Transizioni
 
-Il menu a tendina accanto al pulsante VIDEO sceglie l'effetto con cui il **crossfader** passa da un deck all'altro. L'effetto segue la posizione del fader: a sinistra si vede il deck 1, a destra il deck 2, in mezzo la transizione. Si può cambiare anche durante il set.
+Il menu a tendina accanto al pulsante VIDEO sceglie l'effetto con cui la miscela passa da un deck all'altro. Di default la miscela segue il **crossfader**; chi mixa con i fader del volume dei canali e lascia il crossfader fermo può scegliere **i fader dei canali** in **Impostazioni → VIDEO → Miscela** (o dal clic destro sul pulsante VIDEO): in quel caso il crossfader è ignorato e il video passa da un deck all'altro in base al volume dei due canali (se uno è a zero si vede solo l'altro; con i due volumi uguali, la miscela a metà; con entrambi a zero l'immagine resta com'era). L'effetto segue la posizione della miscela: a sinistra si vede il deck 1, a destra il deck 2, in mezzo la transizione. Si può cambiare anche durante il set.
 
 Le transizioni sono: **Dissolvenza**, **Taglio**, **Dissolvenza al nero**, **Flash bianco**, **Wipe**, **Zoom a spinta**, **Glitch**, **Pixel**, **Caleidoscopio**, **Ondulazione**, **Cubo 3D**, **Vortice** e **Stroboscopio sul ritmo**. L'ultima alterna i due deck a tempo con la **griglia dei battiti**, quindi funziona meglio con brani la cui griglia è giusta.
 
@@ -263,7 +264,7 @@ Il profilo limita risoluzione e fotogrammi al secondo dell'uscita **a schermo in
 Oltre all'audio, SpinLab può registrare **l'immagine dell'uscita video** (con transizioni, visualizzazioni, titolo e artista) e salvarla insieme al suono del master in un solo file **MP4** (video H.264, audio AAC).
 
 1. **RECORD** → nel menu **Formato** scegli **MP4 con video (H.264 + AAC)**.
-2. **Qualità del video**: *Come il profilo video in uso* (consigliato) oppure 480p 24 fps, 720p 30 fps, 1080p 30 fps, 1080p 60 fps. La qualità della registrazione è indipendente da quella dell'uscita: puoi proiettare a una risoluzione e registrare a un'altra. Il 1080p a 60 fps richiede un computer potente.
+2. **Qualità del video**: *Come il profilo video in uso* (consigliato) oppure 480p 24 fps, 720p 30 fps, 1080p 30 fps, 1080p 60 fps. La qualità della registrazione è indipendente da quella dell'uscita: puoi proiettare a una risoluzione e registrare a un'altra. Il video registrato ha la **stessa forma dell'immagine sull'uscita** (16:9, 16:10…), senza barre nere aggiunte: se il video originale è 4:3 vedrai comunque le bande ai lati, che sono parte dell'immagine. Il 1080p a 60 fps richiede un computer potente.
 3. Scegli dove salvare il file e premi **Avvia registrazione**. L'uscita video si accende da sola per tutta la durata (anche se sui deck ci sono solo brani audio: vedrai la scheda o la visualizzazione scelta).
 4. **Ferma** con un clic sull'indicatore **REC** o su **STOP REC**. Il file va preparato (si uniscono audio e video): può servire qualche secondo, e compare un avviso con il percorso e la dimensione.
 
@@ -302,7 +303,7 @@ I video musicali e i filmati sono coperti da diritti d'autore: ciò che proietti
 
 ## Registrare il master
 
-**RECORD** in alto apre la finestra di registrazione. Registra tutto ciò che esce dal master: deck con effetti, campionatore e batteria.
+**RECORD** in alto apre la finestra della registrazione, dove scegli formato, qualità del video e cartella e premi **Avvia registrazione**: la finestra si chiude e compare l'indicatore **REC** con il tempo. Registra tutto ciò che esce dal master: deck con effetti, campionatore e batteria. **Dopo la prima volta** puoi avviare e fermare anche con il pulsante tondo **●** in alto, accanto all'orologio: usa le stesse impostazioni e un nome automatico (`SpinLab AAAA-MM-GG HH.MM.SS`) nella stessa cartella, senza riaprire la finestra. Durante la registrazione il pulsante diventa l'indicatore **REC** (un clic lo ferma) e il pulsante RECORD diventa **STOP REC**.
 
 1. Scegli il formato: WAV 16 o 24 bit, MP3 a 128, 192, 256 o 320 kbps, oppure **MP4 con video** (vedi [Registrare il set in MP4](#registrare-il-set-in-mp4)).
 2. Scegli dove salvare il file.

@@ -83,7 +83,7 @@ L'ordine degli script in `index.html` conta: `video-trans.js`, `video-gl.js`, `v
 
 | Campo | Significato |
 |---|---|
-| `xf` | Posizione del crossfader 0..1 (letta ogni 100 ms da `get_state`, quindi segue anche il MIDI). |
+| `xf` | **Posizione della miscela video** 0..1 (0 = solo deck 1, 1 = solo deck 2). Dipende dall'impostazione `spinlab.video_mix` (`videoMix()` in `video.js`): `xfader` (predefinito) = crossfader del motore (`window.__lastXf`, letto dal poll principale, segue anche il MIDI); `channels` = `peso2 / (peso1 + peso2)` con peso = volume del canale al quadrato (`DeckState.volume`, la stessa curva del motore); se la somma è quasi zero resta l'ultimo valore. |
 | `trans` | Indice della transizione scelta. |
 | `vis` | Indice dell'immagine di ripiego (0 = scheda del brano, 1..10 = visualizzazioni). |
 | `quality` | Profilo attivo: `{ h, fps, visH, simple, level }`. |
@@ -106,6 +106,7 @@ Tutti in `src-tauri/src/video.rs`, registrati in `lib.rs`.
 | `video_monitors` | — | `Vec<MonitorInfo>` (`index`, `name`, `width`, `height`, `primary`) | Elenco dei monitor del sistema. |
 | `video_open` | `monitor: Option<usize>` | `()` | Chiude l'eventuale uscita aperta e ne apre una nuova: a schermo intero senza bordi sul monitor indicato, oppure una finestra 960×540 se `None`. |
 | `video_close` | — | `()` | Chiude la finestra di uscita. |
+| `video_is_open` | — | `bool` | La finestra di uscita esiste ancora? Serve a sapere se l'utente l'ha chiusa a mano (x o Esc). |
 | `video_proxy` | `path` | percorso della copia | Crea o ritrova la copia di lavoro; vedi sotto. Asincrono. |
 | `video_cleanup` | `keep: Vec<String>` | `()` | Cancella dalla cartella temporanea le copie non elencate in `keep` (vuoto = tutte). |
 | `video_hw` | — | `HwInfo` (`cpu`, `cores`, `ram_gb`, `os`, `encoders`, `ffmpeg`) | CPU e RAM con `sysinfo`; gli encoder H.264 si leggono da `ffmpeg -encoders` (ordine: videotoolbox, nvenc, qsv, amf, h264_mf, libx264). |
@@ -279,6 +280,14 @@ Richiede un video in riproduzione. L'uscita parte dal livello 0, ignorando i tet
 
 ## Schermi e finestra di uscita
 
+**Uscita coperta da altre finestre.** Il motore web non disegna una finestra completamente coperta (`document.visibilityState` diventa `hidden` e `requestAnimationFrame` si ferma): niente video, niente messaggi `video-quality` e niente cattura per la registrazione. Per questo l'uscita **in finestra** viene aperta sempre in primo piano (`always_on_top`; a schermo intero su un altro monitor non serve) e l'evento `video-pong` dice se la finestra è visibile e se sta disegnando; la registrazione, se l'uscita non disegna, lo riporta nel messaggio. Trovato con `video.log`: l'uscita rispondeva ma non disegnava perché stava dietro la finestra principale.
+
+**Uscita chiusa a mano.** `sync()` in `video.js` chiede ogni 500 ms `video_is_open`: se la finestra non c'è più, `open` torna falso e `userClosed` blocca la riapertura automatica (la modalità automatica non deve riaprire una finestra che l'utente ha appena chiuso). Si riapre con il pulsante VIDEO, un nuovo video (se prima la modalità si era spenta) o l'avvio di una registrazione (`VideoMode.force(true)`). Prima il programma credeva l'uscita ancora aperta e la registrazione falliva con «l'uscita video non risponde». Se l'uscita non risponde, la registrazione distingue i casi con `video_is_open` e con l'evento `video-ping`/`video-pong` (l'uscita risponde se WebGL è attivo e perché no) e dà un messaggio preciso.
+
+**Barra superiore e layout.** `#app` è una griglia con una sola colonna: se un elemento della barra superiore è più largo della finestra, la colonna `auto` si allarga e **tutto il layout** (deck, libreria) esce dalla finestra e si taglia a destra; se la sua larghezza cambia (etichetta di qualità, voce selezionata di un menu), tutto salta. Per questo: `grid-template-columns: minmax(0, 1fr)`, menu a larghezza fissa, e l'etichetta di qualità è dentro il pulsante VIDEO, fuori dal flusso (`position: absolute`).
+
+**Chiusura del programma.** Alla chiusura della finestra principale (`CloseRequested` o `Destroyed` in `lib.rs`) `video::shutdown` distrugge la finestra di uscita e ferma un'eventuale registrazione video in corso (chiude la pipe e termina FFmpeg), così nessuna finestra o processo resta vivo. I file temporanei di una registrazione interrotta si ripuliscono all'avvio successivo.
+
 - `video_open` costruisce la finestra con `WebviewWindowBuilder`, URL `video-out.html`, etichetta `video-out` (deve comparire in `capabilities/default.json`, altrimenti i comandi e gli eventi non funzionano).
 - Con un monitor scelto: posizione e dimensioni in coordinate logiche del monitor, senza bordi, a schermo intero. Senza: finestra 960×540 con bordi.
 - Lo schermo si ricorda in `spinlab.video_monitor_key` come `nome|LxA`, non come indice (l'indice cambia quando si collega o scollega qualcosa). Due monitor con lo stesso nome e la stessa risoluzione sono indistinguibili: si prende il primo.
@@ -301,6 +310,7 @@ Chiavi di `localStorage` (finestra principale; sono per-utente e si perdono se s
 | `spinlab.video_manual` | `"1"` sempre acceso, `"0"` sempre spento, vuoto = automatico |
 | `spinlab.video_trans` | indice della transizione |
 | `spinlab.video_vis` | indice dell'immagine di ripiego (0 = scheda) |
+| `spinlab.video_mix` | `channels` = la miscela segue i fader dei canali; assente = crossfader |
 | `spinlab.video_monitor_key` | schermo di uscita (`nome|LxA`) o vuoto |
 | `spinlab.video_profile` | profilo forzato (`bassa`, `media`, `alta`, `massima`); assente = automatico |
 | `spinlab.video_perf` | ultima analisi: `{ v: 2, fp, hw, res, auto, why, at }` |
@@ -344,7 +354,7 @@ Tre flussi, uniti alla fine. L'audio non passa mai da FFmpeg in tempo reale: si 
  stop:    rec_stop (audio) ─▶ "video-rec-stop" ─▶ uscita: video_rec_stop ─▶ video_rec_mux ─▶ MP4 finale
 ```
 
-**Cattura (finestra di uscita, `captureFrame`).** Dopo ogni `gl.draw()` il canvas WebGL si copia, centrato e senza deformarlo (bande nere), su un canvas 2D della misura scelta (16:9, dimensioni pari) e si codifica con `toBlob("image/jpeg", 0,85)`. Si cattura al ritmo dei fotogrammi scelti (`next += 1000/fps`; in forte ritardo si riparte da adesso) e al massimo 3 richieste sono in volo: oltre, il fotogramma si salta e si conta. Il corpo della richiesta è binario (`invoke` con `Uint8Array`), senza JSON.
+**Cattura (finestra di uscita, `captureFrame`).** Dopo ogni `gl.draw()` il canvas WebGL si copia su un canvas 2D della misura scelta: altezza e fotogrammi dal dialogo, **larghezza ricavata dalla forma del canvas di uscita** (limitata fra 1:1 e 2,4:1, dimensioni pari), così la registrazione ha la stessa forma dell'immagine che si vede e non aggiunge barre nere se la finestra o lo schermo non sono 16:9 (una forma fissa 16:9 le aggiungeva: errore trovato con una registrazione vera). La forma si fissa all'inizio: se poi la finestra cambia forma, il fotogramma si adatta con bande e si codifica con `toBlob("image/jpeg", 0,85)`. Si cattura al ritmo dei fotogrammi scelti (`next += 1000/fps`; in forte ritardo si riparte da adesso) e al massimo 3 richieste sono in volo: oltre, il fotogramma si salta e si conta. Il corpo della richiesta è binario (`invoke` con `Uint8Array`), senza JSON.
 
 **Codifica (`rec_start_at`).** FFmpeg legge i JPEG da stdin come `image2pipe`/`mjpeg` con `-use_wallclock_as_timestamps 1` (il tempo di ogni fotogramma è quello di arrivo) e li porta a fotogrammi costanti con il filtro `fps=<f>` (i fotogrammi mancanti si ripetono), poi `scale` e `yuv420p`. Encoder: il primo che funziona fra `h264_videotoolbox`, `h264_nvenc`, `h264_qsv`, `h264_amf`, `h264_mf`, `libx264`, provato una volta con tre fotogrammi di prova (`rec_encoder`, in cache). Bitrate: 2,5 Mb/s fino a 480p, 5 Mb/s fino a 720p, 8 Mb/s oltre, ×1,5 sopra i 30 fps; `libx264` usa `-preset veryfast -crf 23`. Un fotogramma chiave ogni 2 secondi. Il registro di FFmpeg va in un file `.log` accanto al temporaneo e, se la codifica fallisce, l'ultima riga compare nell'errore.
 
@@ -364,6 +374,8 @@ Tre flussi, uniti alla fine. L'audio non passa mai da FFmpeg in tempo reale: si 
 **Prestazioni.** Il costo principale è il JPEG nel motore web: a 720p 30 fps è comodo; a 1080p 60 fps su computer deboli salterà fotogrammi (che FFmpeg ripete). È per questo che la qualità della registrazione è separata da quella dell'uscita.
 
 ## Prove e diagnostica
+
+- **Registro del video:** `video_log` scrive righe con data in `spinlab_video/video.log` (nella cartella temporanea del sistema; su macOS `$TMPDIR/spinlab_video/video.log`): apertura e chiusura dell'uscita, passi della registrazione, errori JavaScript della finestra di uscita e della principale. Serve a capire dove si ferma un'operazione senza schermate. Il file si azzera sopra 1 MB e `video_cleanup` non lo cancella.
 
 - **Misure in diretta:** nella finestra di uscita premi **H**. Per ogni deck: dimensione del video, fotogrammi saltati/totali, sfasamento attuale e massimo (ms), velocità, «copia di lavoro sì/no», riallineamenti, ritardo di salto; più visualizzazione, uscita in uso (`720p 30 fps` e livelli di riduzione), tipo di disegno (`WebGL` o `semplice` con il motivo) e fps.
 - **Errori JavaScript:** la barra errori del programma principale mostra gli errori; la finestra di uscita ha la console del motore web.

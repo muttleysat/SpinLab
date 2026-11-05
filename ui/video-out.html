@@ -41,6 +41,10 @@
 /* PROTOTIPO — uscita video. Il video segue la posizione audio che manda la finestra principale; qui si misura quanto regge.
    H = mostra/nasconde le misure. Esc = chiude. */
 const T = window.__TAURI__;
+const vlog = (m) => { try { T.core.invoke("video_log", { msg: "[uscita] " + m }).catch(() => {}); } catch (e) {} };
+document.addEventListener("visibilitychange", () => vlog("visibilita': " + document.visibilityState));
+window.addEventListener("error", (e) => vlog("errore: " + e.message + " (" + (e.filename || "").split("/").pop() + ":" + e.lineno + ")"));
+window.addEventListener("unhandledrejection", (e) => vlog("errore non gestito: " + (e.reason && e.reason.message || e.reason)));
 const VEXT = /\.(mp4|m4v|mov|mkv|webm|avi|ts|mpg|mpeg)$/i;
 const els = [document.getElementById("v0"), document.getElementById("v1")];
 const st = [{ path: "", err: "", maxDrift: 0, seeks: 0 }, { path: "", err: "", maxDrift: 0, seeks: 0 }];
@@ -195,7 +199,7 @@ const glc = document.getElementById("gl");
 // Livelli di qualita' (dal piu' alto): il profilo sceglie da dove partire e l'adattamento puo' scendere (e risalire) se il computer fatica.
 const LEVELS = [{ h: 1080, fps: 60 }, { h: 1080, fps: 30 }, { h: 720, fps: 30 }, { h: 480, fps: 24 }];
 const SIMPLE = [0, 1, 2, 3, 4];
-let adaptOff = 0, lowSecs = 0, highSecs = 0, lastDraw = 0, lastH = 0, calib = null;
+let adaptOff = 0, lowSecs = 0, highSecs = 0, lastDraw = 0, lastH = 0, calib = null, lastDrawAt = 0;
 function eff() {
   const q = (last && last.quality) || { level: 2 };
   if (calib) { const L = LEVELS[calib.idx]; return { h: L.h, fps: L.fps, idx: calib.idx };   // calibrazione: si prova dal livello piu' alto, senza i tetti del profilo
@@ -270,10 +274,16 @@ function captureFrame(now) {
     r.pending--;
   }, "image/jpeg", 0.85);
 }
+T.event.listen("video-ping", () => { try { T.event.emit("video-pong", { gl: GLON, reason: glReason || "", vis: document.visibilityState, drawing: performance.now() - lastDrawAt < 3000 }); } catch (er) {} });
 T.event.listen("video-rec-start", async (e) => {
-  const { w, h, fps } = e.payload, reply = (m) => { try { T.event.emit("video-rec-ready", m); } catch (er) {} };
+  const { h, fps } = e.payload, reply = (m) => { vlog("registrazione, risposta: " + JSON.stringify(m)); try { T.event.emit("video-rec-ready", m); } catch (er) {} };
+  vlog(`registrazione, richiesta ${h}p ${fps} fps, disegno WebGL ${GLON ? "si" : "no (" + glReason + ")"}`);
   if (!GLON) return reply({ ok: false, error: "la registrazione video richiede il disegno WebGL (" + (glReason || "non disponibile") + ")" });
   try {
+    // la registrazione ha la stessa forma dell'immagine sull'uscita (per esempio 16:9 o 16:10): una forma fissa aggiungerebbe barre nere
+    // se la finestra o lo schermo non sono 16:9. Si limita fra 1:1 e 2,4:1 e si arrotonda a numeri pari (richiesto da H.264).
+    const aspect = Math.min(2.4, Math.max(1, glc.width / Math.max(1, glc.height)));
+    const w = Math.round(h * aspect / 2) * 2;
     await T.core.invoke("video_rec_start", { width: w, height: h, fps });
     const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
     rec = { w, h, fps, cv, ctx: cv.getContext("2d"), next: 0, pending: 0, sent: 0, dropped: 0, err: "" };
@@ -297,7 +307,7 @@ function loop(now) {
   const e = eff();
   if (e.h !== lastH) { lastH = e.h; sizeGL(); }                  // cambio di profilo (o di livello): la risoluzione di disegno si adegua subito
   if (now - lastDraw < 1000 / e.fps - 3) return;                 // tetto di fotogrammi al secondo del profilo
-  lastDraw = now;
+  lastDraw = now; lastDrawAt = performance.now();
   fpsN++; if (now - fpsT >= 1000) { fps = Math.round(fpsN * 1000 / (now - fpsT)); fpsN = 0; fpsT = now; adapt(e);
     try { T.event.emit("video-quality", { h: e.h, fps: e.fps, real: fps, off: adaptOff, calib: !!calib, cw: glc.width, ch: glc.height }); } catch (er) {} }
   const vq = (last.quality && last.quality.visH) || 540;         // visualizzazioni: dimensione secondo il profilo
