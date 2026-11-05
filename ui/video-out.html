@@ -195,7 +195,7 @@ const glc = document.getElementById("gl");
 // Livelli di qualita' (dal piu' alto): il profilo sceglie da dove partire e l'adattamento puo' scendere (e risalire) se il computer fatica.
 const LEVELS = [{ h: 1080, fps: 60 }, { h: 1080, fps: 30 }, { h: 720, fps: 30 }, { h: 480, fps: 24 }];
 const SIMPLE = [0, 1, 2, 3, 4];
-let adaptOff = 0, lowSecs = 0, highSecs = 0, lastDraw = 0, calib = null;
+let adaptOff = 0, lowSecs = 0, highSecs = 0, lastDraw = 0, lastH = 0, calib = null;
 function eff() {
   const q = (last && last.quality) || { level: 2 };
   if (calib) { const L = LEVELS[calib.idx]; return { h: L.h, fps: L.fps, idx: calib.idx };   // calibrazione: si prova dal livello piu' alto, senza i tetti del profilo
@@ -250,6 +250,7 @@ function loop(now) {
   requestAnimationFrame(loop);
   if (!GLON || !last) return;
   const e = eff();
+  if (e.h !== lastH) { lastH = e.h; sizeGL(); }                  // cambio di profilo (o di livello): la risoluzione di disegno si adegua subito
   if (now - lastDraw < 1000 / e.fps - 3) return;                 // tetto di fotogrammi al secondo del profilo
   lastDraw = now;
   fpsN++; if (now - fpsT >= 1000) { fps = Math.round(fpsN * 1000 / (now - fpsT)); fpsN = 0; fpsT = now; adapt(e); }

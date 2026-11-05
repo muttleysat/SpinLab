@@ -135,10 +135,6 @@
     const h = document.createElement("div"); h.className = "vh"; h.textContent = "Uscita video su…"; menu.appendChild(h);
     item("Finestra normale", "");
     mons.forEach((m) => item(`${m.name} · ${m.width}×${m.height}${m.primary ? " (principale)" : ""}`, keyOf(m)));
-    if (window.VideoPerf) {
-      const sep = document.createElement("div"); sep.className = "vh"; sep.textContent = `Profilo: ${VideoPerf.active().name}`; menu.appendChild(sep);
-      const b = document.createElement("button"); b.textContent = "Impostazioni video…"; b.onclick = () => { closeMenu(); if (typeof openAudioSettings === "function") openAudioSettings("video"); }; menu.appendChild(b);
-    }
     document.body.appendChild(menu);
     const r = btn.getBoundingClientRect();
     menu.style.top = `${r.bottom + 6}px`; menu.style.right = `${Math.max(8, innerWidth - r.right)}px`;
