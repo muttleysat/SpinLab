@@ -9,6 +9,8 @@ use std::path::Path;
 
 const EXTS: &[&str] = &[
     "mp3", "wav", "flac", "ogg", "oga", "opus", "m4a", "mp4", "aac", "aif", "aiff", "wma", "alac", "ape", "wv", "mka", "webm", "caf", "mpc",
+    // video (l'audio si analizza come un brano; l'immagine va sull'uscita video)
+    "mov", "mkv", "avi", "m4v", "ts", "mpg", "mpeg",
 ];
 
 /// analisi di un file salvata nel database

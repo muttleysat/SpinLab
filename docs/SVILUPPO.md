@@ -98,3 +98,11 @@ La cartella dei dati dell'app è `/data/user/0/com.spinlab.dj`, quella in cui pa
 Per pilotare l'app dal Mac: `adb forward tcp:9333 localabstract:webview_devtools_remote_<pid>` e poi i DevTools di Chrome (`chrome://inspect`) o il protocollo CDP. La cattura dello schermo dei DevTools non mostra i canvas: per le schermate usare `adb exec-out screencap -p`.
 
 Provati e scartati sul telefono: NNAPI (37 s per segmento), fp16 (186 s), int8 dinamico (nessun guadagno). Per misurare un modello direttamente sul telefono c'è `src-tauri/examples/stem_bench.rs` (istruzioni in testa al file).
+
+## Video
+
+Il modulo video (finestra di uscita, transizioni, visualizzazioni, profili di qualità) è descritto in [VIDEO.md](VIDEO.md); i requisiti e le scelte di prodotto sono in [PRD-video.md](PRD-video.md). Per svilupparlo e provarlo:
+
+- serve **FFmpeg** (per le copie di lavoro dei video, le misure di decodifica e codifica, la registrazione MP4 e l'audio dei formati meno comuni): in sviluppo basta quello del `PATH`; nell'installer è incluso come sidecar **LGPL** (vedi [FFMPEG.md](FFMPEG.md) e `tools/fetch_ffmpeg.py`);
+- il codice sta in `src-tauri/src/video.rs` e in `ui/video*.js`, `ui/video-out.html`;
+- nella finestra di uscita **H** mostra le misure in diretta.

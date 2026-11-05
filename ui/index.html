@@ -24,11 +24,14 @@
 <header id="top">
   <div class="brand"><img src="assets/spinlab-mark.svg" width="24" height="24" alt=""><span>SpinLab</span></div>
   <nav id="nav">
-    <button data-nav="lib">LIBRARY</button><button data-nav="mixer" class="on">MIXER</button><button data-nav="rec">RECORD</button><button data-nav="settings">SETTINGS</button>
+    <button data-nav="lib">LIBRARY</button><button data-nav="mixer" class="on">MIXER</button><button data-nav="rec" title="Finestra della registrazione: formato, qualità del video, cartella e avvio">RECORD</button><button data-nav="settings">SETTINGS</button>
   </nav>
   <div class="topr">
-    <div id="recInd" hidden title="Registrazione in corso: clic per fermarla"><i></i><b>REC</b><span id="recTime">00:00</span></div>
+    <div id="recInd" class="idle" title="Registra con le ultime impostazioni (la prima volta scegli formato e cartella da RECORD). Durante la registrazione: clic per fermarla"><i></i><b>REC</b><span id="recTime">00:00</span></div>
     <div class="cpu" title="Carico del thread audio: sopra il 70% (giallo) l'audio rischia di scattare, sopra il 90% (rosso) scatta"><span>CPU</span><i id="cpuBar"><b></b></i><em id="cpuPct">0%</em></div>
+    <select id="vvis" class="vsel" title="Cosa mostrare per i brani senza video: la scheda con copertina e titolo oppure una visualizzazione animata a tempo"></select>
+    <select id="vtrans" class="vsel" title="Transizione video: l'effetto con cui il crossfader passa da un video all'altro"></select>
+    <button id="videoBtn" class="mbtn" title="VIDEO: la modalità si attiva da sola quando carichi un video su un deck. Clic = forza acceso / spento / automatica. Clic destro = scegli lo schermo (HDMI, DisplayPort, proiettore)"><span>VIDEO</span><small id="vqBadge" class="vq" title="Qualità attuale dell'uscita video (risoluzione e fotogrammi al secondo). Dettagli in Impostazioni → VIDEO"></small></button>
     <div class="clock" id="clock">--:--</div>
     <div class="hp" title="Cuffie: accendi il preascolto (PFL) dei canali e dosa fra un lato e l'altro con CUE MIX">
       <svg viewBox="0 0 24 24" width="18" height="18" class="hpic"><path d="M4 15v-3a8 8 0 0 1 16 0v3M4 15h3v5H5a1 1 0 0 1-1-1zM20 15h-3v5h2a1 1 0 0 0 1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
@@ -181,6 +184,9 @@
     <img class="ab-asio" src="assets/asio-logo-white.png" alt="ASIO Compatible">
     <div class="ab-note">ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</div>
     <div class="ab-line"></div>
+    <div class="ab-sec"><span>VIDEO E FORMATI</span></div>
+    <div class="ab-note">Questo programma usa <b>FFmpeg</b> (<a href="https://ffmpeg.org" target="_blank" rel="noopener">ffmpeg.org</a>), con licenza GNU LGPL (2.1 o successiva; LGPL 3 nella versione per Windows), come programma separato che puoi sostituire. I testi delle licenze, la versione e i sorgenti sono nella cartella «licenses» dell'installazione (FFMPEG-LICENSE.txt, FFMPEG-BUILD.txt e la cartella ffmpeg). FFmpeg è un marchio dei suoi autori; SpinLab non è approvato dal progetto FFmpeg.</div>
+    <div class="ab-line"></div>
     <div class="ab-sec"><span>SEPARAZIONE STEM</span></div>
     <div class="ab-note">Modello HT-Demucs (Rouard, Massa, Défossez, «Hybrid Transformers for Music Source Separation», 2023), sviluppato da Meta e distribuito con licenza MIT.</div>
     <details class="ab-lic"><summary>Testo della licenza MIT</summary>
@@ -225,7 +231,11 @@ SOFTWARE.</pre></details>
   <p class="hint" style="margin-top:0">Registra tutto quello che esce dal master: deck con effetti, campionatore e batteria.</p>
   <label>Formato<select id="recFmt">
     <option value="wav16">WAV 16 bit (qualità CD)</option><option value="wav24">WAV 24 bit</option>
-    <option value="mp3-320">MP3 320 kbps</option><option value="mp3-256">MP3 256 kbps</option><option value="mp3-192">MP3 192 kbps</option><option value="mp3-128">MP3 128 kbps</option></select></label>
+    <option value="mp3-320">MP3 320 kbps</option><option value="mp3-256">MP3 256 kbps</option><option value="mp3-192">MP3 192 kbps</option><option value="mp3-128">MP3 128 kbps</option>
+    <option value="mp4">MP4 con video (H.264 + AAC)</option></select></label>
+  <label id="recVid" hidden>Qualità del video<select id="recVq"><option value="profile">Come il profilo video in uso</option><option value="480">480p · 24 fps</option><option value="720">720p · 30 fps</option><option value="1080">1080p · 30 fps</option><option value="1080p60">1080p · 60 fps (se il computer regge)</option></select></label>
+  <p class="hint">Dopo la prima registrazione puoi avviare e fermare con il pulsante <b>●</b> in alto (accanto all'orologio), senza riaprire questa finestra: usa queste impostazioni e un nome automatico nella stessa cartella.</p>
+  <p class="hint" id="recVidHint" hidden>Registra l'immagine così com'è sull'uscita video (transizioni, visualizzazioni, titolo) insieme all'audio del master. L'uscita video si accende da sola durante la registrazione. Al termine il file viene preparato: può servire qualche secondo.</p>
   <label>Salva in<div class="pathrow"><input id="recPath" readonly placeholder="Scegli dove salvare il file…"><button id="recPick">Scegli…</button></div></label>
   <div id="recErr" class="warn"></div>
   <div class="btns"><button id="recCancel">Annulla</button><button id="recGo" class="primary" disabled>● Avvia registrazione</button></div>
@@ -233,7 +243,7 @@ SOFTWARE.</pre></details>
 
 <dialog id="audioDlg">
   <h2>Impostazioni</h2>
-  <div class="stabs"><button data-sp="audio" class="on">AUDIO</button><button data-sp="stem">STEM</button><button data-sp="midi">CONTROLLER MIDI</button><button data-sp="ui">INTERFACCIA</button></div>
+  <div class="stabs"><button data-sp="audio" class="on">AUDIO</button><button data-sp="stem">STEM</button><button data-sp="video">VIDEO</button><button data-sp="midi">CONTROLLER MIDI</button><button data-sp="ui">INTERFACCIA</button></div>
   <div class="spane" id="sp-audio">
     <div class="asiobox"><img src="assets/asio-logo-white.png" alt="ASIO Compatible" height="46"><span>ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</span></div>
     <label>Driver audio<select id="aDrv"></select></label>
@@ -260,6 +270,7 @@ SOFTWARE.</pre></details>
     <div class="btns" style="justify-content:flex-start"><button id="stBench">Misura la velocità di questo PC</button></div>
     <p class="hint">Tempo reale: gli stem si separano mentre il brano suona, con il processore. Se il PC non è abbastanza veloce conviene prepararli prima: clic destro su uno o più brani (o su una playlist) → «Crea stem». Vengono salvati in una cartella «stems» accanto ai brani, compressi senza perdita di qualità, e si caricano subito.</p>
   </div>
+  <div class="spane" id="sp-video" hidden><div id="vpMount"></div></div>
   <div class="spane" id="sp-ui" hidden>
     <label>Interfaccia<select id="uiMode">
       <option value="auto">Automatica: sui telefoni A in verticale e B compatto in orizzontale, desktop altrove</option>
@@ -289,6 +300,12 @@ SOFTWARE.</pre></details>
 <div id="ctx" hidden></div>
 <div id="ghost" hidden></div>
 <script src="app.js"></script>
+<script src="video-trans.js"></script>
+<script src="video-gl.js"></script>
+<script src="video-vis.js"></script>
+<script src="video-perf.js"></script>
+<script src="video.js"></script>
+<script src="video-rec.js"></script>
 <script src="midi.js"></script>
 <script src="automix.js"></script>
 <script src="cockpit.js"></script>

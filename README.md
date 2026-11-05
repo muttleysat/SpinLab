@@ -9,6 +9,9 @@ App Tauri 2: il motore audio è in Rust (`src-tauri/src`), l'interfaccia è web 
 ## Documentazione
 
 - **[Manuale completo](docs/MANUALE.md)**: uso del programma, controller MIDI, impostazioni audio, soluzione dei problemi.
+- **[FFmpeg](docs/FFMPEG.md)**: licenza, inclusione nell'installer e aggiornamento di FFmpeg.
+- **[Decisioni](docs/DECISIONI.md)**: le decisioni aperte che spettano al responsabile del prodotto (con opzioni e raccomandazioni) e quelle già prese.
+- **[Video](docs/VIDEO.md)**: documentazione tecnica del modulo video (architettura, messaggi, sincronia, profili); i requisiti sono in [PRD-video.md](docs/PRD-video.md).
 - Dentro il programma: il pulsante **?** in alto a destra apre la stessa guida, anche senza internet.
 
 Il manuale si scrive in `docs/MANUALE.md`. Dopo ogni modifica, per aggiornare la guida che si apre nel programma:

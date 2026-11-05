@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>SpinLab — Uscita video</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; font-family: system-ui, sans-serif; }
+  video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; opacity: 0; }
+  .card { position: absolute; inset: 0; opacity: 0; display: grid; place-items: center; overflow: hidden; }
+  .card .bg { position: absolute; inset: -10%; background-size: cover; background-position: center; filter: blur(40px) brightness(.45) saturate(1.2); background-color: #10131c; }
+  .card .box { position: relative; display: flex; align-items: center; gap: 4vw; max-width: 90vw; }
+  .card .cov { height: 46vh; width: 46vh; object-fit: cover; border-radius: 1.2vh; box-shadow: 0 2vh 6vh #000a; background: #1b2030; }
+  .card .cov.none { display: none; }
+  .card .t { color: #fff; font-size: 6vh; font-weight: 700; line-height: 1.1; text-shadow: 0 .4vh 2vh #000a; }
+  .card .a { color: #cfd6e6; font-size: 3.6vh; margin-top: 1.2vh; }
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: none; background: #000; }
+  /* con WebGL i video non si mostrano: sono solo sorgenti per le texture (restano nella pagina, minuscoli, cosi' il motore li decodifica) */
+  .gl #gl { display: block; }
+  .gl video { inset: auto !important; left: 0; top: 0; width: 2px !important; height: 2px !important; opacity: .01 !important; pointer-events: none; }
+  .gl .card { display: none; }
+  #shade { position: absolute; left: 0; right: 0; bottom: 0; height: 24vh; background: linear-gradient(to top, rgba(0,0,0,.6), rgba(0,0,0,0)); opacity: 0; transition: opacity .6s; pointer-events: none; }
+  #title { position: absolute; left: 4vw; bottom: 6vh; color: #fff; text-shadow: 0 2px 12px #000c; font-size: 3.2vh; font-weight: 600; transition: opacity .6s; opacity: 0; max-width: 80vw; }
+  #title small { display: block; font-size: 2.2vh; font-weight: 400; color: #e2e8f5; margin-top: .4vh; }
+  #hud { position: absolute; left: 8px; top: 8px; margin: 0; padding: 8px 10px; background: #000c; color: #7df0b6; font: 12px/1.45 Consolas, Menlo, monospace; border: 1px solid #1a82b8; border-radius: 6px; white-space: pre; display: none; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<video id="v0" muted playsinline preload="auto"></video>
+<video id="v1" muted playsinline preload="auto"></video>
+<div class="card" id="c0"><div class="bg"></div><div class="box"><img class="cov none"><div><div class="t"></div><div class="a"></div></div></div></div>
+<div class="card" id="c1"><div class="bg"></div><div class="box"><img class="cov none"><div><div class="t"></div><div class="a"></div></div></div></div>
+<div id="shade"></div>
+<div id="title"></div>
+<pre id="hud"></pre>
+<script src="video-trans.js"></script>
+<script src="video-gl.js"></script>
+<script src="video-vis.js"></script>
+<script>
+/* PROTOTIPO — uscita video. Il video segue la posizione audio che manda la finestra principale; qui si misura quanto regge.
+   H = mostra/nasconde le misure. Esc = chiude. */
+const T = window.__TAURI__;
+const vlog = (m) => { try { T.core.invoke("video_log", { msg: "[uscita] " + m }).catch(() => {}); } catch (e) {} };
+document.addEventListener("visibilitychange", () => vlog("visibilita': " + document.visibilityState));
+window.addEventListener("error", (e) => vlog("errore: " + e.message + " (" + (e.filename || "").split("/").pop() + ":" + e.lineno + ")"));
+window.addEventListener("unhandledrejection", (e) => vlog("errore non gestito: " + (e.reason && e.reason.message || e.reason)));
+const VEXT = /\.(mp4|m4v|mov|mkv|webm|avi|ts|mpg|mpeg)$/i;
+const els = [document.getElementById("v0"), document.getElementById("v1")];
+const st = [{ path: "", err: "", maxDrift: 0, seeks: 0 }, { path: "", err: "", maxDrift: 0, seeks: 0 }];
+const titleEl = document.getElementById("title"), hud = document.getElementById("hud");
+let last = null, lastTitle = "", gotAt = 0;
+
+// i video arrivano dal protocollo asset:// (origine diversa dalla pagina): WebGL puo' usarli solo con l'accesso incrociato (CORS)
+els.forEach((v) => { v.crossOrigin = "anonymous"; });
+els.forEach((v, i) => v.addEventListener("error", () => {
+  const s = st[i];
+  if (v.crossOrigin && !s.retried && v.src) {     // ritenta senza accesso incrociato: il video parte, ma senza WebGL (dissolvenza semplice)
+    s.retried = true; v.removeAttribute("crossorigin"); fallbackToDom("video non caricabile con accesso incrociato");
+    const cur = v.src; v.src = cur; return;
+  }
+  s.err = v.error ? `codice ${v.error.code}: ${v.error.message || "formato non supportato da questo motore"}` : "errore";
+}));
+
+function apply(i, d, op) {
+  const v = els[i], s = st[i];
+  const isVid = d && d.loaded && VEXT.test(d.path || "");
+  if (!isVid) { v.style.opacity = 0; if (!v.paused) v.pause(); if (s.path) { s.path = ""; v.removeAttribute("src"); v.load(); } return; }
+  if (s.path !== d.path) { s.path = d.path; s.src = d.path; s.err = ""; s.maxDrift = 0; s.seeks = 0; s.lat = undefined; s.ema = undefined; s.upT = undefined; s.fresh = false; v.src = T.core.convertFileSrc(d.path); }
+  // la copia di lavoro (tutti fotogrammi interi: salti quasi gratuiti) sostituisce l'originale appena e' pronta, nello stesso punto
+  if (d.proxy && s.src !== d.proxy) {
+    const t = Math.max(0, v.currentTime || 0);
+    s.src = d.proxy; s.lat = undefined; s.ema = undefined; s.grace = performance.now() + 800;
+    v.src = T.core.convertFileSrc(d.proxy);
+    v.addEventListener("loadedmetadata", () => { try { v.currentTime = t; } catch (e) {} }, { once: true });
+  }
+  const age = (performance.now() - gotAt) / 1000;
+  const target = d.pos + (d.playing ? age * d.rate : 0);
+  v.style.opacity = op;
+  const setRate = (r) => { r = Math.max(0.0625, Math.min(16, r)); if (Math.abs(r - (s.rate || 0)) > 1e-4) { s.rate = r; v.playbackRate = r; } };
+  // salto: dopo un salto il video impiega un po' a ripartire (ricostruisce l'immagine). Si misura quanto ('seeked') e al salto
+  // si punta in avanti di quel tempo, cosi' quando riparte e' gia' al punto giusto invece di restare indietro e saltare di nuovo.
+  const seek = (t, fast) => {
+    s.seekT0 = performance.now();
+    t = Math.max(0, t);
+    if (fast && v.fastSeek) v.fastSeek(t); else v.currentTime = t;
+  };
+  if (v.readyState >= 1) {
+    const now = performance.now(), raw = v.currentTime - target;
+    s.ema = s.ema === undefined || v.seeking ? raw : s.ema * 0.9 + raw * 0.1;   // scarto filtrato: i messaggi arrivano con qualche ms di variazione
+    const drift = s.ema;
+    const lat = s.lat ?? 0.35;
+    if (!d.playing || d.held) {
+      // fermo o in scrub: il video segue la testina il prima possibile, senza limiti di frequenza (conta solo l'ultimo punto richiesto)
+      setRate(d.rate);
+      if (!v.paused) v.pause();
+      if (!v.seeking && Math.abs(raw) > 0.04) seek(target, d.held);
+      s.ema = undefined;
+    } else {
+      s.maxDrift = Math.max(s.maxDrift, Math.abs(drift));
+      if (v.paused && !v.seeking) v.play().catch(() => {});
+      if (now < (s.grace || 0)) { setRate(d.rate); }                        // appena dopo un salto: non si giudica lo scarto
+      else if (Math.abs(drift) > 0.5) {
+        setRate(d.rate);
+        if (!v.seeking && now - (s.lastSeek || 0) > 800) {
+          seek(target + lat * d.rate, false); s.lastSeek = now; s.seeks++; s.ema = undefined; s.grace = now + lat * 1000 + 400;
+        }
+      } else {
+        if (!s.fix && Math.abs(drift) > 0.06) s.fix = true;
+        if (s.fix && Math.abs(drift) < 0.015) s.fix = false;
+        // correzione: 4% (8% se lo scarto e' grande) piu' veloce o piu' lento
+        setRate(s.fix ? d.rate * (1 - Math.sign(drift) * (Math.abs(drift) > 0.25 ? 0.08 : 0.04)) : d.rate);
+      }
+    }
+    s.last = raw;
+  }
+}
+
+els.forEach((v, i) => v.addEventListener("seeked", () => {
+  const s = st[i];
+  if (s.seekT0) { const l = (performance.now() - s.seekT0) / 1000; s.lat = Math.max(0.05, Math.min(1.5, (s.lat ?? l) * 0.6 + l * 0.4)); s.seekT0 = 0; }
+}));
+
+const cards = [document.getElementById("c0"), document.getElementById("c1")];
+const art = [{ path: "", art: null, img: null }, { path: "", art: null, img: null }];
+T.event.listen("video-art", (e) => {
+  const { i, path, art: data } = e.payload;
+  art[i] = { path, art: data, img: null };
+  if (data) { const im = new Image(); im.onload = () => { art[i].img = im; cardKey[i] = ""; lastCard[i] = ""; }; im.src = data; }
+  cardKey[i] = ""; lastCard[i] = "";
+});
+let lastCard = ["", ""], cardKey = ["", ""];
+
+// --- scheda del brano (deck solo audio): disegnata su un canvas 2D, che diventa texture; senza WebGL si usa la versione in HTML
+const cardCv = [0, 1].map(() => { const c = document.createElement("canvas"); c.width = 1280; c.height = 720; return c; });
+function wrap(ctx, text, maxW, maxLines) {
+  const words = String(text || "").split(/\s+/).filter(Boolean), lines = []; let cur = "";
+  for (const w of words) {
+    const t = cur ? cur + " " + w : w;
+    if (ctx.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*\S{0,3}$/, "") + "…"; }
+  return lines;
+}
+function drawCard(i, d) {
+  const c = cardCv[i], ctx = c.getContext("2d"), W = c.width, H = c.height, im = art[i].path === d.path ? art[i].img : null;
+  ctx.fillStyle = "#10131c"; ctx.fillRect(0, 0, W, H);
+  if (im) {   // sfondo: la copertina ridotta e ingrandita (sfocata) e scurita
+    const sm = document.createElement("canvas"); sm.width = 32; sm.height = 18;
+    const sc = sm.getContext("2d"), r = Math.max(32 / im.width, 18 / im.height);
+    sc.drawImage(im, (32 - im.width * r) / 2, (18 - im.height * r) / 2, im.width * r, im.height * r);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high"; ctx.drawImage(sm, 0, 0, W, H);
+    ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(0, 0, W, H);
+  }
+  const textX = im ? 690 : 140, maxW = im ? 520 : W - 280;
+  if (im) {
+    const x = 110, y = 120, z = 480, rad = 18;
+    ctx.save(); ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
+    ctx.beginPath(); ctx.moveTo(x + rad, y); ctx.arcTo(x + z, y, x + z, y + z, rad); ctx.arcTo(x + z, y + z, x, y + z, rad); ctx.arcTo(x, y + z, x, y, rad); ctx.arcTo(x, y, x + z, y, rad); ctx.closePath();
+    ctx.fillStyle = "#1b2030"; ctx.fill(); ctx.shadowColor = "transparent"; ctx.clip();
+    const r = Math.max(z / im.width, z / im.height);
+    ctx.drawImage(im, x + (z - im.width * r) / 2, y + (z - im.height * r) / 2, im.width * r, im.height * r);
+    ctx.restore();
+  }
+  ctx.fillStyle = "#fff"; ctx.textBaseline = "alphabetic"; ctx.font = "700 54px system-ui, -apple-system, Segoe UI, sans-serif";
+  const tl = wrap(ctx, d.title, maxW, 3), lh = 62;
+  ctx.font = "400 34px system-ui, -apple-system, Segoe UI, sans-serif";
+  const al = d.artist ? wrap(ctx, d.artist, maxW, 2) : [];
+  const total = tl.length * lh + (al.length ? 14 + al.length * 42 : 0);
+  let y = (H - total) / 2 + 48;
+  ctx.font = "700 54px system-ui, -apple-system, Segoe UI, sans-serif"; ctx.fillStyle = "#fff";
+  tl.forEach((l) => { ctx.fillText(l, textX, y); y += lh; });
+  ctx.font = "400 34px system-ui, -apple-system, Segoe UI, sans-serif"; ctx.fillStyle = "#cfd6e6"; y += 14 - 8;
+  al.forEach((l) => { ctx.fillText(l, textX, y); y += 42; });
+}
+function ensureCard(i, d) {
+  const key = d.path + "|" + d.title + "|" + d.artist + "|" + (art[i].path === d.path && art[i].img ? 1 : 0);
+  if (key === cardKey[i]) return;
+  cardKey[i] = key; drawCard(i, d);
+  gl.upload(i, cardCv[i], cardCv[i].width, cardCv[i].height);
+}
+// versione in HTML (solo se WebGL non c'e')
+function setCard(i, d, show) {
+  const c = cards[i];
+  c.style.opacity = show;
+  const key = d.path + "|" + d.title + "|" + d.artist + "|" + (art[i].path === d.path && art[i].art ? 1 : 0);
+  if (key === lastCard[i]) return;
+  lastCard[i] = key;
+  const a = art[i].path === d.path ? art[i].art : null;
+  c.querySelector(".t").textContent = d.title; c.querySelector(".a").textContent = d.artist;
+  const img = c.querySelector(".cov"); img.classList.toggle("none", !a); if (a) img.src = a;
+  c.querySelector(".bg").style.backgroundImage = a ? `url(${a})` : "none";
+}
+
+// --- WebGL: composizione e transizioni
+let GLON = false, gl = null, glReason = "", fps = 0, fpsN = 0, fpsT = performance.now();
+const glc = document.getElementById("gl");
+// Livelli di qualita' (dal piu' alto): il profilo sceglie da dove partire e l'adattamento puo' scendere (e risalire) se il computer fatica.
+const LEVELS = [{ h: 1080, fps: 60 }, { h: 1080, fps: 30 }, { h: 720, fps: 30 }, { h: 480, fps: 24 }];
+const SIMPLE = [0, 1, 2, 3, 4];
+let adaptOff = 0, lowSecs = 0, highSecs = 0, lastDraw = 0, lastH = 0, calib = null, lastDrawAt = 0;
+function eff() {
+  const q = (last && last.quality) || { level: 2 };
+  if (calib) { const L = LEVELS[calib.idx]; return { h: L.h, fps: L.fps, idx: calib.idx };   // calibrazione: si prova dal livello piu' alto, senza i tetti del profilo
+  }
+  const idx = Math.min(LEVELS.length - 1, (q.level ?? 2) + adaptOff), L = LEVELS[idx];
+  return { h: Math.min(L.h, q.h || L.h), fps: Math.min(L.fps, q.fps || L.fps), idx };
+}
+// Calibrazione sul campo (richiesta dalle Impostazioni, con un video in riproduzione): parte dal livello piu' alto e scende finche' i
+// fotogrammi al secondo reggono per 3 secondi di fila; poi comunica il livello trovato.
+function calibStep(e) {
+  if (calib.skip > 0) { calib.skip--; return; }     // il secondo dopo un cambio di livello non vale (la misura non e' ancora a regime)
+  const done = () => { const idx = calib.idx; calib = null; adaptOff = 0; lowSecs = highSecs = 0; sizeGL(); try { T.event.emit("video-calibrated", { level: idx }); } catch (er) {} };
+  calib.total++;
+  if (fps < 0.9 * e.fps) {
+    calib.ok = 0;
+    if (calib.idx < LEVELS.length - 1) { calib.idx++; calib.skip = 1; sizeGL(); } else done();
+  } else if (++calib.ok >= 3) done();
+  if (calib && calib.total > 25) done();
+}
+T.event.listen("video-calibrate", () => { calib = { idx: 0, ok: 0, skip: 1, total: 0 }; adaptOff = 0; lowSecs = highSecs = 0; lastDraw = 0; sizeGL(); });
+function adapt(e) {
+  if (document.visibilityState !== "visible" || !last || !last.decks.some((d) => d.loaded)) { lowSecs = highSecs = 0; return; }
+  if (calib) { calibStep(e); return; }
+  if (fps < 0.75 * e.fps) { lowSecs++; highSecs = 0; } else if (fps >= 0.95 * e.fps) { highSecs++; lowSecs = 0; } else { lowSecs = highSecs = 0; }
+  const tell = (m) => { try { T.event.emit("video-adapt", m); } catch (er) {} };
+  if (lowSecs >= 3 && e.idx < LEVELS.length - 1) {
+    adaptOff++; lowSecs = highSecs = 0; sizeGL(); const n = eff();
+    tell(`Il computer fatica: l'uscita video scende a ${n.h}p ${n.fps} fps per non disturbare l'audio`);
+  } else if (highSecs >= 30 && adaptOff > 0) {
+    adaptOff--; lowSecs = highSecs = 0; sizeGL(); const n = eff();
+    tell(`Carico in calo: l'uscita video torna a ${n.h}p ${n.fps} fps`);
+  }
+}
+function sizeGL() {
+  if (!gl) return;
+  const dpr = window.devicePixelRatio || 1;
+  let w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  const cap = eff().h;
+  if (h > cap) { w = Math.round(w * cap / h); h = cap; }          // tetto di risoluzione: lo decide il profilo (e l'adattamento)
+  gl.resize(Math.max(2, w), Math.max(2, h));
+}
+function initGL() {
+  gl = window.VideoGL ? VideoGL.create(glc) : null;
+  if (!gl) { glReason = (window.VideoGL && VideoGL.error) || "WebGL non disponibile"; return; }
+  GLON = true; document.body.classList.add("gl"); sizeGL();
+}
+function fallbackToDom(why) { GLON = false; glReason = why; document.body.classList.remove("gl"); }
+addEventListener("resize", sizeGL);
+// un fotogramma nuovo per ogni video: si ricarica la texture solo quando serve
+els.forEach((v, i) => { if (v.requestVideoFrameCallback) { const cb = () => { st[i].fresh = true; v.requestVideoFrameCallback(cb); }; v.requestVideoFrameCallback(cb); } });
+// --- registrazione del set in MP4: ogni fotogramma disegnato si copia (centrato, senza deformarlo) su un canvas della misura scelta, si
+// codifica in JPEG e si manda al programma, che lo passa a FFmpeg. Quando il computer non regge si saltano fotogrammi (FFmpeg li ripete).
+let rec = null;
+function captureFrame(now) {
+  const r = rec;
+  if (!r || !GLON) return;
+  if (now < r.next) return;
+  r.next = r.next ? r.next + 1000 / r.fps : now;
+  if (now - r.next > 250) r.next = now;               // in forte ritardo: si riparte da adesso invece di recuperare a raffica
+  if (r.pending >= 3) { r.dropped++; return; }
+  const sw = glc.width, sh = glc.height, sc = Math.min(r.w / sw, r.h / sh), dw = Math.round(sw * sc), dh = Math.round(sh * sc);
+  r.ctx.fillStyle = "#000"; r.ctx.fillRect(0, 0, r.w, r.h);
+  r.ctx.drawImage(glc, (r.w - dw) / 2, (r.h - dh) / 2, dw, dh);     // subito dopo il disegno: il buffer WebGL e' ancora valido
+  const t0 = performance.now(); r.pending++;
+  r.cv.toBlob(async (blob) => {
+    try {
+      if (!blob) throw new Error("JPEG non creato");
+      const buf = new Uint8Array(await blob.arrayBuffer());
+      await T.core.invoke("video_rec_frame", buf, { headers: { "x-lag-ms": String(performance.now() - t0) } });
+      r.sent++;
+    } catch (e) { r.err = String(e); }
+    r.pending--;
+  }, "image/jpeg", 0.85);
+}
+T.event.listen("video-ping", () => { try { T.event.emit("video-pong", { gl: GLON, reason: glReason || "", vis: document.visibilityState, drawing: performance.now() - lastDrawAt < 3000 }); } catch (er) {} });
+T.event.listen("video-rec-start", async (e) => {
+  const { h, fps } = e.payload, reply = (m) => { vlog("registrazione, risposta: " + JSON.stringify(m)); try { T.event.emit("video-rec-ready", m); } catch (er) {} };
+  vlog(`registrazione, richiesta ${h}p ${fps} fps, disegno WebGL ${GLON ? "si" : "no (" + glReason + ")"}`);
+  if (!GLON) return reply({ ok: false, error: "la registrazione video richiede il disegno WebGL (" + (glReason || "non disponibile") + ")" });
+  try {
+    // la registrazione ha la stessa forma dell'immagine sull'uscita (per esempio 16:9 o 16:10): una forma fissa aggiungerebbe barre nere
+    // se la finestra o lo schermo non sono 16:9. Si limita fra 1:1 e 2,4:1 e si arrotonda a numeri pari (richiesto da H.264).
+    const aspect = Math.min(2.4, Math.max(1, glc.width / Math.max(1, glc.height)));
+    const w = Math.round(h * aspect / 2) * 2;
+    await T.core.invoke("video_rec_start", { width: w, height: h, fps });
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    rec = { w, h, fps, cv, ctx: cv.getContext("2d"), next: 0, pending: 0, sent: 0, dropped: 0, err: "" };
+    reply({ ok: true });
+  } catch (er) { reply({ ok: false, error: String(er) }); }
+});
+T.event.listen("video-rec-stop", async () => {
+  const r = rec; rec = null;
+  const done = (m) => { try { T.event.emit("video-rec-done", m); } catch (er) {} };
+  if (!r) return done({ ok: false, error: "nessuna registrazione video in corso" });
+  const t = performance.now();
+  while (r.pending > 0 && performance.now() - t < 5000) await sleep(20);     // si aspettano gli ultimi fotogrammi in volo
+  try { const info = await T.core.invoke("video_rec_stop"); done({ ok: true, ...info, skipped: r.dropped, error: r.err }); }
+  catch (er) { done({ ok: false, error: String(er) }); }
+});
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (!GLON || !last) return;
+  const e = eff();
+  if (e.h !== lastH) { lastH = e.h; sizeGL(); }                  // cambio di profilo (o di livello): la risoluzione di disegno si adegua subito
+  if (now - lastDraw < 1000 / e.fps - 3) return;                 // tetto di fotogrammi al secondo del profilo
+  lastDraw = now; lastDrawAt = performance.now();
+  fpsN++; if (now - fpsT >= 1000) { fps = Math.round(fpsN * 1000 / (now - fpsT)); fpsN = 0; fpsT = now; adapt(e);
+    try { T.event.emit("video-quality", { h: e.h, fps: e.fps, real: fps, off: adaptOff, calib: !!calib, cw: glc.width, ch: glc.height }); } catch (er) {} }
+  const vq = (last.quality && last.quality.visH) || 540;         // visualizzazioni: dimensione secondo il profilo
+  if (window.VideoVis && vis && vis.h !== vq && visTry !== vq) { visTry = vq; const nv = VideoVis.create(Math.round(vq * 16 / 9), vq); if (nv) vis = nv; }
+  const decks = last.decks, has = [false, false];
+  for (let i = 0; i < 2; i++) {
+    const d = decks[i];
+    if (!d.loaded) { gl.clear(i); st[i].upT = undefined; continue; }
+    if (VEXT.test(d.path || "")) {
+      const v = els[i], s = st[i];
+      if (v.readyState >= 2 && v.videoWidth > 0) {
+        const newFrame = v.requestVideoFrameCallback ? s.fresh : v.currentTime !== s.upT;
+        if (newFrame || s.upT === undefined) {
+          if (!gl.upload(i, v, v.videoWidth, v.videoHeight)) { fallbackToDom("texture rifiutata: " + VideoGL.error); return; }
+          s.upT = v.currentTime; s.fresh = false;
+        }
+      }
+      has[i] = s.upT !== undefined;
+    } else if (vis && (last.vis | 0) > 0) {
+      // deck senza video con una visualizzazione scelta: si disegna a tempo con il battito e il livello del deck
+      const beatIdx = d.pos * (d.bpm || 0) / 60;
+      vis.render({ scene: (last.vis | 0) - 1, time: now / 1000, beat: d.beat || 0, bar: ((beatIdx % 4) + 4) % 4 / 4, level: d.level, hue: d.hue });
+      if (!gl.upload(i, vis.canvas, vis.w, vis.h)) { fallbackToDom("texture rifiutata: " + VideoGL.error); return; }
+      has[i] = true;
+    } else { ensureCard(i, d); has[i] = true; }
+  }
+  gl.draw({ t: Math.max(0, Math.min(1, last.xf)), type: (last.quality && last.quality.simple && !SIMPLE.includes(last.trans | 0)) ? 0 : last.trans | 0, time: now / 1000, beat: (last.xf < 0.5 ? decks[0] : decks[1]).beat || 0, has });
+  if (rec) captureFrame(now);
+}
+let vis = null, visTry = 0;
+function initVis() { vis = window.VideoVis ? VideoVis.create(960, 540) : null; if (vis) visTry = 540; }
+initGL(); initVis();
+requestAnimationFrame(loop);
+
+T.event.listen("video-state", (e) => {
+  last = e.payload; gotAt = performance.now();
+  const x = last.xf * Math.PI / 2, ga = Math.cos(x), gb = Math.sin(x);
+  const op = last.decks.map((d) => (d.assign === 0 ? ga : d.assign === 1 ? gb : 1));
+  const vid = last.decks.map((d) => d.loaded && VEXT.test(d.path || ""));
+  // dissolvenza fra i deck: un deck solo audio mostra la sua scheda (copertina, titolo, artista); se l'altro deck e' vuoto resta pieno
+  const o = [0, 1].map((i) => (last.decks[1 - i].loaded ? op[i] : 1));
+  apply(0, last.decks[0], vid[0] ? o[0] : 0); apply(1, last.decks[1], vid[1] ? o[1] : 0);
+  if (!GLON) [0, 1].forEach((i) => setCard(i, last.decks[i], last.decks[i].loaded && !vid[i] ? o[i] : 0));
+  // titolo e artista del lato dominante, sopra i video (le schede li contengono gia')
+  const dom = op[0] >= op[1] ? 0 : 1, dd = last.decks[dom], showT = !!vid[dom] || (GLON && !!vis && (last.vis | 0) > 0 && !!dd?.loaded);
+  const nm = dd?.loaded ? dd.title + "\u0001" + dd.artist : "";
+  if (nm !== lastTitle) {
+    lastTitle = nm; titleEl.style.opacity = 0;
+    setTimeout(() => { titleEl.innerHTML = ""; if (nm) { titleEl.append(document.createTextNode(dd.title)); if (dd.artist) { const sm = document.createElement("small"); sm.textContent = dd.artist; titleEl.append(sm); } } titleEl.style.opacity = nm && showT ? 1 : 0; }, 350);
+  } else titleEl.style.opacity = nm && showT ? 1 : 0;
+  // sulle visualizzazioni una leggera ombra in basso tiene leggibile il titolo anche con le animazioni chiare
+  document.getElementById("shade").style.opacity = nm && showT && !vid[dom] ? 1 : 0;
+});
+
+setInterval(() => {
+  if (hud.style.display === "none") return;
+  hud.textContent = [0, 1].map((i) => {
+    const v = els[i], s = st[i], q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : {};
+    return `deck ${i + 1}: ${s.path ? s.path.split(/[\\/]/).pop() : "—"}\n  ${v.videoWidth}x${v.videoHeight} · fotogrammi saltati ${q.droppedVideoFrames ?? "?"}/${q.totalVideoFrames ?? "?"} · sfasamento ora ${((s.ema ?? 0) * 1000).toFixed(0)} ms (max ${(s.maxDrift * 1000).toFixed(0)}) · velocita' ${(s.rate || 0).toFixed(3)} · copia di lavoro ${s.src && s.src !== s.path ? "sì" : "no"} · riallineamenti ${s.seeks} · ritardo salto ${((s.lat ?? 0) * 1000).toFixed(0)} ms${s.err ? "\n  ERRORE " + s.err : ""}`;
+  }).join("\n") + `\nvisualizzazione: ${(window.VIDEO_VIS || [])[(last && last.vis) | 0] || "—"}${vis ? "" : " (non disponibile: " + (window.VideoVis && VideoVis.error) + ")"} · uscita: ${eff().h}p ${eff().fps} fps${adaptOff ? " (ridotta di " + adaptOff + " livelli dal carico)" : ""}${calib ? " [CALIBRAZIONE]" : ""} · disegno: ${GLON ? "WebGL" : "semplice (" + (glReason || "?") + ")"} · transizione: ${(window.VIDEO_TRANS || [])[(last && last.trans) | 0] || "—"} · ${fps} fps · messaggi dal programma: ${last ? "ok" : "nessuno"}`;
+}, 500);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "h" || e.key === "H") hud.style.display = hud.style.display === "none" || !hud.style.display ? "block" : "none";
+  if (e.key === "Escape") T.core.invoke("video_close");
+});
+</script>
+</body>
+</html>

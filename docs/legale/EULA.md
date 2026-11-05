@@ -35,7 +35,7 @@ Non puoi, salvo quanto la legge ti consente in modo inderogabile:
 - copiare, rivendere, noleggiare, prestare, sublicenziare o mettere online il Programma o la tua chiave;
 - condividere la chiave con altre persone o usarla su più computer di quelli consentiti;
 - aggirare, disattivare o manomettere il controllo della licenza;
-- decompilare, disassemblare o ricavare il codice sorgente, salvo i limiti dell'art. 64-quater della legge sul diritto d'autore (L. 633/1941), che permette la decompilazione solo per ottenere l'interoperabilità, alle condizioni di legge;
+- decompilare, disassemblare o ricavare il codice sorgente, salvo i limiti dell'art. 64-quater della legge sul diritto d'autore (L. 633/1941), che permette la decompilazione solo per ottenere l'interoperabilità, alle condizioni di legge. **Questo divieto non si applica ai componenti di terzi con licenza libera elencati al punto 6** (per esempio FFmpeg): per quelli valgono i diritti che la loro licenza ti dà, compresi la modifica e il reverse engineering per correggere i difetti;
 - togliere avvisi di copyright o marchi;
 - usare il Programma per violare diritti di terzi o la legge.
 
@@ -53,7 +53,9 @@ Non puoi, salvo quanto la legge ti consente in modo inderogabile:
 
 6.2 **Separazione degli stem.** [DA DECIDERE con il parere legale: il modello HT-Demucs è incluso nell'installer oppure lo scarichi tu alla prima apertura.] Il modello è messo a disposizione da terzi, con una licenza (MIT) di cui ti mostriamo il testo; **lo usi sotto la tua responsabilità** e non garantiamo che sia adatto a un uso commerciale. [Se scaricato dall'utente: il download parte solo dopo la tua conferma.]
 
-6.3 **FFmpeg.** Non lo distribuiamo. Se lo hai installato tu, il Programma può usarlo per leggere alcuni formati rari; resta soggetto alla sua licenza.
+6.3 **FFmpeg.** Il Programma include FFmpeg (https://ffmpeg.org), nella versione con licenza GNU LGPL (2.1 o successiva; per la versione Windows, LGPL 3), come programma separato (`ffmpeg` o `ffmpeg.exe`, accanto al Programma). Lo usa per preparare i video, misurare le prestazioni, registrare in MP4 e leggere alcuni formati. I testi delle licenze (in `licenses/FFMPEG-LICENSE.txt` e nella cartella `licenses/ffmpeg/`), la versione, la configurazione e l'indirizzo da cui ottenere i sorgenti sono in `licenses/FFMPEG-BUILD.txt` e nella scheda Informazioni. Puoi sostituirlo con una versione compatibile. FFmpeg è un marchio dei suoi autori; SpinLab non è sviluppato né approvato dal progetto FFmpeg.
+
+6.4 **Contenuti video e codec.** I video che carichi, proietti, registri o pubblichi sono sotto la tua responsabilità, compresi i diritti d'autore e di esecuzione pubblica. Alcuni formati (per esempio H.264, H.265, AAC) possono essere coperti da brevetti di terzi: il Programma usa, dove possibile, i decodificatori e gli encoder del tuo sistema. [DA VERIFICARE con il parere legale prima della vendita.]
 
 ## 7. Garanzia, limiti di responsabilità e assistenza
 

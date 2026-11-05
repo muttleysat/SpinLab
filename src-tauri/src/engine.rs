@@ -37,6 +37,8 @@ pub enum Motion {
 /// loudness di riferimento (LUFS) quando nessun altro brano sta suonando
 pub const REFERENCE_LUFS: f64 = -14.0;
 pub const NUM_PADS: usize = 8;
+/// Velocita' del rientro automatico del pitch, in punti percentuali al secondo: +8% torna a 0 in 16 s, +2% in 4 s.
+pub const TEMPO_RAMP_PCT_PER_S: f64 = 0.5;
 
 pub struct Track {
     pub name: String,
@@ -124,6 +126,8 @@ pub struct Deck {
     pub playing: bool,
     preview: bool,
     pub tempo: f64, // frazione, es. 0.04 = +4%
+    /// rientro graduale del pitch in corso: tempo (frazione) verso cui si va
+    pub tempo_ramp: Option<f64>,
     /// tasto SYNC acceso: il deck insegue tempo e fase del deck guida. Resta acceso finche' non lo spegni tu
     pub sync: bool,
     sync_prev_playing: bool,
@@ -206,7 +210,7 @@ pub struct Deck {
 impl Deck {
     pub fn new(sr: u32, xf_assign: u8) -> Self {
         Deck {
-            sr, track: None, pos: 0.0, playing: false, preview: false, tempo: 0.0, sync: false, sync_prev_playing: false, armed: false, arm_pos: 0.0, range: 0.08,
+            sr, track: None, pos: 0.0, playing: false, preview: false, tempo: 0.0, tempo_ramp: None, sync: false, sync_prev_playing: false, armed: false, arm_pos: 0.0, range: 0.08,
             keylock: true, key_shift: 0, cue_point: 0.0, hot_cues: [None; 8], quantize: true,
             grid_orig: (vec![], 0, 0.0), grid_base: vec![], grid_down: 0, grid_bpm: 0.0, grid_fixed: false, grid_pins: vec![],
             volume: 0.85, xf_assign, eq: Eq3::new(sr as f32), eq_knobs: [0.5; 3], fx: Fx::new(sr as f32),
@@ -245,6 +249,7 @@ impl Deck {
     }
 
     pub fn load(&mut self, t: Arc<Track>) {
+        self.tempo_ramp = None;
         self.grid_orig = (t.beats.clone(), t.downbeat, t.bpm);
         self.grid_base = t.beats.clone();
         self.grid_down = t.downbeat;
@@ -344,7 +349,29 @@ impl Deck {
         }
     }
     pub fn set_tempo_pct(&mut self, pct: f64) {
+        self.tempo_ramp = None; // muovere il pitch a mano interrompe il rientro automatico
         self.tempo = (pct / 100.0).clamp(-self.range, self.range).max(-0.95);
+    }
+    /// Avvia il rientro graduale del pitch verso `target_pct` (di solito 0): il tempo si avvicina al bersaglio a velocita'
+    /// costante (`TEMPO_RAMP_PCT_PER_S`), quindi un pitch piccolo rientra presto e uno grande piu' lentamente, senza scatti udibili.
+    pub fn start_tempo_ramp(&mut self, target_pct: f64) {
+        self.tempo_ramp = Some((target_pct / 100.0).clamp(-self.range, self.range).max(-0.95));
+    }
+    pub fn cancel_tempo_ramp(&mut self) {
+        self.tempo_ramp = None;
+    }
+    /// Un passo del rientro: da chiamare a ogni blocco audio con la durata del blocco in secondi.
+    pub fn step_tempo_ramp(&mut self, secs: f64) {
+        if let Some(target) = self.tempo_ramp {
+            let max = TEMPO_RAMP_PCT_PER_S / 100.0 * secs;
+            let d = target - self.tempo;
+            if d.abs() <= max {
+                self.tempo = target;
+                self.tempo_ramp = None;
+            } else {
+                self.tempo += d.signum() * max;
+            }
+        }
     }
     pub fn set_range_pct(&mut self, pct: f64) {
         self.range = pct / 100.0;
@@ -1406,6 +1433,10 @@ impl Mixer {
     }
 
     fn render_inner(&mut self, out: &mut [f32]) {
+        let block_secs = out.len() as f64 / 2.0 / self.sr.max(1) as f64;
+        for d in self.decks.iter_mut() {
+            d.step_tempo_ramp(block_secs);
+        }
         self.update_sync();
         out.iter_mut().for_each(|v| *v = 0.0);
         if self.scratch.len() < out.len() {
@@ -1684,6 +1715,7 @@ impl Mixer {
     /// Se un altro deck sta suonando, il deck si allinea subito a lui.
     pub fn sync(&mut self, deck: usize) {
         if deck >= NUM_DECKS { return; }
+        self.decks[deck].tempo_ramp = None; // il sync prende il tempo della guida: il rientro non ha piu' senso
         self.decks[deck].sync = true;
         let Some(m) = self.pick_leader() else { return };
         if m == deck { return; }
@@ -1707,6 +1739,8 @@ impl Mixer {
                     bpm_orig: t.map_or(0.0, |t| t.bpm),
                     bpm_now: d.bpm_now(),
                     tempo_pct: d.tempo * 100.0,
+                    volume: d.volume,
+                    tempo_ramp: d.tempo_ramp.is_some(),
                     range_pct: d.range * 100.0,
                     keylock: d.keylock,
                     key_orig: t.and_then(|t| t.key).map(camelot::camelot_code),
@@ -1736,6 +1770,7 @@ impl Mixer {
                     loop_in: d.loop_in / d.sr as f64,
                     loop_out: d.loop_out / d.sr as f64,
                     path: t.map_or(String::new(), |t| t.path.clone()),
+                    xf_assign: d.xf_assign,
                     norm_db: d.norm_db,
                     loudness: d.loudness,
                     downbeat: t.map_or(0, |t| t.downbeat),
@@ -1752,6 +1787,7 @@ impl Mixer {
             learn: self.learn,
             last_note: self.last_note,
             note_seq: self.note_seq,
+            crossfader: self.crossfader,
             master_level: self.master_level,
             auto_gain: self.auto_gain,
             hp_vol: self.hp_vol,
@@ -1772,6 +1808,10 @@ pub struct DeckState {
     pub bpm_orig: f64,
     pub bpm_now: f64,
     pub tempo_pct: f64,
+    /// fader del volume del canale (0..1): la miscela video puo' seguire questo invece del crossfader
+    pub volume: f32,
+    /// true mentre il pitch rientra da solo verso lo 0
+    pub tempo_ramp: bool,
     pub range_pct: f64,
     pub keylock: bool,
     pub key_orig: Option<String>,
@@ -1804,6 +1844,8 @@ pub struct DeckState {
     pub loop_in: f64,
     pub loop_out: f64,
     pub path: String,
+    /// assegnazione al crossfader (0 = A, 1 = B, 2 = diretto)
+    pub xf_assign: u8,
     pub norm_db: f64,
     pub loudness: f64,
     pub downbeat: usize,
@@ -1847,6 +1889,8 @@ pub struct Snapshot {
     pub learn: Option<usize>,
     pub last_note: i16,
     pub note_seq: u32,
+    /// posizione del crossfader (0..1): serve anche alla miscela video
+    pub crossfader: f32,
 }
 
 #[derive(Serialize)]
@@ -2052,6 +2096,108 @@ mod tests {
         d.grid_cmd("reset", 0.0);
         let t = d.track.as_ref().unwrap();
         assert!((t.beats[0] - 0.104).abs() < 1e-9 && t.downbeat == 1 && !d.grid_fixed);
+    }
+
+    /// lo stato espone il fader del volume di ogni canale (serve alla miscela video che segue i fader dei canali)
+    #[test]
+    fn snapshot_exposes_channel_volume() {
+        let mut m = Mixer::new(44100);
+        m.decks[0].volume = 0.3;
+        m.decks[1].volume = 0.9;
+        let s = m.snapshot();
+        assert!((s.decks[0].volume - 0.3).abs() < 1e-6 && (s.decks[1].volume - 0.9).abs() < 1e-6);
+    }
+
+    /// rientro graduale del pitch: parte da +6%, torna a 0 a velocita' costante (0,5 punti al secondo = 12 s), senza scatti e si ferma da solo
+    #[test]
+    fn tempo_ramp_returns_to_zero_gradually() {
+        let sr = 44100;
+        let mut m = Mixer::new(sr);
+        m.decks[0].load(sine_track(sr, 120.0, 440.0));
+        m.decks[0].playing = true;
+        m.decks[0].set_tempo_pct(6.0);
+        m.decks[0].start_tempo_ramp(0.0);
+        assert!(m.decks[0].tempo_ramp.is_some());
+        let mut buf = vec![0f32; 1024];
+        let block = 512.0 / sr as f64;
+        let mut prev = m.decks[0].tempo;
+        let mut max_step = 0f64;
+        let mut secs_to_zero = None;
+        for blk in 0..(sr as usize * 20 / 512) {
+            m.render(&mut buf);
+            let t = m.decks[0].tempo;
+            assert!(t <= prev + 1e-12, "il pitch non deve risalire durante il rientro");
+            max_step = max_step.max(prev - t);
+            prev = t;
+            if secs_to_zero.is_none() && t == 0.0 {
+                secs_to_zero = Some((blk + 1) as f64 * block);
+            }
+        }
+        let secs = secs_to_zero.expect("il pitch deve arrivare a 0");
+        assert!((secs - 12.0).abs() < 0.2, "rientro in {secs} s invece di 12");
+        // il passo massimo per blocco e' quello della velocita' costante: nessun salto
+        assert!(max_step <= TEMPO_RAMP_PCT_PER_S / 100.0 * block * 1.001, "passo troppo grande: {max_step}");
+        assert!(m.decks[0].tempo_ramp.is_none() && m.decks[0].tempo == 0.0, "a fine rientro si ferma");
+    }
+
+    /// un pitch piccolo rientra presto, uno grande piu' lentamente (stessa velocita'); funziona anche verso il basso
+    #[test]
+    fn tempo_ramp_speed_is_constant_for_any_offset() {
+        let sr = 44100;
+        for (start, expect) in [(2.0, 4.0), (-4.0, 8.0), (8.0, 16.0)] {
+            let mut m = Mixer::new(sr);
+            m.decks[0].load(sine_track(sr, 120.0, 440.0));
+            m.decks[0].playing = true;
+            m.decks[0].set_tempo_pct(start);
+            m.decks[0].start_tempo_ramp(0.0);
+            let mut buf = vec![0f32; 1024];
+            let mut blocks = 0;
+            while m.decks[0].tempo_ramp.is_some() && blocks < sr as usize * 30 / 512 {
+                m.render(&mut buf);
+                blocks += 1;
+            }
+            let secs = blocks as f64 * 512.0 / sr as f64;
+            assert!((secs - expect).abs() < 0.2, "da {start}%: {secs} s invece di {expect}");
+            assert_eq!(m.decks[0].tempo, 0.0);
+        }
+    }
+
+    /// il rientro si interrompe se muovi il pitch a mano, se lo ferma il pulsante, se carichi un brano o se accendi il sync
+    #[test]
+    fn tempo_ramp_is_cancelled_by_user_actions() {
+        let sr = 44100;
+        let mut m = Mixer::new(sr);
+        m.decks[0].load(sine_track(sr, 120.0, 440.0));
+        m.decks[1].load(sine_track(sr, 120.0, 440.0));
+        m.decks[0].playing = true;
+        m.decks[1].playing = true;
+        let mut buf = vec![0f32; 1024];
+        // a mano
+        m.decks[0].set_tempo_pct(5.0);
+        m.decks[0].start_tempo_ramp(0.0);
+        for _ in 0..100 { m.render(&mut buf); }
+        let mid = m.decks[0].tempo;
+        assert!(mid < 0.05 && mid > 0.0);
+        m.decks[0].set_tempo_pct(3.0);
+        assert!(m.decks[0].tempo_ramp.is_none());
+        for _ in 0..100 { m.render(&mut buf); }
+        assert!((m.decks[0].tempo - 0.03).abs() < 1e-9, "dopo l'intervento manuale il pitch deve restare dov'e'");
+        // fermato dal pulsante: resta dove si trova
+        m.decks[0].start_tempo_ramp(0.0);
+        for _ in 0..100 { m.render(&mut buf); }
+        m.decks[0].cancel_tempo_ramp();
+        let stop = m.decks[0].tempo;
+        for _ in 0..100 { m.render(&mut buf); }
+        assert_eq!(m.decks[0].tempo, stop);
+        // nuovo brano
+        m.decks[0].start_tempo_ramp(0.0);
+        m.decks[0].load(sine_track(sr, 120.0, 440.0));
+        assert!(m.decks[0].tempo_ramp.is_none());
+        // sync
+        m.decks[1].set_tempo_pct(4.0);
+        m.decks[1].start_tempo_ramp(0.0);
+        m.sync(1);
+        assert!(m.decks[1].tempo_ramp.is_none());
     }
 
     /// sync continuo: tempo e fase del master vengono inseguiti anche quando il master cambia velocita'
