@@ -62,26 +62,6 @@
     return out;
   }
 
-  /** Riproduce a velocita' 4× il video di prova nel motore web: quanti fotogrammi al secondo decodifica (in multipli del tempo reale). */
-  async function decodeBench(path) {
-    const v = document.createElement("video");
-    v.muted = true; v.playsInline = true; v.loop = true; v.preload = "auto";
-    v.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none";
-    document.body.appendChild(v);
-    try {
-      v.src = T.core.convertFileSrc(path);
-      await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error("video di prova non leggibile")); setTimeout(() => rej(new Error("timeout")), 5000); });
-      v.playbackRate = 4;
-      await v.play();
-      await sleep(400);
-      const q0 = v.getVideoPlaybackQuality(), t0 = performance.now();
-      await sleep(1500);
-      const q1 = v.getVideoPlaybackQuality(), dt = (performance.now() - t0) / 1000;
-      const frames = (q1.totalVideoFrames - q1.droppedVideoFrames) - (q0.totalVideoFrames - q0.droppedVideoFrames);
-      return Math.min(4, frames / dt / 30);
-    } finally { try { v.pause(); v.removeAttribute("src"); v.load(); } catch (e) {} v.remove(); }
-  }
-
   const fingerprint = (hw, gpu) => [hw.cpu, hw.cores, hw.ram_gb, gpu, hw.os].join("|");
   let busy = false, last = null;
   try { last = JSON.parse(LS("spinlab.video_perf") || "null"); } catch (e) {}
@@ -100,7 +80,7 @@
       try {
         const clip = await T.core.invoke("video_bench_clip");
         encoder = clip.encoder; encodeFps = clip.encode_fps;
-        try { decodeX = await decodeBench(clip.path); } catch (e) { decodeErr = String(e.message || e); }
+        try { decodeX = Math.min(10, await T.core.invoke("video_bench_decode", { path: clip.path })); } catch (e) { decodeErr = String(e.message || e); }
       } catch (e) { decodeErr = String(e); }
       try { await T.core.invoke("video_bench_clean"); } catch (e) {}
       let hwDecode = null;
@@ -108,7 +88,7 @@
       let stems = null; try { stems = !!(await T.core.invoke("stems_cfg")).realtime; } catch (e) {}
       const res = { shader1080: gs.shader1080, shader720: gs.shader720, visFps: gs.visFps, decodeX, hwDecode, encoder, encodeFps, ram: hw.ram_gb, cores: hw.cores, stemsRealtime: stems, error: gs.error, decodeErr };
       const pick = decide(res);
-      last = { v: 1, fp: fingerprint(hw, gs.gpu), hw: { ...hw, gpu: gs.gpu }, res, auto: pick.id, why: pick.why, at: Date.now() };
+      last = { v: 2, fp: fingerprint(hw, gs.gpu), hw: { ...hw, gpu: gs.gpu }, res, auto: pick.id, why: pick.why, at: Date.now() };
       LS("spinlab.video_perf", JSON.stringify(last));
       return last;
     } finally { busy = false; }
@@ -118,36 +98,51 @@
   const manualId = () => { const m = LS("spinlab.video_profile"); return m && PROFILES[m] ? m : "auto"; };
   const active = () => { const m = manualId(); return PROFILES[m !== "auto" ? m : last?.auto || "media"]; };
 
-  // ---------------------------------------------------------------- pannello
-  let panel = null;
+  // ---------------------------------------------------------------- scheda VIDEO delle Impostazioni
+  const VEXT = /\.(mp4|m4v|mov|mkv|webm|avi|ts|mpg|mpeg)$/i;
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const ID_BY_LEVEL = ["massima", "alta", "media", "bassa"];
+  let mountEl = null, status = "";
   function render() {
-    if (!panel) return;
+    if (!mountEl) return;
     const r = last?.res, hw = last?.hw, cur = active(), m = manualId();
     const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
-    panel.querySelector(".vp-body").innerHTML = last ? `
-      <h4>Computer</h4><table>${row("Processore", `${esc(hw.cpu)} · ${hw.cores} core`)}${row("Memoria", `${hw.ram_gb} GB`)}${row("Scheda grafica", esc(hw.gpu || "non rilevata"))}${row("Sistema", esc(hw.os))}${row("Encoder video", hw.encoders?.length ? esc(hw.encoders.join(", ")) : "nessuno (FFmpeg mancante?)")}</table>
-      <h4>Misure</h4><table>${row("Grafica 1080p", `${r.shader1080.toFixed(0)} disegni/s`)}${row("Grafica 720p", `${r.shader720.toFixed(0)} disegni/s`)}${row("Visualizzazioni", `${r.visFps.toFixed(0)} disegni/s`)}${row("Decodifica video", r.decodeX ? `${r.decodeX.toFixed(1)}× il tempo reale${r.hwDecode === true ? " (accelerata)" : r.hwDecode === false ? " (software)" : ""}` : `non misurata${r.decodeErr ? " — " + esc(r.decodeErr) : ""}`)}${row("Codifica MP4", r.encoder ? `${esc(r.encoder)}: ${r.encodeFps.toFixed(0)} fotogrammi/s` : "non misurata")}${row("Stem", r.stemsRealtime === null ? "—" : r.stemsRealtime ? "in tempo reale" : "solo preparati")}</table>
-      <h4>Profilo</h4><p><b>${cur.name}</b> — fino a ${cur.h}p a ${cur.fps} fps${cur.simple ? ", transizioni leggere" : ", tutte le transizioni"}; registrazione ${cur.rec}.<br><span class="dim">${m === "auto" ? "Scelto in automatico: " + esc(last.why) : "Forzato dall'utente."}</span></p>`
-      : `<p>Nessuna misura ancora. Premi «Misura ora».</p>`;
-    const sel = panel.querySelector("select"); sel.value = m;
+    mountEl.innerHTML = `<div class="vp-body">
+      <h4>Profilo</h4>
+      <label class="vp-sel">Qualità dell'uscita video <select id="vpSel"><option value="auto">Automatico</option>${Object.values(PROFILES).map((p) => `<option value="${p.id}">${p.name} (fino a ${p.h}p, ${p.fps} fps)</option>`).join("")}</select></label>
+      <p>In uso: <b>${cur.name}</b> — fino a ${cur.h}p a ${cur.fps} fps${cur.simple ? ", solo transizioni leggere" : ", tutte le transizioni"}; registrazione ${cur.rec}.<br><span class="dim">${m === "auto" ? (last ? "Scelto in automatico: " + esc(last.why) : "In attesa della prima analisi del computer.") : "Forzato da te."}</span></p>
+      <div class="btns" style="justify-content:flex-start"><button id="vpCal">Ottimizza con un video in riproduzione</button><span class="vp-st">${esc(status)}</span></div>
+      <p class="hint">All'avvio il programma analizza il computer e sceglie un profilo di partenza. «Ottimizza» lo affina sul campo: avvia un video su un deck, premi il pulsante e per circa 10 secondi il programma prova la qualità più alta e scende finché l'uscita è fluida, poi ricorda il risultato. Durante il set l'uscita scende da sola se il computer fatica e risale quando il carico cala.</p>
+      <p class="hint">Il profilo limita risoluzione e fotogrammi al secondo dell'<b>uscita a schermo intero</b>: la differenza si nota su un proiettore o un monitor grande. In una piccola finestra di anteprima, o con un video a 25 fps, profili diversi sembrano uguali.</p>
+      ${last ? `<h4>Analisi del computer</h4><table>${row("Processore", `${esc(hw.cpu)} · ${hw.cores} core`)}${row("Memoria", `${hw.ram_gb} GB`)}${row("Scheda grafica", esc(hw.gpu || "non rilevata"))}${row("Sistema", esc(hw.os))}${row("Encoder video", hw.encoders?.length ? esc(hw.encoders.join(", ")) : "nessuno (FFmpeg mancante?)")}${row("Grafica 1080p / 720p", r.error ? `non misurata (${esc(r.error)})` : `${r.shader1080.toFixed(0)} / ${r.shader720.toFixed(0)} disegni/s`)}${row("Visualizzazioni", r.error ? "—" : `${r.visFps.toFixed(0)} disegni/s`)}${row("Decodifica video", r.decodeX ? `${r.decodeX.toFixed(1)}× il tempo reale${r.hwDecode === true ? " (accelerata)" : r.hwDecode === false ? " (software)" : ""}` : `non misurata${r.decodeErr ? " — " + esc(r.decodeErr) : ""}`)}${row("Codifica MP4", r.encoder ? `${esc(r.encoder)}: ${r.encodeFps.toFixed(0)} fotogrammi/s` : "non misurata")}${row("Stem", r.stemsRealtime === null ? "—" : r.stemsRealtime ? "in tempo reale" : "solo preparati")}</table>` : ""}
+    </div>`;
+    const sel = mountEl.querySelector("#vpSel"); sel.value = m;
+    sel.onchange = () => { LS("spinlab.video_profile", sel.value === "auto" ? null : sel.value); render(); };
+    mountEl.querySelector("#vpCal").onclick = calibrate;
   }
-  function openPanel() {
-    if (panel) { panel.remove(); panel = null; return; }
-    panel = document.createElement("div"); panel.className = "vperf";
-    panel.innerHTML = `<div class="vp-box"><div class="vp-head"><b>Prestazioni video</b><button class="vp-x" title="Chiudi">×</button></div><div class="vp-body"></div>
-      <div class="vp-foot"><label>Profilo <select><option value="auto">Automatico</option>${Object.values(PROFILES).map((p) => `<option value="${p.id}">${p.name} (${p.h}p ${p.fps} fps)</option>`).join("")}</select></label><span class="vp-st"></span><button class="vp-go">Misura ora</button></div></div>`;
-    document.body.appendChild(panel);
-    panel.querySelector(".vp-x").onclick = () => { panel.remove(); panel = null; };
-    panel.onclick = (e) => { if (e.target === panel) { panel.remove(); panel = null; } };
-    panel.querySelector("select").onchange = (e) => { LS("spinlab.video_profile", e.target.value === "auto" ? null : e.target.value); render(); };
-    panel.querySelector(".vp-go").onclick = async () => {
-      const st = panel.querySelector(".vp-st"), b = panel.querySelector(".vp-go"); b.disabled = true;
-      try { await measure((t) => { st.textContent = t; }); } catch (e) { st.textContent = "Errore: " + e; }
-      b.disabled = false; if (panel) { st.textContent = ""; render(); }
-    };
+  function mount(el) { mountEl = el; render(); }
+  const setStatus = (t) => { status = t; const e = mountEl && mountEl.querySelector(".vp-st"); if (e) e.textContent = t; };
+
+  // Calibrazione sul campo: l'uscita video parte dal livello piu' alto e scende finche' regge i fotogrammi al secondo (vedi video-out.html)
+  let calTimer = 0;
+  function calibrate() {
+    const playing = (typeof decks !== "undefined") && decks.slice(0, 2).some((d) => d.snap?.playing && d.snap?.loaded && VEXT.test(d.snap.path || ""));
+    if (!playing) { setStatus("Avvia un video su un deck (play) e riprova."); return; }
+    setStatus("Calibrazione in corso (circa 10 secondi)…");
+    const b = mountEl && mountEl.querySelector("#vpCal"); if (b) b.disabled = true;
+    try { T.event.emit("video-calibrate", {}); } catch (e) {}
+    clearTimeout(calTimer);
+    calTimer = setTimeout(() => { setStatus("L'uscita video non ha risposto: attiva VIDEO e riprova."); const bb = mountEl && mountEl.querySelector("#vpCal"); if (bb) bb.disabled = false; }, 40000);
+  }
+  T.event.listen("video-calibrated", (e) => {
+    clearTimeout(calTimer);
+    const level = Math.max(0, Math.min(3, e.payload.level | 0)), id = ID_BY_LEVEL[level];
+    last = { ...(last || { v: 2, fp: "", hw: {}, res: {} }), auto: id, why: `calibrato con un video in riproduzione: l'uscita regge ${PROFILES[id].h}p ${PROFILES[id].fps} fps`, at: Date.now() };
+    LS("spinlab.video_perf", JSON.stringify(last));
+    status = `Fatto: profilo ${PROFILES[id].name}.`;
+    try { (typeof toast2 === "function" ? toast2 : () => {})(`Video ottimizzato: profilo ${PROFILES[id].name}`); } catch (er) {}
     render();
-  }
+  });
 
   // ---------------------------------------------------------------- misura automatica
   // Parte da sola quando manca (primo avvio) o l'hardware e' cambiato, ma solo a deck fermi: la misura usa la scheda grafica.
@@ -159,7 +154,8 @@
     try {
       const hw = await T.core.invoke("video_hw");
       const cv = document.createElement("canvas"); const comp = window.VideoGL && VideoGL.create(cv); const gpu = comp ? comp.info() : "";
-      if (last && last.fp === fingerprint(hw, gpu)) { tries = 999; return; }
+      const bad = last && (last.v !== 2 || last.res?.error || !(last.res?.shader720 > 0));   // misura fallita o di una versione vecchia
+      if (last && !bad && last.fp === fingerprint(hw, gpu)) { tries = 999; return; }
     } catch (e) { return; }
     tries = 999;
     const say = (t) => { try { (typeof toast2 === "function" ? toast2 : () => {})(t); } catch (e) {} };
@@ -168,5 +164,5 @@
   }
   setTimeout(() => { auto(); setInterval(auto, 15000); }, 10000);
 
-  window.VideoPerf = { PROFILES, SIMPLE_TRANS, decide, measure, active, openPanel, manualId, last: () => last };
+  window.VideoPerf = { PROFILES, SIMPLE_TRANS, decide, measure, active, mount, manualId, last: () => last };
 })();

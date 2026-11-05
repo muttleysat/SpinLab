@@ -1745,6 +1745,7 @@ function setSettingsTab(t) {
   $$(".spane").forEach((p) => (p.hidden = p.id !== "sp-" + t));
   $("#aApply").hidden = t !== "audio";
   if (t === "stem") refreshStemPane();
+  if (t === "video" && window.VideoPerf) VideoPerf.mount($("#vpMount"));
   if (t === "midi") refreshMidiPane();
   if (t === "ui") $("#uiMode").value = uiChoice();
 }

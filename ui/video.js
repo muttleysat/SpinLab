@@ -137,7 +137,7 @@
     mons.forEach((m) => item(`${m.name} · ${m.width}×${m.height}${m.primary ? " (principale)" : ""}`, keyOf(m)));
     if (window.VideoPerf) {
       const sep = document.createElement("div"); sep.className = "vh"; sep.textContent = `Profilo: ${VideoPerf.active().name}`; menu.appendChild(sep);
-      const b = document.createElement("button"); b.textContent = "Prestazioni video…"; b.onclick = () => { closeMenu(); VideoPerf.openPanel(); }; menu.appendChild(b);
+      const b = document.createElement("button"); b.textContent = "Impostazioni video…"; b.onclick = () => { closeMenu(); if (typeof openAudioSettings === "function") openAudioSettings("video"); }; menu.appendChild(b);
     }
     document.body.appendChild(menu);
     const r = btn.getBoundingClientRect();

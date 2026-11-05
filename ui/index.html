@@ -234,7 +234,7 @@ SOFTWARE.</pre></details>
 
 <dialog id="audioDlg">
   <h2>Impostazioni</h2>
-  <div class="stabs"><button data-sp="audio" class="on">AUDIO</button><button data-sp="stem">STEM</button><button data-sp="midi">CONTROLLER MIDI</button><button data-sp="ui">INTERFACCIA</button></div>
+  <div class="stabs"><button data-sp="audio" class="on">AUDIO</button><button data-sp="stem">STEM</button><button data-sp="video">VIDEO</button><button data-sp="midi">CONTROLLER MIDI</button><button data-sp="ui">INTERFACCIA</button></div>
   <div class="spane" id="sp-audio">
     <div class="asiobox"><img src="assets/asio-logo-white.png" alt="ASIO Compatible" height="46"><span>ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</span></div>
     <label>Driver audio<select id="aDrv"></select></label>
@@ -261,6 +261,7 @@ SOFTWARE.</pre></details>
     <div class="btns" style="justify-content:flex-start"><button id="stBench">Misura la velocità di questo PC</button></div>
     <p class="hint">Tempo reale: gli stem si separano mentre il brano suona, con il processore. Se il PC non è abbastanza veloce conviene prepararli prima: clic destro su uno o più brani (o su una playlist) → «Crea stem». Vengono salvati in una cartella «stems» accanto ai brani, compressi senza perdita di qualità, e si caricano subito.</p>
   </div>
+  <div class="spane" id="sp-video" hidden><div id="vpMount"></div></div>
   <div class="spane" id="sp-ui" hidden>
     <label>Interfaccia<select id="uiMode">
       <option value="auto">Automatica: sui telefoni A in verticale e B compatto in orizzontale, desktop altrove</option>
@@ -291,6 +292,8 @@ SOFTWARE.</pre></details>
 <div id="ghost" hidden></div>
 <script src="app.js"></script>
 <script src="video-trans.js"></script>
+<script src="video-gl.js"></script>
+<script src="video-vis.js"></script>
 <script src="video-perf.js"></script>
 <script src="video.js"></script>
 <script src="midi.js"></script>

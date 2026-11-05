@@ -240,3 +240,20 @@ pub async fn video_bench_clip() -> Result<BenchClip, String> {
 pub fn video_bench_clean() {
     let _ = std::fs::remove_file(proxy_dir().join("bench-clip.mp4"));
 }
+
+/// Velocita' di decodifica del video di prova, in multipli del tempo reale (30 s di video decodificati e scartati, con l'accelerazione del
+/// sistema se c'e'). Misurarla con FFmpeg e' piu' affidabile che nel motore web, dove un video nascosto viene rallentato.
+#[tauri::command]
+pub async fn video_bench_decode(path: String) -> Result<f64, String> {
+    tauri::async_runtime::spawn_blocking(move || -> Result<f64, String> {
+        let t0 = std::time::Instant::now();
+        let o = run_ffmpeg(&["-v", "error", "-hwaccel", "auto", "-stream_loop", "9", "-i", &path, "-map", "0:v:0", "-f", "null", "-"]).ok_or("ffmpeg non trovato")?;
+        if !o.status.success() {
+            return Err("decodifica di prova non riuscita".into());
+        }
+        // 3 s a 30 fps ripetuti 10 volte = 900 fotogrammi
+        Ok((900.0 / t0.elapsed().as_secs_f64().max(0.001)) / 30.0)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
