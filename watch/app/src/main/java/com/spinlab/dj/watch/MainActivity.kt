@@ -15,6 +15,8 @@ import androidx.core.content.ContextCompat
  */
 class MainActivity : Activity() {
     private lateinit var view: RingView
+    /** Volumi degli stem prima di tenere premuto: al rilascio si torna a quelli, non per forza a tutti accesi. */
+    private var preHold = floatArrayOf(1f, 1f, 1f, 1f)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,10 +33,28 @@ class MainActivity : Activity() {
         view = RingView(this, Engine.pulse)
         setContentView(view)
         view.onHold = { down ->
-            // in demo non si toccano gli stem del telefono; al rilascio il telefono li fa rientrare sulla battuta (conosce la griglia)
-            if (!Engine.demo) Engine.link.sendStems(
-                if (down) floatArrayOf(0f, 0f, 1f, 1f) else floatArrayOf(1f, 1f, 1f, 1f), onBar = !down,
-            )
+            // in demo non si toccano gli stem del telefono
+            if (!Engine.demo) {
+                if (down) {
+                    // fuori batteria e basso, il resto resta com'e'
+                    preHold = Engine.stems.copyOf()
+                    val g = preHold.copyOf().also { it[0] = 0f; it[1] = 0f }
+                    Engine.stems = g
+                    Engine.link.sendStems(g)
+                } else {
+                    // al rilascio tornano come prima, sulla prossima battuta (lo decide il telefono, che conosce la griglia)
+                    Engine.link.sendStems(preHold.copyOf().also { if (it[0] < 0.01f && it[1] < 0.01f) { it[0] = 1f; it[1] = 1f } }, onBar = true)
+                }
+            }
+        }
+        view.onToggleStem = { i ->
+            // le pillole colorate: un tocco silenzia o riammette quello stem (subito); lo stato vero lo conferma il telefono
+            if (!Engine.demo) {
+                val g = Engine.stems.copyOf()
+                g[i] = if (g[i] > 0.01f) 0f else 1f
+                Engine.stems = g
+                Engine.link.sendStems(g)
+            }
         }
         view.onLead = { d -> Engine.setLead(Engine.pulse.leadMs + d) }
     }

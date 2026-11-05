@@ -24,6 +24,8 @@ import kotlin.math.min
 class RingView(ctx: Context, private val pulse: Pulse) : View(ctx) {
     var onHold: ((Boolean) -> Unit)? = null
     var onLead: ((Int) -> Unit)? = null
+    /** Tocco su una pillola: silenzia o riammette quello stem (0 batteria, 1 basso, 2 altro, 3 voce). */
+    var onToggleStem: ((Int) -> Unit)? = null
 
     // stato che vive in Engine (collegamento e metronomo continuano anche con lo schermo spento)
     private val linked get() = Engine.linked
@@ -56,6 +58,7 @@ class RingView(ctx: Context, private val pulse: Pulse) : View(ctx) {
     private val glowBlue = Paint(Paint.ANTI_ALIAS_FLAG)
     private val glowOrange = Paint(Paint.ANTI_ALIAS_FLAG)
     private val rect = RectF()
+    private val pillHit = Array(4) { RectF() }   // zona di tocco di ogni pillola, un po' piu' grande del disegno
 
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) {
         val cx = w / 2f
@@ -66,7 +69,7 @@ class RingView(ctx: Context, private val pulse: Pulse) : View(ctx) {
     }
 
     /** Chiamata a ogni stato dal telefono: se dopo il rilascio gli stem sono tornati tutti, e' il drop. */
-    fun checkRestored() { if (armed && stems.all { it > 0.01f }) stemsRestored() }
+    fun checkRestored() { if (armed && stems[0] > 0.01f && stems[1] > 0.01f) stemsRestored() }
 
     /** Gli stem sono rientrati sul telefono: lampo del drop. */
     fun stemsRestored() {
@@ -193,6 +196,7 @@ class RingView(ctx: Context, private val pulse: Pulse) : View(ctx) {
             val py = cy + (if (i < 2) -1 else 1) * r * 0.51f
             val on = stems[i] > 0.01f
             rect.set(px - pw / 2, py - ph / 2, px + pw / 2, py + ph / 2)
+            pillHit[i].set(rect.left - r * 0.03f, rect.top - r * 0.05f, rect.right + r * 0.03f, rect.bottom + r * 0.05f)
             fill.color = if (on) chipColor[i] else 0xFF141B29.toInt()
             c.drawRoundRect(rect, ph / 2, ph / 2, fill)
             label(c, chipName[i], px, py, r * 0.078f, if (on) 0xFF05070C.toInt() else 0xFF5E6A86.toInt())
@@ -212,7 +216,7 @@ class RingView(ctx: Context, private val pulse: Pulse) : View(ctx) {
 
         if (tune) {
             label(c, "RTT %.0f   CMD %s".format(if (rttMs >= 0) rttMs else 0.0, if (ackMs >= 0) "$ackMs" else "-"), cx, cy + r * 0.665f, r * 0.068f, DIM)
-            label(c, "ANTICIPO $leadMs ms", cx, cy + r * 0.745f, r * 0.072f, Color.WHITE)
+            label(c, if (leadMs == 0) "VIBRA A TEMPO" else "VIBRA $leadMs ms PRIMA", cx, cy + r * 0.745f, r * 0.072f, Color.WHITE)
             for (s in intArrayOf(-1, 1)) {
                 val bx = cx + s * r * 0.60f
                 line.strokeWidth = r * 0.012f
@@ -325,7 +329,11 @@ class RingView(ctx: Context, private val pulse: Pulse) : View(ctx) {
         if (splash) { if (e.actionMasked == MotionEvent.ACTION_DOWN) splash = false; return true }
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                if (hypot(e.x - cx, e.y - cy) < r * 0.40f) {
+                val pill = (0..3).firstOrNull { pillHit[it].contains(e.x, e.y) }
+                if (pill != null) {
+                    pulse.tick()
+                    onToggleStem?.invoke(pill)
+                } else if (hypot(e.x - cx, e.y - cy) < r * 0.40f) {
                     held = true
                     pressPos = pulse.posAbs()
                     pulse.tick()
@@ -334,7 +342,7 @@ class RingView(ctx: Context, private val pulse: Pulse) : View(ctx) {
                     onLead?.invoke(-5)
                 } else if (tune && hypot(e.x - (cx + r * 0.60f), e.y - cy) < r * 0.18f) {
                     onLead?.invoke(5)
-                } else if (e.y < cy - r * 0.55f) {
+                } else if (e.y < cy - r * 0.64f) {
                     tune = !tune
                 }
             }
