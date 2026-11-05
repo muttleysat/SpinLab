@@ -27,3 +27,6 @@ server/updates/latest.json
 
 # impostazioni locali dell'editor
 .vscode/
+
+# FFmpeg incluso nell installer (grande): lo prepara tools/fetch_ffmpeg.py
+src-tauri/binaries/

@@ -26,6 +26,14 @@ caricata a richiesta. La libreria e' sotto licenza GNU LGPL: potete sostituire `
 I sorgenti ufficiali sono su https://lame.sourceforge.io e lo script con cui la DLL e' stata costruita e' nel repository del progetto
 (`tools/build_lame_dll.py`). Il testo della licenza e' in `licenses/LICENSE-LAME.txt`.
 
+### FFmpeg (video e formati) - LGPL (2.1 o successiva; LGPL 3 per la build Windows)
+SpinLab include FFmpeg (https://ffmpeg.org) come programma separato (`ffmpeg.exe` su Windows, `ffmpeg` su macOS), solo in una build LGPL
+senza componenti GPL ne' non liberi. Lo usa per le copie di lavoro dei video, le misure di prestazioni, la registrazione in MP4 e la
+decodifica dei formati rari. Potete sostituire il file con una versione compatibile. Il testo della licenza e' in
+`licenses/FFMPEG-LICENSE.txt` (quella della build; tutti i testi, compresa la GPL 3 richiamata dalla LGPL 3, sono in `licenses/ffmpeg/`); versione, origine, impronta e configurazione della build sono in `licenses/FFMPEG-BUILD.txt`.
+I sorgenti ufficiali sono su https://ffmpeg.org/releases/ (e https://git.ffmpeg.org/ffmpeg.git); per le build di Windows anche gli
+script pubblici di https://github.com/BtbN/FFmpeg-Builds. FFmpeg e' un marchio dei suoi autori; SpinLab non e' approvato dal progetto FFmpeg.
+
 ### Modello di separazione degli stem - HT-Demucs
 Gli stem si separano con il modello HT-Demucs (Rouard, Massa, Defossez, "Hybrid Transformers for Music Source Separation", 2023),
 sviluppato da Meta (facebookresearch/demucs) nella versione ONNX di StemSplit

@@ -11,7 +11,7 @@ L'elenco completo delle librerie, con i testi delle licenze, e' in `THIRD-PARTY-
 | 408 librerie Rust (Tauri, cpal, rustfft, rusqlite, ort...) | MIT / Apache-2.0 / BSD / ISC / Zlib / Unlicense / CC0 / Unicode | si, con l'obbligo di riportare i testi | fatto: `THIRD-PARTY-LICENSES.md` nell'installer |
 | 21 librerie MPL-2.0 (Symphonia, cssparser, selectors...) | MPL-2.0 (copyleft **solo sui singoli file**) | si, se non si modificano; chi le modifica deve pubblicare le modifiche a quei file | ok: non modifichiamo nessuna di queste librerie |
 | LAME (encoder MP3) | **LGPL** | si, a condizione che l'utente possa sostituire la libreria | **corretto**: era legata dentro l'eseguibile, ora e' una DLL separata (`libmp3lame.dll`), caricata a richiesta |
-| FFmpeg | LGPL o **GPL** a seconda della versione | non lo distribuiamo | ok: e' facoltativo, usato solo se l'utente lo ha gia' installato; vedi sotto |
+| FFmpeg | **LGPL** (2.1 o successiva per la build macOS; **LGPL 3** per la build Windows di BtbN, compilata con `--enable-version3`); solo build senza componenti GPL ne' non liberi | si, a condizione di testo della licenza, avviso, sorgenti e possibilita' di sostituirlo | **incluso nell'installer** come programma separato (sidecar); vedi `docs/FFMPEG.md` |
 | ONNX Runtime | MIT | si | ok |
 | DirectML.dll | Microsoft, ridistribuibile | si | ok (testo nei crediti) |
 | Microsoft WebView2 | Microsoft, ridistribuibile | si | ok (lo installa Tauri / Windows) |
@@ -19,6 +19,26 @@ L'elenco completo delle librerie, con i testi delle licenze, e' in `THIRD-PARTY-
 | Font dell'interfaccia (Bahnschrift, Segoe UI) | Microsoft, font di sistema | si: non vengono distribuiti, li usa Windows | ok |
 | Marchio e icone SpinLab | nostri | si | fatto, vedi note sul nome sotto |
 | **Modello HT-Demucs (stem)** | **codice MIT, pesi non chiari** | **da verificare - rischio reale** | **da decidere, vedi sotto** |
+
+## Registro delle licenze e dei permessi da ottenere
+
+Aggiornato il 2026-11-05 su indicazione del responsabile del prodotto. Stato di ogni voce: **Richiesta** (inviata, si attende), **Da fare**, **Da decidere**, **Fatto**. Non e' un parere legale: per le voci con rischio reale serve un avvocato prima di vendere (decisioni D-10 e D-17 in `DECISIONI.md`).
+
+| # | Cosa | Con chi | Stato | Note |
+|---|------|---------|-------|------|
+| 1 | **ASIO**: accordo per l'SDK e uso del logo «ASIO Compatible» | Steinberg | **In attesa** | Senza accordo non si distribuisce un programma con ASIO (vedi `ASIO-licenza.md`) |
+| 2 | **HEVC (H.265)**: brevetti del codec | Consorzio dei brevetti (da indicare) | **Richiesta** | Da chiarire se copre solo la **decodifica** (SpinLab non codifica HEVC). Indicare qui chi e da quando |
+| 3 | **H.264 e AAC**: brevetti, soglie di esenzione | Consorzi dei brevetti | **Da fare** | La registrazione MP4 produce H.264 + AAC, con l'encoder AAC software di FFmpeg e gli encoder H.264 di sistema |
+| 4 | **Pesi del modello degli stem (HT-Demucs)** | Avvocato o fornitore con licenza commerciale | **Da decidere** | Meta non ha chiarito la licenza dei pesi (dataset non commerciale); vedi sezione sul modello |
+| 5 | **Contributo di Marco Dufour** (port per macOS) | Marco Dufour | **Da fare** | Accordo scritto su a chi appartiene il codice |
+| 6 | **Marchio «SpinLab»**: ricerca di anteriorita' ed eventuale registrazione | EUIPO / UIBM / USPTO | **Da fare** | Anche «Camelot» nel materiale commerciale |
+| 7 | **Certificato di firma del codice** | Autorita' di certificazione | **Da fare** | Per evitare gli avvisi di Windows (SmartScreen) |
+| 8 | **Account Apple Developer** (firma e notarizzazione) | Apple | **Da fare** | Per distribuire su macOS fuori dallo store |
+| 9 | **Parere dell'avvocato su EULA, informativa sulla privacy e donazioni/vendita** | Avvocato | **Da fare** | Le bozze sono in `legale/` |
+| 10 | **Contratto con chi incassa** (vendita) o condizioni della piattaforma di donazioni, e profilo fiscale | Piattaforma di pagamento, commercialista | **Da decidere** | Dipende dal modello di distribuzione (D-17) |
+| 11 | **Accordi con le piattaforme di streaming** (solo se si fara' lo streaming) | Beatport/Beatsource, TIDAL ecc. | **Da decidere** | Decisione D-15; non e' una questione tecnica |
+
+**Senza nulla da chiedere** (si rispettano soltanto le licenze): FFmpeg e LAME (LGPL), le librerie MIT/Apache/BSD, le librerie MPL (non modificate), ONNX Runtime (MIT), DirectML e WebView2 (ridistribuibili). I brevetti MP3 sono scaduti. Vedi `FFMPEG.md`.
 
 ## Il problema serio: il modello degli stem (HT-Demucs)
 
@@ -62,9 +82,18 @@ Cosa abbiamo fatto: il modello e' un singolo file sostituibile (`htdemucs.onnx`,
 
 ## FFmpeg
 
-Non e' distribuito con SpinLab. SpinLab legge da solo MP3, AAC/M4A, FLAC, WAV, AIFF, OGG/Vorbis, ALAC e MKV con Symphonia (MPL-2.0). Per formati rari (WMA, Opus, AC3...) usa FFmpeg **solo se l'utente lo ha gia' installato**. Un programma esterno scelto e installato dall'utente non crea obblighi di licenza per noi.
+E' **incluso nell'installer**, come programma separato (`ffmpeg.exe` su Windows, `ffmpeg` su macOS) accanto all'eseguibile di SpinLab, solo in versione **LGPL** (senza x264, x265, fdk-aac e altri componenti GPL o non liberi). Serve per le copie di lavoro dei video, le misure di prestazioni, la registrazione in MP4 e l'audio dei formati rari.
 
-Se un giorno volessimo includerlo: solo una versione **LGPL** (senza componenti GPL ne «nonfree»), come eseguibile separato, con testo della licenza e offerta dei sorgenti. Le versioni «full» comuni (per esempio quelle di Gyan) sono GPL e **non** vanno incluse.
+Cosa facciamo per rispettare la licenza (dettagli e procedura in `docs/FFMPEG.md`):
+
+- il testo della licenza LGPL (preso dalla distribuzione ufficiale di FFmpeg) e il file con versione, origine e configurazione della build entrano nell'installer (`licenses/FFMPEG-LICENSE.txt`, `licenses/FFMPEG-BUILD.txt`);
+- la scheda Informazioni e `THIRD-PARTY-LICENSES.md` dicono che SpinLab usa FFmpeg e da dove si ottengono i sorgenti;
+- FFmpeg e' un file a parte, quindi l'utente puo' sostituirlo con una versione compatibile;
+- l'EULA non vieta la modifica e il reverse engineering per i componenti con licenza libera (art. 4 e 6.3).
+
+**Attenzione alla versione della LGPL.** Una build compilata con `--enable-version3` (come quella Windows di BtbN) e' **LGPL 3**, non 2.1: il testo da includere cambia (e la LGPL 3 richiama anche la GPL 3, per questo si includono tutti i testi in `licenses/ffmpeg/`) e valgono le condizioni sui brevetti della GPL 3 (art. 11, licenze brevettuali «discriminatorie»), da far verificare dal legale perche' possono interagire con le licenze dei codec (HEVC, H.264, AAC). Per questo la build **LGPL 2.1** (macOS, compilata da noi) e' preferibile; per Windows conviene compilarne una propria senza `--enable-version3` se il legale lo consiglia.
+
+Le versioni «full» comuni (per esempio quelle di Gyan) sono GPL e **non** vanno incluse. **I brevetti dei codec (H.264, H.265, AAC) sono un tema separato dalla licenza del software**: restano da verificare con il parere legale (decisione D-10 in `docs/DECISIONI.md`).
 
 ## LAME / MP3
 

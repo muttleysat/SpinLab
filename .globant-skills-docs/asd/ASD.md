@@ -77,6 +77,8 @@ Il documento è una cartella di file Markdown collegati: si caricano solo quelli
 
 ## Open Items
 
+> Le decisioni che spettano al responsabile del prodotto sono nel [registro delle decisioni](../../docs/DECISIONI.md): §1.1 → D-02; §5 → D-05; ambito dell'ASD → D-03; piattaforme → D-04; FFmpeg e codec → D-09, D-10; `asset://` → D-12; prove su Windows → D-13.
+
 | Section | Item | Priority |
 |---------|------|----------|
 | §1.1 | Contesto di business (problema, utenti, piani di vendita) | High |

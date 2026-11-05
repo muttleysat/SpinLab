@@ -72,6 +72,8 @@ Ambito della sessione 1 (scelto da noi in assenza di indicazioni diverse): **sis
 
 ## Open Questions & Blockers
 
+> Ogni domanda aperta ha la sua decisione nel [registro](../../docs/DECISIONI.md): Q-01 → D-03; Q-03 → D-04; §1.1 → D-02; §5 → D-05; Q-02 (CI) → da aggiungere al registro quando si affronta §9.
+
 | ID | Question / Blocker | Affects | Raised | Status |
 |----|-------------------|---------|--------|--------|
 | Q-01 | Il server PHP (`server/`) e gli strumenti (`tools/`) rientrano nell'ASD o solo l'app desktop? | §6, §7, §8, §9 | 2026-11-05 | Open |

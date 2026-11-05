@@ -109,11 +109,11 @@ fn decode_ffmpeg(path: &str, sr: u32) -> Result<Vec<f32>, String> {
     Ok(bytes.chunks_exact(4).map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]])).collect())
 }
 
-/// Cerca ffmpeg accanto all'eseguibile (sidecar dell'installer) altrimenti nel PATH.
+/// Cerca ffmpeg accanto all'eseguibile (sidecar dell'installer: `ffmpeg.exe` su Windows, `ffmpeg` altrove) altrimenti nel PATH.
 pub(crate) fn ffmpeg_path() -> std::path::PathBuf {
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            let p = dir.join("ffmpeg.exe");
+            let p = dir.join(if cfg!(windows) { "ffmpeg.exe" } else { "ffmpeg" });
             if p.exists() {
                 return p;
             }

@@ -5,7 +5,13 @@
       "models/htdemucs.onnx": "models/htdemucs.onnx",
       "libs/libmp3lame.dll": "libmp3lame.dll",
       "libs/LICENSE-LAME.txt": "licenses/LICENSE-LAME.txt",
-      "../THIRD-PARTY-LICENSES.md": "licenses/THIRD-PARTY-LICENSES.md"
-    }
+      "../THIRD-PARTY-LICENSES.md": "licenses/THIRD-PARTY-LICENSES.md",
+      "binaries/licenses/FFMPEG-LICENSE.txt": "licenses/FFMPEG-LICENSE.txt",
+      "binaries/licenses/FFMPEG-BUILD.txt": "licenses/FFMPEG-BUILD.txt",
+      "binaries/licenses/ffmpeg": "licenses/ffmpeg"
+    },
+    "externalBin": [
+      "binaries/ffmpeg"
+    ]
   }
 }

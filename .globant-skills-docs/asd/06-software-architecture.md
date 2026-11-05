@@ -124,7 +124,7 @@ flowchart LR
 
 | Integration | Owner | Type | Status | Blocking dependency |
 |-------------|-------|------|--------|---------------------|
-| FFmpeg | 3rd Party (progetto FFmpeg) + Team SpinLab per la distribuzione | Processo esterno (CLI, pipe) | Draft | Parziale: senza FFmpeg mancano copie di lavoro, misure, registrazione MP4 e i formati audio rari; il video riprodotto dal motore web e l'audio con Symphonia continuano a funzionare |
+| FFmpeg (incluso nell'installer, build LGPL: `docs/FFMPEG.md`) | 3rd Party (progetto FFmpeg) + Team SpinLab per la distribuzione | Processo esterno (CLI, pipe) | Draft | Parziale: senza FFmpeg mancano copie di lavoro, misure, registrazione MP4 e i formati audio rari; il video riprodotto dal motore web e l'audio con Symphonia continuano a funzionare |
 | Motore web del sistema (WKWebView / WebView2) | 3rd Party (Apple / Microsoft) | API del browser (`<video>`, WebGL 1, Canvas, MediaCapabilities) | Draft | Sì: senza WebGL si usa solo la dissolvenza semplice; senza `<video>` non si vede il video |
 | Sistema dei monitor (tramite Tauri) | 3rd Party (OS) + Tauri | API di finestre e monitor | Draft | No: senza schermo esterno l'uscita è una finestra |
 | File system (cartella temporanea e asset) | Sistema operativo | File e protocollo `asset://` | Draft | Parziale: senza spazio o permessi non si creano copie e registrazioni |
@@ -148,7 +148,7 @@ Fa le operazioni su file e flussi video che il motore web non fa o non fa bene: 
 
 ##### API Specification
 
-**Ricerca del programma** (`decode::ffmpeg_path`): `ffmpeg.exe` accanto all'eseguibile; altrimenti `ffmpeg` nel `PATH`. Su Windows si lancia senza finestra (`CREATE_NO_WINDOW`).
+**Ricerca del programma** (`decode::ffmpeg_path`): sidecar accanto all'eseguibile (`ffmpeg.exe` su Windows, `ffmpeg` altrove, **build LGPL inclusa nell'installer**); altrimenti `ffmpeg` nel `PATH`. Su Windows si lancia senza finestra (`CREATE_NO_WINDOW`).
 
 **Autenticazione / limiti / ambienti:** nessuno (processo locale).
 
@@ -199,7 +199,7 @@ Encoder, nell'ordine di prova: `h264_videotoolbox`, `h264_nvenc`, `h264_qsv`, `h
 
 ##### ASD Alignment
 
-Coerente con il principio «l'audio non si ferma»: nessuna chiamata a FFmpeg avviene nel thread audio. Da verificare con le sezioni 3 (NFR) e 5 (principi), non ancora scritte. **Licenza:** una build di FFmpeg con `libx264` è GPL; se si distribuisce occorre dichiararlo in `THIRD-PARTY-LICENSES.md` o usare una build LGPL con encoder di sistema (richiede parere legale) → Open Items.
+Coerente con il principio «l'audio non si ferma»: nessuna chiamata a FFmpeg avviene nel thread audio. Da verificare con le sezioni 3 (NFR) e 5 (principi), non ancora scritte. **Licenza:** decisione D-09 presa: solo build **LGPL** (senza x264/x265; macOS: LGPL 2.1 compilata da noi; Windows: build BtbN **LGPL 3**, compilata con `--enable-version3`), come programma separato, con licenza, avviso e sorgenti documentati (`docs/FFMPEG.md`, EULA §4 e §6.3, scheda Informazioni). Il parere sui brevetti dei codec resta aperto (D-10).
 
 ---
 
@@ -340,7 +340,7 @@ Il punto di sicurezza (FC-01) va allineato con la sezione NFR (§3.4), non ancor
 | Prove del modulo video su Windows (WebView2, encoder hardware, D3D, `crossOrigin`) (FC-02) | Team SpinLab | `[TO BE DEFINED]` |
 | Timeout e gestione dei processi FFmpeg orfani alla chiusura anomala | Team SpinLab | `[TO BE DEFINED]` |
 | Gestione della perdita del contesto WebGL (`webglcontextlost`) | Team SpinLab | `[TO BE DEFINED]` |
-| Build di FFmpeg da distribuire (LGPL o GPL con x264) e parere legale su H.264/H.265 | Team SpinLab / consulente legale | Prima della vendita |
+| Parere legale su H.264/H.265/AAC (la build LGPL è già scelta: D-09) e prova della build Windows | Team SpinLab / consulente legale | Prima della vendita |
 | Decisione sulla riproduzione con FFmpeg al posto di `<video>` per la compatibilità completa dei formati (possibile ADR) | Team SpinLab | `[TO BE DEFINED]` |
 | Unificare l'elenco delle transizioni leggere (FC-03) | Team SpinLab | `[TO BE DEFINED]` |
 

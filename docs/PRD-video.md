@@ -2,6 +2,7 @@
 
 **Versione:** 2.0 · **Data:** 2026-11-05 · **Stato:** bozza per revisione
 **Generato con:** skill `g-p-generate-prd` (modalità: tutto in una volta), a partire dalla bozza precedente di questo documento e dalle decisioni prese durante lo sviluppo.
+**Decisioni che spettano al responsabile del prodotto:** [DECISIONI.md](DECISIONI.md) (D-01…D-16)
 **Documenti collegati:** [ASD](../.globant-skills-docs/asd/ASD.md) · [Documentazione tecnica](VIDEO.md) · [Manuale](MANUALE.md#video)
 
 Nota sulle fonti: ogni sezione deriva da materiali forniti (la bozza precedente, le istruzioni e le decisioni del responsabile del prodotto durante lo sviluppo, il codice). Quello che non si può derivare è segnato `[PENDING INPUT]` e raccolto nel rapporto finale. **Stato dei requisiti** (colonna «Stato»): *Fatto* = realizzato nel branch `video-mixing` e provato su macOS; *Parziale* = realizzato in parte; *Da fare* = non ancora realizzato.
@@ -144,7 +145,7 @@ Fonte: bozza precedente del PRD; da confermare (`[PENDING INPUT]` per la validaz
 
 | Dipendenza | Uso | Note |
 |------------|-----|------|
-| FFmpeg (processo esterno) | Copie di lavoro, misure, codifica MP4, audio dei formati rari | Distribuzione e licenza da decidere (LGPL o GPL con x264) |
+| FFmpeg (processo esterno) | Copie di lavoro, misure, codifica MP4, audio dei formati rari | Incluso nell'installer, build LGPL (D-09); vedi [FFMPEG.md](FFMPEG.md) |
 | Motore web del sistema (WKWebView, WebView2) | Decodifica e disegno dei video (`<video>`, WebGL) | Codec leggibili diversi per piattaforma; Windows non provato |
 | Encoder e decoder hardware (VideoToolbox, NVENC, Quick Sync, AMF, Media Foundation) | Prestazioni di codifica e decodifica | Opzionali, con ripiego software |
 | Sistema operativo (monitor, finestre, file temporanei) | Uscita a schermo intero, ripiego | |
@@ -183,7 +184,7 @@ Fonte: bozza precedente del PRD; da confermare (`[PENDING INPUT]` per la validaz
 |------|---------|-------|
 | Diritti d'autore dei contenuti | I video musicali e i filmati sono protetti: proiezione, registrazione e pubblicazione sono responsabilità dell'utente; l'EULA lo dichiara (anche per i video) | EULA in bozza (`docs/legale/EULA.md`): voce sui video da aggiungere |
 | Brevetti sui codec (H.264, H.265, AAC) | Distribuire decodifica e codifica può richiedere licenze o dichiarazioni | Parere legale prima della vendita |
-| Licenza di FFmpeg | Una build con `libx264` è GPL; va dichiarata in `THIRD-PARTY-LICENSES.md`, oppure si usa una build LGPL con encoder di sistema | Da decidere |
+| Licenza di FFmpeg | Si include solo una build **LGPL** (senza x264/x265), come programma separato, con licenza, avviso e sorgenti documentati ([FFMPEG.md](FFMPEG.md)); una build GPL o nonfree non è ammessa | Deciso (D-09); da provare su Windows |
 | Privacy | Il video non invia dati all'esterno (tutto locale) | Informativa in bozza (`docs/legale/PRIVACY.md`): `[PENDING INPUT]` su altri obblighi |
 | Standard o certificazioni di settore | `[PENDING INPUT]` | — |
 
@@ -222,6 +223,8 @@ I materiali non indicano persone. Ruoli necessari, derivati dall'ambito:
 # Gap Management
 
 ## Informazioni mancanti (`[PENDING INPUT]`)
+
+> Le decisioni corrispondenti, con opzioni e raccomandazioni, sono nel [registro delle decisioni](DECISIONI.md): §1 e §6 → D-01; §3 → D-01/D-02; §10 → D-09, D-10, D-11; FR-13 → D-08; FR-14 → D-06; FR-15 → D-07; sicurezza di `asset://` → D-12; prove su Windows → D-13.
 
 | Campo | Perché serve all'ingegneria | Domanda per la prossima riunione |
 |-------|-----------------------------|----------------------------------|

@@ -118,7 +118,7 @@ Tutti in `src-tauri/src/video.rs`, registrati in `lib.rs`.
 | `video_rec_stop` | — | `RecVideoInfo` (`frames`, `dropped`, `secs`, `path`) | Chiude la codifica e aspetta FFmpeg. |
 | `video_rec_mux` | `audio`, `out`, `latency_ms` | `MuxResult` (`path`, `bytes`, `offset_ms`) | Unisce video e audio in MP4 e cancella i temporanei. |
 
-FFmpeg viene sempre lanciato come processo esterno (`decode::ffmpeg_path()`: `ffmpeg.exe` accanto all'eseguibile, altrimenti nel `PATH`), senza finestra su Windows (`CREATE_NO_WINDOW`).
+FFmpeg viene sempre lanciato come processo esterno (`decode::ffmpeg_path()`: `ffmpeg.exe` su Windows o `ffmpeg` altrove accanto all'eseguibile, cioè il sidecar **LGPL** dell'installer, altrimenti nel `PATH`), senza finestra su Windows (`CREATE_NO_WINDOW`). Come si prepara, quale licenza ha e cosa serve per rispettarla: [FFMPEG.md](FFMPEG.md).
 
 ## Messaggi tra le finestre
 
