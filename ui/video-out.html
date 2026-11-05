@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>SpinLab — Uscita video</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; font-family: system-ui, sans-serif; }
+  video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; opacity: 0; }
+  #title { position: absolute; left: 4vw; bottom: 6vh; color: #fff; text-shadow: 0 2px 12px #000c; font-size: 3.2vh; font-weight: 600; transition: opacity .6s; opacity: 0; max-width: 80vw; }
+  #hud { position: absolute; left: 8px; top: 8px; margin: 0; padding: 8px 10px; background: #000c; color: #7df0b6; font: 12px/1.45 Consolas, Menlo, monospace; border: 1px solid #1a82b8; border-radius: 6px; white-space: pre; display: none; }
+</style>
+</head>
+<body>
+<video id="v0" muted playsinline preload="auto"></video>
+<video id="v1" muted playsinline preload="auto"></video>
+<div id="title"></div>
+<pre id="hud"></pre>
+<script>
+/* PROTOTIPO — uscita video. Il video segue la posizione audio che manda la finestra principale; qui si misura quanto regge.
+   H = mostra/nasconde le misure. Esc = chiude. */
+const T = window.__TAURI__;
+const VEXT = /\.(mp4|m4v|mov|mkv|webm|avi|ts|mpg|mpeg)$/i;
+const els = [document.getElementById("v0"), document.getElementById("v1")];
+const st = [{ path: "", err: "", maxDrift: 0, seeks: 0 }, { path: "", err: "", maxDrift: 0, seeks: 0 }];
+const titleEl = document.getElementById("title"), hud = document.getElementById("hud");
+let last = null, lastTitle = "", gotAt = 0;
+
+els.forEach((v, i) => v.addEventListener("error", () => { st[i].err = v.error ? `codice ${v.error.code}: ${v.error.message || "formato non supportato da questo motore"}` : "errore"; }));
+
+function apply(i, d, op) {
+  const v = els[i], s = st[i];
+  const isVid = d && d.loaded && VEXT.test(d.path || "");
+  if (!isVid) { v.style.opacity = 0; if (!v.paused) v.pause(); if (s.path) { s.path = ""; v.removeAttribute("src"); v.load(); } return; }
+  if (s.path !== d.path) { s.path = d.path; s.err = ""; s.maxDrift = 0; s.seeks = 0; v.src = T.core.convertFileSrc(d.path); }
+  const age = (performance.now() - gotAt) / 1000;
+  const target = d.pos + (d.playing ? age * d.rate : 0);
+  v.style.opacity = op;
+  v.playbackRate = Math.max(0.0625, Math.min(16, d.rate));
+  const drift = v.currentTime - target;
+  if (v.readyState >= 1) {
+    if (!d.playing) { if (!v.paused) v.pause(); if (Math.abs(drift) > 0.04) v.currentTime = Math.max(0, target); }
+    else {
+      if (v.paused) v.play().catch(() => {});
+      s.maxDrift = Math.max(s.maxDrift, Math.abs(drift));
+      if (Math.abs(drift) > 0.12) { v.currentTime = Math.max(0, target); s.seeks++; }
+      else if (Math.abs(drift) > 0.03) v.playbackRate *= 1 - Math.max(-0.05, Math.min(0.05, drift * 0.5)); // recupero morbido
+    }
+  }
+}
+
+T.event.listen("video-state", (e) => {
+  last = e.payload; gotAt = performance.now();
+  const x = last.xf * Math.PI / 2, ga = Math.cos(x), gb = Math.sin(x);
+  const op = last.decks.map((d) => (d.assign === 0 ? ga : d.assign === 1 ? gb : 1));
+  const vid = last.decks.map((d) => d.loaded && VEXT.test(d.path || ""));
+  // dissolvenza: il video visibile e' quello del lato dominante; se l'altro deck e' solo audio il video resta pieno
+  const o = [vid[0] ? (vid[1] ? op[0] : 1) : 0, vid[1] ? (vid[0] ? op[1] : 1) : 0];
+  apply(0, last.decks[0], o[0]); apply(1, last.decks[1], o[1]);
+  // titolo del brano del lato dominante
+  const dom = op[0] >= op[1] ? 0 : 1, nm = last.decks[dom]?.loaded ? last.decks[dom].name : "";
+  if (nm !== lastTitle) { lastTitle = nm; titleEl.style.opacity = 0; setTimeout(() => { titleEl.textContent = nm; titleEl.style.opacity = nm ? 1 : 0; }, 350); }
+});
+
+setInterval(() => {
+  if (hud.style.display === "none") return;
+  hud.textContent = [0, 1].map((i) => {
+    const v = els[i], s = st[i], q = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : {};
+    return `deck ${i + 1}: ${s.path ? s.path.split(/[\\/]/).pop() : "—"}\n  ${v.videoWidth}x${v.videoHeight} · fotogrammi saltati ${q.droppedVideoFrames ?? "?"}/${q.totalVideoFrames ?? "?"} · sfasamento max ${(s.maxDrift * 1000).toFixed(0)} ms · riallineamenti ${s.seeks}${s.err ? "\n  ERRORE " + s.err : ""}`;
+  }).join("\n") + `\nmessaggi dal programma: ${last ? "ok" : "nessuno"}`;
+}, 500);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "h" || e.key === "H") hud.style.display = hud.style.display === "none" || !hud.style.display ? "block" : "none";
+  if (e.key === "Escape") T.core.invoke("video_close");
+});
+</script>
+</body>
+</html>

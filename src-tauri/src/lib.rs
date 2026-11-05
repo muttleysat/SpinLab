@@ -17,6 +17,7 @@ mod midi;
 mod recorder;
 mod preview;
 mod stems;
+mod video;
 
 use engine::{Mixer, Snapshot, Track, NUM_DECKS, NUM_DRUMS, NUM_PADS};
 use parking_lot::Mutex;
@@ -1383,7 +1384,8 @@ pub fn run() {
             preview_play, preview_stop, preview_seek, preview_state,
             stems_queue, stems_queue_playlist, stems_queue_path, stems_have, stems_cfg, stems_cfg_set, stems_bench_cmd, stems_delete, deck_stems, stems_auto, track_art,
             drum_load, drum_cmd, drum_save, midi_ports, midi_out_info, midi_out_select, midi_send, midi_map_get, midi_map_set, audio_current, rec_start, rec_stop,
-            license_status, license_activate, license_refresh, license_deactivate
+            license_status, license_activate, license_refresh, license_deactivate,
+            video::video_monitors, video::video_open, video::video_close
         ])
         .run(tauri::generate_context!())
         .expect("errore avvio SpinLab");

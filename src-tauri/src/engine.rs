@@ -1736,6 +1736,7 @@ impl Mixer {
                     loop_in: d.loop_in / d.sr as f64,
                     loop_out: d.loop_out / d.sr as f64,
                     path: t.map_or(String::new(), |t| t.path.clone()),
+                    xf_assign: d.xf_assign,
                     norm_db: d.norm_db,
                     loudness: d.loudness,
                     downbeat: t.map_or(0, |t| t.downbeat),
@@ -1752,6 +1753,7 @@ impl Mixer {
             learn: self.learn,
             last_note: self.last_note,
             note_seq: self.note_seq,
+            crossfader: self.crossfader,
             master_level: self.master_level,
             auto_gain: self.auto_gain,
             hp_vol: self.hp_vol,
@@ -1804,6 +1806,8 @@ pub struct DeckState {
     pub loop_in: f64,
     pub loop_out: f64,
     pub path: String,
+    /// assegnazione al crossfader (0 = A, 1 = B, 2 = diretto)
+    pub xf_assign: u8,
     pub norm_db: f64,
     pub loudness: f64,
     pub downbeat: usize,
@@ -1847,6 +1851,8 @@ pub struct Snapshot {
     pub learn: Option<usize>,
     pub last_note: i16,
     pub note_seq: u32,
+    /// posizione del crossfader (0..1): serve anche alla miscela video
+    pub crossfader: f32,
 }
 
 #[derive(Serialize)]
