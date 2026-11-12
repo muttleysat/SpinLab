@@ -134,11 +134,30 @@ impl Previewer {
         let (tx, rx) = mpsc::channel::<Cmd>();
         let state = Arc::new(Mutex::new(PState { gain: 1.0, ..Default::default() }));
         let st = state.clone();
+        let lost = Arc::new(std::sync::atomic::AtomicBool::new(false));
         *inline.r.lock() = Some(CueRender::new(state.clone(), bus.clone()));
         std::thread::spawn(move || {
             let host = cpal::default_host();
             let mut stream: Option<cpal::Stream> = None;
-            while let Ok(Cmd::Open(dev, reply)) = rx.recv() {
+            let mut last: Option<String> = None;
+            loop {
+                // ogni secondo controlla se il flusso si e' interrotto (cuffie USB scollegate e ricollegate, driver riavviato...)
+                // e lo riapre sullo stesso dispositivo: prima l'errore veniva solo stampato e il preascolto restava muto per sempre
+                let (dev, reply) = match rx.recv_timeout(std::time::Duration::from_secs(1)) {
+                    Ok(Cmd::Open(dev, reply)) => (dev, reply),
+                    Err(mpsc::RecvTimeoutError::Timeout) => {
+                        if lost.swap(false, Ordering::SeqCst) && stream.is_some() && last.as_deref() != Some(SAME_DEVICE) {
+                            eprintln!("anteprima: flusso interrotto, lo riapro");
+                            drop(stream.take());
+                            if let Ok((s, _)) = open(&host, last.as_deref(), st.clone(), bus.clone(), lost.clone()) {
+                                stream = Some(s);
+                            }
+                        }
+                        continue;
+                    }
+                    Err(_) => break,
+                };
+                last = dev.clone();
                 drop(stream.take());
                 inline.on.store(false, Ordering::SeqCst);
                 if dev.as_deref() == Some(SAME_DEVICE) {
@@ -152,7 +171,7 @@ impl Previewer {
                     }
                     continue;
                 }
-                match open(&host, dev.as_deref(), st.clone(), bus.clone()) {
+                match open(&host, dev.as_deref(), st.clone(), bus.clone(), lost.clone()) {
                     Ok((s, sr)) => {
                         stream = Some(s);
                         let _ = reply.send(Ok(sr));
@@ -226,7 +245,7 @@ impl Previewer {
     }
 }
 
-fn open(host: &cpal::Host, device: Option<&str>, st: Arc<Mutex<PState>>, bus: Arc<CueBus>) -> Result<(cpal::Stream, u32), String> {
+fn open(host: &cpal::Host, device: Option<&str>, st: Arc<Mutex<PState>>, bus: Arc<CueBus>, lost: Arc<std::sync::atomic::AtomicBool>) -> Result<(cpal::Stream, u32), String> {
     let default = host.default_output_device();
     let dev = match crate::audio::chosen(device) {
         Some(n) => host.output_devices().map_err(|e| e.to_string())?.find(|d| d.name().ok().as_deref() == Some(n)).ok_or_else(|| format!("dispositivo «{n}» non trovato"))?,
@@ -237,10 +256,10 @@ fn open(host: &cpal::Host, device: Option<&str>, st: Arc<Mutex<PState>>, bus: Ar
     let channels = dcfg.channels();
     let cfg = StreamConfig { channels, sample_rate: dcfg.sample_rate(), buffer_size: cpal::BufferSize::Default };
     let stream = match dcfg.sample_format() {
-        SampleFormat::F32 => build::<f32>(&dev, &cfg, channels as usize, st, bus, sr),
-        SampleFormat::I16 => build::<i16>(&dev, &cfg, channels as usize, st, bus, sr),
-        SampleFormat::U16 => build::<u16>(&dev, &cfg, channels as usize, st, bus, sr),
-        SampleFormat::I32 => build::<i32>(&dev, &cfg, channels as usize, st, bus, sr),
+        SampleFormat::F32 => build::<f32>(&dev, &cfg, channels as usize, st, bus, sr, lost.clone()),
+        SampleFormat::I16 => build::<i16>(&dev, &cfg, channels as usize, st, bus, sr, lost.clone()),
+        SampleFormat::U16 => build::<u16>(&dev, &cfg, channels as usize, st, bus, sr, lost.clone()),
+        SampleFormat::I32 => build::<i32>(&dev, &cfg, channels as usize, st, bus, sr, lost.clone()),
         f => Err(format!("formato audio non supportato: {f:?}")),
     }?;
     stream.play().map_err(|e| e.to_string())?;
@@ -254,6 +273,7 @@ fn build<T: SizedSample + FromSample<f32>>(
     st: Arc<Mutex<PState>>,
     bus: Arc<CueBus>,
     sr: u32,
+    lost: Arc<std::sync::atomic::AtomicBool>,
 ) -> Result<cpal::Stream, String> {
     let mut r = CueRender::new(st, bus);
     let mut tmp = Vec::<f32>::new();
@@ -268,7 +288,10 @@ fn build<T: SizedSample + FromSample<f32>>(
                 }
             }
         },
-        |e| eprintln!("errore audio anteprima: {e}"),
+        move |e| {
+            eprintln!("errore audio anteprima: {e}");
+            lost.store(true, Ordering::SeqCst);
+        },
         None,
     )
     .map_err(|e| e.to_string())

@@ -27,8 +27,8 @@ impl CueBus {
     pub fn push(&self, data: &[f32]) {
         if let Some(mut q) = self.q.try_lock() {
             q.extend(data.iter().copied());
-            // limite di sicurezza: oltre mezzo secondo di ritardo si scarta il piu' vecchio
-            let cap = self.sr() as usize; // frame*2 = mezzo secondo
+            // limite di sicurezza: oltre 150 ms di ritardo si scarta il piu' vecchio
+            let cap = self.sr() as usize * 3 / 10; // frame*2 = 150 ms
             if q.len() > cap {
                 let drop = q.len() - cap;
                 q.drain(..drop);
@@ -75,6 +75,16 @@ impl Puller {
             self.primed = false;
             return;
         }
+        // ritardo accumulato (uscita cuffie ferma o in ritardo per un po'): il servo da solo smaltirebbe 0,5 s in due minuti,
+        // quindi sopra i ~60 ms si salta subito al livello normale (un piccolo salto, meglio di un ritardo che resta)
+        let max_have = (target * 2.0).max(frames as f64 * base * 2.0 + out_sr as f64 * 0.06 * base);
+        if have > max_have {
+            let drop = ((have - target) as usize) * 2;
+            let n = drop.min(q.len());
+            q.drain(..n);
+            self.frac = 0.0;
+        }
+        let have = (q.len() / 2) as f64;
         // servo: buffer troppo pieno -> leggi un po' piu' in fretta, troppo vuoto -> piu' piano
         let adj = ((have - target) / target).clamp(-1.0, 1.0) * 0.004;
         let ratio = base * (1.0 + adj);
@@ -101,6 +111,24 @@ mod tests {
     use super::*;
 
     /// due clock diversi (48 kHz scrive, 44,1 kHz legge): il suono arriva continuo, senza vuoti, e il buffer non cresce
+    #[test]
+    fn drops_accumulated_delay_quickly() {
+        let bus = CueBus::new(44100);
+        let mut puller = Puller::default();
+        let mut out = vec![0f32; 441 * 2];
+        // il lato cuffie resta fermo 250 ms mentre il mixer continua a scrivere
+        for _ in 0..25 {
+            bus.push(&vec![0.3f32; 441 * 2]);
+        }
+        // poi riprende a ritmo normale: dopo pochi blocchi il ritardo deve essere sceso sotto i 60 ms
+        for _ in 0..10 {
+            bus.push(&vec![0.3f32; 441 * 2]);
+            puller.pull(&bus, &mut out, 44100);
+        }
+        let delay_ms = bus.q.lock().len() as f64 / 2.0 / 44.1;
+        assert!(delay_ms < 60.0, "ritardo rimasto {delay_ms} ms");
+    }
+
     #[test]
     fn resamples_between_clocks_without_gaps_or_growth() {
         let bus = CueBus::new(48000);
