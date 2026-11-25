@@ -185,4 +185,44 @@
   };
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
   btn.dataset.mode = manual === null ? "AUTO" : manual ? "ON" : "OFF";
+
+  // Anteprima nei deck: un deck con un video mostra il video al posto delle forme d'onda (layout «video»), un deck con un brano audio
+  // resta con il layout classico. L'anteprima e' un secondo video, muto, che segue la stessa posizione che si manda all'uscita.
+  const pv = [{ path: "", src: "", seekAt: 0 }, { path: "", src: "", seekAt: 0 }];
+  function previews() {
+    decks.slice(0, 2).forEach((d, i) => {
+      const deck = document.querySelector(`.deck[data-i="${i}"]`);
+      if (!deck) return;
+      const v = deck.querySelector(".vpv video"), s = pv[i];
+      const isVid = !!(d.snap?.loaded && VEXT.test(d.snap.path || ""));
+      if (deck.classList.contains("vid") !== isVid) { deck.classList.toggle("vid", isVid); 
+        // la panoramica (scrubbabile) si sposta accanto ai pulsanti, cosi' non toglie spazio al video; senza video torna al suo posto
+        const ov = deck.querySelector("canvas.over")?.parentElement, pl = deck.querySelector(".dmain");
+        if (ov && pl) { if (isVid) pl.prepend(ov); else deck.insertBefore(ov, deck.querySelector(".vpv")); }
+        if (window.resizeCanvases) requestAnimationFrame(resizeCanvases); }
+      if (!v) return;
+      if (!isVid) { if (s.path) { s.path = s.src = ""; v.pause(); v.removeAttribute("src"); v.load(); } return; }
+      const want = proxies[d.snap.path] || d.snap.path;
+      if (s.path !== d.snap.path || s.src !== want) {
+        const keep = s.path === d.snap.path ? Math.max(0, v.currentTime || 0) : 0;
+        s.path = d.snap.path; s.src = want;
+        v.src = window.__TAURI__.core.convertFileSrc(want);
+        if (keep) v.addEventListener("loadedmetadata", () => { try { v.currentTime = keep; } catch (e) {} }, { once: true });
+      }
+      if (v.readyState < 1) return;
+      const rate = 1 + (d.snap?.tempo_pct || 0) / 100, playing = !!d.snap?.playing && d.scrub == null;
+      const target = smoothPos(i) - (playing ? (audioLatency + visOffset) * rate : 0);
+      const now = performance.now(), diff = v.currentTime - target;
+      if (playing) {
+        const r = Math.max(0.0625, Math.min(16, rate)); if (Math.abs(v.playbackRate - r) > 1e-3) v.playbackRate = r;
+        if (v.paused && !v.seeking) v.play().catch(() => {});
+        if (Math.abs(diff) > 0.4 && !v.seeking && now - s.seekAt > 1000) { s.seekAt = now; v.currentTime = Math.max(0, target + 0.1); }
+      } else {
+        if (!v.paused) v.pause();
+        if (!v.seeking && Math.abs(diff) > 0.04) { if (d.scrub != null && v.fastSeek) v.fastSeek(Math.max(0, target)); else v.currentTime = Math.max(0, target); }
+      }
+    });
+  }
+  setInterval(previews, 60);
+  btn.dataset.mode = manual === null ? "AUTO" : manual ? "ON" : "OFF";
 })();

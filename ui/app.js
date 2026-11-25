@@ -225,6 +225,7 @@ function deckHTML(i) {
   </div>
   <div class="wv"><canvas class="zoom"></canvas></div>
   <div class="wv"><canvas class="over"></canvas></div>
+  <div class="vpv"><video muted playsinline preload="auto"></video></div>
   <div class="dmain">
     <div class="lcol">
       <div class="card"><div class="ch"><button class="modebtn" data-r="mode" title="Cambia la funzione dei 4 pad: hot cue, beatjump, loop roll, freno/reverse">HOT CUE 1–4 ⌄</button></div>
@@ -313,7 +314,7 @@ function bindDeck(i) {
     art: r("art"), title: r("title"), artist: r("artist"), stm: r("stm"), key: r("key"), bpm: r("bpm"), remain: r("remain"), time: r("time"), beat: r("beat"),
     play: r("play"), cue: r("cue"), sync: r("sync"), pfl: r("pfl"), pfl2: sr("pfl2"), range: r("range"), tempo: r("tempo"), tempoval: r("tempoval"),
     lsz: r("lsz"), hot: $$("[data-hot]", el), modebtn: r("mode"), pval: r("pval"), pdn: r("pdn"), pup: r("pup"), qbtn: r("qbtn"), qpill: r("qpill"), slipbtn: r("slipbtn"), prow: $(".prow", el), grid: r("grid"), anchor: r("anchor"), tzero: r("tzero"), meterL: sr("meterL"), meterR: sr("meterR"), eject: r("eject"), vol: sr("vol"), fxkind: sr("fxkind"), fxon: sr("fxon"),
-    knobs: $$("[data-k]", st), plat: $("canvas.plat", el), zoomCv: $("canvas.zoom", el), over: $("canvas.over", el),
+    knobs: $$("[data-k]", st), plat: $("canvas.plat", el), vpv: $(".vpv", el), zoomCv: $("canvas.zoom", el), over: $("canvas.over", el),
     vzoom: $(`canvas.vzoom[data-i="${i}"]`), vslot: $(".vslot", el), kcol: $(".kcol", st),
   };
   const D = DK[i];
@@ -460,6 +461,11 @@ function bindDeck(i) {
     s.last = a;
     s.pos = Math.min(d.dur, Math.max(0, s.pos + (da / (2 * Math.PI)) * REV_SEC));
     return s.pos;
+  });
+  // schermo del video (layout video, senza piatto): trascinare in orizzontale e' lo scratch, come sul piatto (tutta la larghezza = 4 s; verso destra si avanza)
+  scrubber(D.vpv, (e) => ({ x: e.clientX, pos: currentPos(i) }), (e, s) => {
+    const w = Math.max(1, D.vpv.getBoundingClientRect().width);
+    return Math.min(d.dur, Math.max(0, s.pos + (e.clientX - s.x) / w * 4));
   });
   // waveform verticale (vista scratch): il tempo scorre verso il basso, trascinare in giu' avanza
   scrubber(D.vzoom, (e) => ({ y: e.clientY, pos: currentPos(i) }), (e, s) => {
