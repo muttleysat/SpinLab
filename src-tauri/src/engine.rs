@@ -12,6 +12,12 @@ pub const NUM_DECKS: usize = 4;
 /// Movimenti del disco: freno, spinback, retromarcia e ripartenza.
 /// Porta una lunghezza in battiti a un valore leggibile: la potenza di due piu' vicina (entro il 4%), altrimenti un intero
 /// (entro il 3%), altrimenti due decimali. Cosi' un loop segnato a mano mostra 4 e non 4,01.
+/// millisecondi dall'avvio del programma (orologio monotono)
+pub fn now_ms() -> f64 {
+    static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+    START.get_or_init(std::time::Instant::now).elapsed().as_secs_f64() * 1000.0
+}
+
 pub fn snap_beats(x: f64) -> f64 {
     const NICE: [f64; 12] = [0.03125, 0.0625, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0];
     let rel = |n: f64| (n - x).abs() / x.max(1e-9);
@@ -145,7 +151,10 @@ pub struct Deck {
     grid_base: Vec<f64>,
     grid_down: usize,
     grid_bpm: f64,
-    pub grid_fixed: bool,
+    /// modalita' della griglia (0 auto, 1 fisso, 2 flessibile), vedi gridfit.rs
+    pub grid_mode: u8,
+    /// etichette BPM dove il tempo cambia: (secondi, BPM)
+    grid_labels: Vec<(f64, f64)>,
     /// battiti fissati a mano con «anchor_here» (indici in grid_base); non vengono più spostati
     grid_pins: Vec<usize>,
     pub volume: f32,
@@ -212,7 +221,7 @@ impl Deck {
         Deck {
             sr, track: None, pos: 0.0, playing: false, preview: false, tempo: 0.0, tempo_ramp: None, sync: false, sync_prev_playing: false, armed: false, arm_pos: 0.0, range: 0.08,
             keylock: true, key_shift: 0, cue_point: 0.0, hot_cues: [None; 8], quantize: true,
-            grid_orig: (vec![], 0, 0.0), grid_base: vec![], grid_down: 0, grid_bpm: 0.0, grid_fixed: false, grid_pins: vec![],
+            grid_orig: (vec![], 0, 0.0), grid_base: vec![], grid_down: 0, grid_bpm: 0.0, grid_mode: 0, grid_labels: vec![], grid_pins: vec![],
             volume: 0.85, xf_assign, eq: Eq3::new(sr as f32), eq_knobs: [0.5; 3], fx: Fx::new(sr as f32),
             stretch: Stretch::preset_default(2, sr), stretch_mode: false, need_preroll: true,
             last_transpose: 1e9, in_buf: Vec::new(), lead: 0.0, held: false, pfl: false, pfl_buf: Vec::new(), mod_rate: 1.0, nudge: 0.0, motion: Motion::None, brake_dur: 1.5, slip: true, slip_sec: None, rolling: false, roll_prev: (false, 0.0, 0.0), filter: 0.5, cfilt: crate::fx::ColorFilter::new(), loop_in: 0.0, loop_out: 0.0, loop_on: false, loop_beats: 4.0, view: None, stem_mask: 15, stem_gains: [1.0; 4], prev_view: None, xf: 0.0, loudness: 0.0, peak: 1.0, norm_db: 0.0, scrub_target: None, scrub_v: 0.0, level: 0.0, gain_prev: 0.0, lvl: [0.0; 2],
@@ -254,7 +263,7 @@ impl Deck {
         self.grid_base = t.beats.clone();
         self.grid_down = t.downbeat;
         self.grid_bpm = t.bpm;
-        self.grid_fixed = false;
+        self.grid_mode = 0;
         self.grid_pins.clear();
         self.sync_prev_playing = false;
         self.loudness = 0.0;
@@ -277,6 +286,7 @@ impl Deck {
         self.lead = 0.0;
         self.stretch_mode = false;
         self.need_preroll = true;
+        self.rebuild_grid();
     }
 
     /// Imposta gli stem ascoltati: `view` = audio gia' mescolato (None = brano intero). Il suono entra con una breve rampa.
@@ -698,30 +708,23 @@ impl Deck {
     }
 
     // ---- griglia: modifica manuale
-    fn regular(base: &[f64]) -> (Vec<f64>, f64) {
-        let n = base.len();
-        if n < 2 {
-            return (base.to_vec(), 0.0);
-        }
-        let (mx, my) = ((n - 1) as f64 / 2.0, base.iter().sum::<f64>() / n as f64);
-        let (mut sxy, mut sxx) = (0.0, 0.0);
-        for (i, &t) in base.iter().enumerate() {
-            sxy += (i as f64 - mx) * (t - my);
-            sxx += (i as f64 - mx).powi(2);
-        }
-        let b = sxy / sxx;
-        ((0..n).map(|i| my + b * (i as f64 - mx)).collect(), 60.0 / b)
-    }
-    /// ricostruisce la traccia con la griglia (fluida o fissa) corrente
+    /// ricostruisce la traccia con la griglia della modalita' corrente (Auto / Fisso / Flessibile, vedi gridfit.rs).
+    /// Una griglia con battiti fissati a mano resta com'e' (salvo in modalita' Fisso, che la riduce a un solo tempo).
     fn rebuild_grid(&mut self) {
         let Some(t) = self.track.clone() else { return };
-        let (beats, bpm) = if self.grid_fixed {
-            let (b, bpm) = Self::regular(&self.grid_base);
-            (b, if bpm > 0.0 { bpm } else { self.grid_bpm })
-        } else {
-            (self.grid_base.clone(), self.grid_bpm)
-        };
-        self.track = Some(Arc::new(t.with_grid(beats, self.grid_down, bpm)));
+        let mode = crate::gridfit::GridMode::from_id(self.grid_mode);
+        let manual = !self.grid_pins.is_empty() && mode != crate::gridfit::GridMode::Fixed;
+        let fitted = if manual { None } else { crate::gridfit::fit(&self.grid_base, self.grid_down, mode) };
+        match fitted {
+            Some(f) => {
+                self.grid_labels = crate::gridfit::tempo_labels(&f);
+                self.track = Some(Arc::new(t.with_grid(f.beats, f.downbeat, f.bpm)));
+            }
+            None => {
+                self.grid_labels.clear();
+                self.track = Some(Arc::new(t.with_grid(self.grid_base.clone(), self.grid_down, self.grid_bpm)));
+            }
+        }
     }
     pub fn grid_pins(&self) -> &[usize] {
         &self.grid_pins
@@ -732,17 +735,30 @@ impl Deck {
     }
     pub fn grid_info(&self) -> Option<GridInfo> {
         let t = self.track.as_ref()?;
-        Some(GridInfo { beats: t.beats.clone(), downbeat: t.downbeat, bpm: t.bpm, fixed: self.grid_fixed })
+        Some(GridInfo { beats: t.beats.clone(), base: self.grid_base.clone(), base_downbeat: self.grid_down, downbeat: t.downbeat, bpm: t.bpm, mode: self.grid_mode, labels: self.grid_labels.clone() })
     }
-    pub fn grid_apply_saved(&mut self, beats: Vec<f64>, downbeat: usize, bpm: f64, fixed: bool, pins: Vec<usize>) {
+    pub fn grid_apply_saved(&mut self, beats: Vec<f64>, downbeat: usize, bpm: f64, mode: u8, pins: Vec<usize>) {
         if beats.len() < 2 {
             return;
         }
         self.grid_base = beats;
         self.grid_down = downbeat % 4;
         self.grid_bpm = bpm;
-        self.grid_fixed = fixed;
+        self.grid_mode = mode.min(2);
         self.grid_pins = pins.into_iter().filter(|&p| p < self.grid_base.len()).collect();
+        self.rebuild_grid();
+    }
+    /// battiti nuovi (rete neurale) per un brano la cui griglia non e' stata toccata a mano: sostituiscono quelli di lavoro e
+    /// quelli del reset, mantenendo la modalita'
+    pub fn grid_refine(&mut self, beats: Vec<f64>, downbeat: usize, bpm: f64) {
+        if beats.len() < 2 || self.track.is_none() {
+            return;
+        }
+        self.grid_orig = (beats.clone(), downbeat % 4, bpm);
+        self.grid_base = beats;
+        self.grid_down = downbeat % 4;
+        self.grid_bpm = bpm;
+        self.grid_pins.clear();
         self.rebuild_grid();
     }
     /// comandi di modifica della griglia; ritorna true se la griglia e' cambiata
@@ -786,12 +802,13 @@ impl Deck {
                 self.grid_down = j % 4;
             }
             "bar_shift" => self.grid_down = (self.grid_down as i64 + a as i64).rem_euclid(4) as usize,
-            "fixed" => self.grid_fixed = a > 0.5,
+            "fixed" => self.grid_mode = if a > 0.5 { 1 } else { 0 },
+            "mode" => self.grid_mode = (a as i64).clamp(0, 2) as u8,
             "reset" => {
                 self.grid_base = self.grid_orig.0.clone();
                 self.grid_down = self.grid_orig.1;
                 self.grid_bpm = self.grid_orig.2;
-                self.grid_fixed = false;
+                self.grid_mode = 0;
                 self.grid_pins.clear();
             }
             // il battito piu' vicino alla testina viene portato esattamente sulla testina
@@ -1728,6 +1745,7 @@ impl Mixer {
 
     pub fn snapshot(&self) -> Snapshot {
         Snapshot {
+            t_ms: now_ms(),
             decks: self.decks.iter().map(|d| {
                 let t = d.track.as_ref();
                 DeckState {
@@ -1755,7 +1773,8 @@ impl Mixer {
                     level_l: d.lvl[0],
                     level_r: d.lvl[1],
                     held: d.held,
-                    grid_fixed: d.grid_fixed,
+                    grid_fixed: d.grid_mode == 1,
+                    grid_mode: d.grid_mode,
                     sync: d.sync,
                     pfl: d.pfl,
                     stems: d.stem_mask,
@@ -1828,6 +1847,7 @@ pub struct DeckState {
     pub level_r: f32,
     pub held: bool,
     pub grid_fixed: bool,
+    pub grid_mode: u8,
     pub sync: bool,
     pub pfl: bool,
     /// stem ascoltati (bit0 batteria, bit1 basso, bit2 altro, bit3 voce) e brano caricato
@@ -1854,10 +1874,16 @@ pub struct DeckState {
 
 #[derive(Serialize)]
 pub struct GridInfo {
+    /// battiti mostrati (dopo l'adattamento della modalita')
     pub beats: Vec<f64>,
+    /// battiti di lavoro (rilevati o corretti a mano), da cui la modalita' ricalcola la griglia: e' questa che si salva
+    pub base: Vec<f64>,
+    /// indice in `base` del battito che apre la battuta
+    pub base_downbeat: usize,
     pub downbeat: usize,
     pub bpm: f64,
-    pub fixed: bool,
+    pub mode: u8,
+    pub labels: Vec<(f64, f64)>,
 }
 
 #[derive(Serialize)]
@@ -1872,6 +1898,9 @@ pub struct PadState {
 
 #[derive(Serialize)]
 pub struct Snapshot {
+    /// istante (ms dall'avvio del motore) in cui e' stato preso lo stato: l'interfaccia lo usa al posto dell'istante di arrivo,
+    /// che include il ritardo variabile della risposta e farebbe tornare indietro la posizione della waveform
+    pub t_ms: f64,
     pub decks: Vec<DeckState>,
     pub pads: Vec<PadState>,
     pub master_level: [f32; 2],
@@ -2095,7 +2124,7 @@ mod tests {
         assert!(b.windows(2).all(|w| w[1] > w[0]));
         d.grid_cmd("reset", 0.0);
         let t = d.track.as_ref().unwrap();
-        assert!((t.beats[0] - 0.104).abs() < 1e-9 && t.downbeat == 1 && !d.grid_fixed);
+        assert!((t.beats[0] - 0.104).abs() < 0.01 && t.downbeat == 1 && d.grid_mode == 0);
     }
 
     /// lo stato espone il fader del volume di ogni canale (serve alla miscela video che segue i fader dei canali)

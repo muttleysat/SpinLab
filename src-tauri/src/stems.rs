@@ -137,7 +137,7 @@ pub fn ensure_model(model: &Path) -> Result<(), String> {
 }
 
 #[cfg(not(target_os = "android"))]
-fn download(url: &str, dest: &Path) -> Result<bool, String> {
+pub(crate) fn download(url: &str, dest: &Path) -> Result<bool, String> {
     // su Windows il curl incluso si chiama curl.exe, su macOS/Linux semplicemente curl
     let curl = if cfg!(windows) { "curl.exe" } else { "curl" };
     let st = std::process::Command::new(curl)
@@ -150,7 +150,7 @@ fn download(url: &str, dest: &Path) -> Result<bool, String> {
 }
 
 #[cfg(target_os = "android")]
-fn download(url: &str, dest: &Path) -> Result<bool, String> {
+pub(crate) fn download(url: &str, dest: &Path) -> Result<bool, String> {
     let resp = ureq::get(url).call().map_err(|e| e.to_string())?;
     let mut f = std::fs::File::create(dest).map_err(|e| e.to_string())?;
     std::io::copy(&mut resp.into_reader(), &mut f).map_err(|e| e.to_string())?;
@@ -279,6 +279,15 @@ fn probe_gpu_later(model: PathBuf) {
 /// Abbassa la priorita' del thread che chiama (e dei thread che crea, come quelli di ONNX Runtime): la separazione
 /// non deve togliere tempo all'interfaccia. L'audio non ne risente (gira in un thread a priorita' reale).
 pub fn background_priority() {
+    #[cfg(windows)]
+    unsafe {
+        // priorita' sotto la normale: la separazione e l'analisi non devono togliere tempo a interfaccia e audio
+        extern "system" {
+            fn GetCurrentThread() -> isize;
+            fn SetThreadPriority(h: isize, p: i32) -> i32;
+        }
+        SetThreadPriority(GetCurrentThread(), -1); // THREAD_PRIORITY_BELOW_NORMAL
+    }
     #[cfg(target_os = "android")]
     unsafe {
         // nice 5: sotto l'interfaccia (0), sopra i lavori di sfondo di Android (10) per non restare indietro
@@ -781,7 +790,7 @@ impl Hub {
                 let t_seg = std::time::Instant::now();
                 match infer_segment(&model, planar, clen) {
                     Ok(out) => {
-                        eprintln!("stem: deck {} segmento {}/{} in {:.2} s", live.deck, j + 1, live.n, t_seg.elapsed().as_secs_f32());
+                        eprintln!("[{:.0}] stem: deck {} segmento {}/{} in {:.2} s", crate::engine::now_ms(), live.deck, j + 1, live.n, t_seg.elapsed().as_secs_f32());
                         if !live.alive.load(Ordering::SeqCst) {
                             continue;
                         }

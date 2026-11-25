@@ -22,6 +22,8 @@ pub struct CachedAnalysis {
     pub wave: crate::analysis::Wave,
     pub loudness: f64,
     pub peak: f32,
+    /// i battiti vengono dalla rete neurale (neural.rs) e non dal solo rilevatore DSP
+    pub neural: bool,
 }
 
 pub struct Library {
@@ -116,7 +118,7 @@ impl Library {
         for col in ["pins TEXT", "anchors TEXT", "auto_beats TEXT"] {
             let _ = db.execute(&format!("ALTER TABLE grids ADD COLUMN {col}"), []);
         }
-        for col in ["loudness REAL", "peak REAL"] {
+        for col in ["loudness REAL", "peak REAL", "neural INTEGER DEFAULT 0"] {
             let _ = db.execute(&format!("ALTER TABLE analysis ADD COLUMN {col}"), []);
         }
         Ok(Library { db: Mutex::new(db) })
@@ -127,7 +129,7 @@ impl Library {
         let (size, mtime) = file_stamp(path)?;
         let db = self.db.lock();
         db.query_row(
-            "SELECT bpm,key_pc,key_minor,downbeat,beats,wave_rate,lo,mid,hi,loudness,peak FROM analysis WHERE path=? AND size=? AND mtime=? AND version=?",
+            "SELECT bpm,key_pc,key_minor,downbeat,beats,wave_rate,lo,mid,hi,loudness,peak,COALESCE(neural,0) FROM analysis WHERE path=? AND size=? AND mtime=? AND version=?",
             params![path, size, mtime, ANALYSIS_VERSION],
             |r| {
                 let pc: Option<i64> = r.get(1)?;
@@ -140,6 +142,7 @@ impl Library {
                     wave: crate::analysis::Wave { rate: r.get::<_, i64>(5)? as usize, lo: r.get(6)?, mid: r.get(7)?, hi: r.get(8)? },
                     loudness: r.get::<_, Option<f64>>(9)?.unwrap_or(-70.0),
                     peak: r.get::<_, Option<f32>>(10)?.unwrap_or(1.0),
+                    neural: r.get::<_, i64>(11)? != 0,
                 })
             },
         )
@@ -148,6 +151,14 @@ impl Library {
     /// Dimentica l'analisi salvata: la prossima richiesta di analisi rifa' il brano da capo.
     pub fn analysis_forget(&self, path: &str) {
         let _ = self.db.lock().execute("DELETE FROM analysis WHERE path=?", params![path]);
+    }
+
+    /// Sostituisce i battiti salvati con quelli della rete neurale (resta tutto il resto dell'analisi).
+    pub fn analysis_put_neural(&self, path: &str, beats: &[f64], downbeat: usize, bpm: f64) {
+        let js = serde_json::to_string(beats).unwrap_or_default();
+        let db = self.db.lock();
+        let _ = db.execute("UPDATE analysis SET beats=?, downbeat=?, bpm=?, neural=1 WHERE path=?", params![js, downbeat as i64, bpm, path]);
+        let _ = db.execute("UPDATE tracks SET bpm=? WHERE path=?", params![bpm, path]);
     }
 
     pub fn analysis_put(&self, path: &str, a: &crate::analysis::Analysis) {
@@ -332,7 +343,7 @@ impl Library {
     }
 
     /// Griglia corretta a mano per un file (sovrascrive l'analisi automatica al prossimo caricamento).
-    pub fn save_grid(&self, path: &str, beats: &[f64], downbeat: usize, bpm: f64, fixed: bool, pins: &[usize], auto: &[f64]) {
+    pub fn save_grid(&self, path: &str, beats: &[f64], downbeat: usize, bpm: f64, mode: u8, pins: &[usize], auto: &[f64]) {
         let js = serde_json::to_string(beats).unwrap_or_default();
         let pins_js = serde_json::to_string(pins).unwrap_or_default();
         let anchors: Vec<f64> = pins.iter().filter_map(|&i| beats.get(i).copied()).collect();
@@ -342,10 +353,10 @@ impl Library {
             "INSERT INTO grids(path,beats,downbeat,bpm,fixed,pins,anchors,auto_beats) VALUES(?,?,?,?,?,?,?,?)
              ON CONFLICT(path) DO UPDATE SET beats=excluded.beats, downbeat=excluded.downbeat, bpm=excluded.bpm, fixed=excluded.fixed,
                pins=excluded.pins, anchors=excluded.anchors, auto_beats=excluded.auto_beats",
-            params![path, js, downbeat as i64, bpm, fixed as i64, pins_js, anchors_js, auto_js],
+            params![path, js, downbeat as i64, bpm, mode as i64, pins_js, anchors_js, auto_js],
         );
     }
-    pub fn load_grid(&self, path: &str) -> Option<(Vec<f64>, usize, f64, bool, Vec<usize>)> {
+    pub fn load_grid(&self, path: &str) -> Option<(Vec<f64>, usize, f64, u8, Vec<usize>)> {
         let db = self.db.lock();
         db.query_row("SELECT beats,downbeat,bpm,fixed,pins FROM grids WHERE path=?", [path], |r| {
             let js: String = r.get(0)?;
@@ -354,7 +365,7 @@ impl Library {
                 serde_json::from_str::<Vec<f64>>(&js).unwrap_or_default(),
                 r.get::<_, i64>(1)? as usize,
                 r.get(2)?,
-                r.get::<_, i64>(3)? != 0,
+                r.get::<_, i64>(3)?.clamp(0, 2) as u8,
                 pins.and_then(|p| serde_json::from_str::<Vec<usize>>(&p).ok()).unwrap_or_default(),
             ))
         })

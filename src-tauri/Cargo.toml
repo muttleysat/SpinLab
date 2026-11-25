@@ -50,6 +50,8 @@ oboe = { version = "0.6", features = ["java-interface"] }
 
 # MIDI (midir) non supporta Android
 [target.'cfg(not(target_os = "android"))'.dependencies]
+# rilevatore neurale dei battiti (Beat This!, MIT) per la griglia, vedi neural.rs
+beat-this = { version = "1.1", default-features = false }
 midir = "0.10"
 
 # ASIO e DirectML esistono solo su Windows
@@ -76,3 +78,6 @@ opt-level = 3
 opt-level = 3
 lto = "thin"
 codegen-units = 16
+
+[dev-dependencies]
+beat-this = { version = "1.1", default-features = false, features = ["decode"] }

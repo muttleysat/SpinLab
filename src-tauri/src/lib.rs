@@ -6,11 +6,13 @@ mod camelot;
 mod decode;
 mod engine;
 mod fx;
+mod gridfit;
 mod lame;
 mod license;
 mod library;
 #[cfg(not(target_os = "android"))]
 mod midi;
+mod neural;
 #[cfg(target_os = "android")]
 #[path = "midi_stub.rs"]
 mod midi;
@@ -44,6 +46,9 @@ struct TrackInfo {
     beats: Vec<f64>,
     downbeat: usize,
     fixed: bool,
+    /// modalita' della griglia (0 auto, 1 fisso, 2 flessibile) e etichette BPM dove il tempo cambia: (secondi, BPM)
+    grid_mode: u8,
+    labels: Vec<(f64, f64)>,
     norm_db: f64,
     loudness: f64,
     /// diagnostica del caricamento: tempo totale e di decodifica (ms), analisi gia' in cache o calcolata ora
@@ -92,6 +97,48 @@ impl Drop for LoadGuard {
     }
 }
 
+/// brani per cui e' in corso l'affinamento dei battiti con la rete neurale
+static NEURAL_BUSY: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+/// Battiti con la rete neurale (neural.rs), salvati al posto di quelli del rilevatore DSP. Se la griglia del brano non e' stata
+/// toccata a mano si aggiorna anche sul deck che lo sta suonando (evento "grid-refined" per l'interfaccia).
+fn neural_job(app: &tauri::AppHandle, lib: &Library, path: &str, data: &[f32], sr: u32, dsp_bpm: f64) -> bool {
+    use tauri::Manager;
+    while LOADING.load(std::sync::atomic::Ordering::SeqCst) > 0 {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    let st = app.state::<App>();
+    let Some(n) = neural::refine(&st.dir, data, sr, dsp_bpm) else { return false };
+    lib.analysis_put_neural(path, &n.beats, n.downbeat, n.bpm);
+    if lib.load_grid(path).is_none() {
+        let mut m = st.mixer.lock();
+        for d in 0..NUM_DECKS {
+            if m.decks[d].track.as_ref().is_some_and(|t| t.path == path) {
+                m.decks[d].grid_refine(n.beats.clone(), n.downbeat, n.bpm);
+                if let Some(g) = m.decks[d].grid_info() {
+                    let _ = app.emit("grid-refined", (d, path.to_string(), g.beats, g.labels, g.downbeat, g.bpm));
+                }
+            }
+        }
+    }
+    true
+}
+
+fn spawn_neural(app: tauri::AppHandle, lib: Arc<Library>, path: String, data: Arc<Vec<f32>>, sr: u32, dsp_bpm: f64) {
+    {
+        let mut b = NEURAL_BUSY.lock();
+        if b.contains(&path) {
+            return;
+        }
+        b.push(path.clone());
+    }
+    std::thread::spawn(move || {
+        stems::background_priority();
+        neural_job(&app, &lib, &path, &data, sr, dsp_bpm);
+        NEURAL_BUSY.lock().retain(|p| *p != path);
+    });
+}
+
 fn run_analysis(app: &tauri::AppHandle, lib: &Library, path: &str, data: &[f32], sr: u32, background: bool) -> analysis::Analysis {
     emit_progress(app, path, 10);
     let mut last = 10u32;
@@ -107,6 +154,10 @@ fn run_analysis(app: &tauri::AppHandle, lib: &Library, path: &str, data: &[f32],
         }
     });
     lib.analysis_put(path, &a);
+    // l'analisi in background (coda, "Analizza") affina subito i battiti; quella sul deck lo fa dopo, a brano gia' caricato
+    if background {
+        neural_job(app, lib, path, data, sr, a.bpm);
+    }
     emit_progress(app, path, 100);
     a
 }
@@ -133,9 +184,11 @@ async fn load_track(
     let p = path.clone();
     let l = lib.inner().clone();
     // un brano gia' analizzato (in playlist) ha tutto in cache: resta solo la decodifica. Altrimenti si analizza ora.
-    let (track, wave, loud, cache_hit, decode_ms) = tauri::async_runtime::spawn_blocking(move || -> Result<(Track, analysis::Wave, (f64, f32), bool, u128), String> {
+    let handle_for_neural = handle.clone();
+    let (track, wave, loud, cache_hit, decode_ms, neural_done) = tauri::async_runtime::spawn_blocking(move || -> Result<(Track, analysis::Wave, (f64, f32), bool, u128, bool), String> {
         let cached = l.analysis_get(&p);
         let hit = cached.is_some();
+        let neural_done = cached.as_ref().is_some_and(|c| c.neural);
         if cached.is_none() {
             emit_progress(&handle, &p, 0);
         }
@@ -152,6 +205,7 @@ async fn load_track(
             (a.loudness, a.peak),
             hit,
             decode_ms,
+            neural_done,
         ))
     })
     .await
@@ -161,21 +215,26 @@ async fn load_track(
     }
     let saved = lib.load_grid(&path);
     let (key, key_name, name, duration) = (track.key.map(camelot::camelot_code), track.key.map(camelot::key_name), track.name.clone(), track.duration());
-    let (beats, downbeat, bpm, fixed, norm_db) = {
+    let (t_data, t_sr, t_bpm) = (track.data.clone(), track.sr, track.bpm);
+    let (beats, downbeat, bpm, mode, labels, norm_db) = {
         let mut m = app.mixer.lock();
         let d = &mut m.decks[deck];
         d.load(Arc::new(track));
         d.loudness = loud.0;
         d.peak = loud.1;
         // una griglia corretta a mano ha la precedenza sull'analisi automatica
-        if let Some((b, dn, bp, fx, pins)) = saved {
-            d.grid_apply_saved(b, dn, bp, fx, pins);
+        if let Some((b, dn, bp, md, pins)) = saved {
+            d.grid_apply_saved(b, dn, bp, md, pins);
         }
         let g = d.grid_info().unwrap();
         // volume: allineato a quello del brano che sta suonando su un altro deck
         m.normalize_deck(deck);
-        (g.beats, g.downbeat, g.bpm, g.fixed, m.decks[deck].norm_db)
+        (g.beats, g.downbeat, g.bpm, g.mode, g.labels, m.decks[deck].norm_db)
     };
+    // battiti con la rete neurale: in sottofondo, a brano gia' suonabile (se non gia' fatti)
+    if !neural_done {
+        spawn_neural(handle_for_neural, lib.inner().clone(), path.clone(), t_data, t_sr, t_bpm);
+    }
     // stem: la sessione del brano precedente si chiude e, se attivo, parte la separazione del nuovo
     stems_attach(app.mixer.clone(), hub.inner().clone(), app.dir.clone(), deck, path.clone());
     Ok(TrackInfo {
@@ -187,7 +246,9 @@ async fn load_track(
         wave: WaveInfo { rate: wave.rate, lo: wave.lo, mid: wave.mid, hi: wave.hi },
         beats,
         downbeat,
-        fixed,
+        fixed: mode == 1,
+        grid_mode: mode,
+        labels,
         norm_db,
         loudness: loud.0,
         ms: t_start.elapsed().as_millis(),
@@ -208,11 +269,17 @@ fn grid_cmd(app: State<'_, App>, lib: State<'_, Arc<Library>>, deck: usize, cmd:
     if !d.grid_cmd(&cmd, a) {
         return None;
     }
+    if cmd == "reset" {
+        // il ripristino torna ai battiti calcolati piu' di recente: se la rete neurale ha lavorato dopo il caricamento sono i suoi
+        if let Some(c) = lib.analysis_get(&path).filter(|c| c.neural) {
+            d.grid_refine(c.beats, c.downbeat, c.bpm);
+        }
+    }
     let g = d.grid_info()?;
     if cmd == "reset" {
         lib.delete_grid(&path);
     } else {
-        lib.save_grid(&path, &g.beats, g.downbeat, g.bpm, g.fixed, d.grid_pins(), d.grid_auto());
+        lib.save_grid(&path, &g.base, g.base_downbeat, g.bpm, g.mode, d.grid_pins(), d.grid_auto());
     }
     Some(g)
 }
@@ -561,9 +628,19 @@ fn rec_stop(app: State<'_, App>, rec: State<'_, RecState>) -> Result<RecResult, 
     Ok(RecResult { path: f.path.to_string_lossy().into_owned(), secs: f.secs, dropped: f.dropped, bytes: f.bytes })
 }
 
+// async: un comando sincrono gira nel thread principale e, se e' occupato, la risposta (e la posizione della waveform) arriva in ritardo
 #[tauri::command]
-fn get_state(app: State<'_, App>) -> Snapshot {
-    app.mixer.lock().snapshot()
+async fn get_state(app: State<'_, App>) -> Result<Snapshot, String> {
+    let t = std::time::Instant::now();
+    let g = app.mixer.lock();
+    let wait = t.elapsed();
+    let s = g.snapshot();
+    drop(g);
+    // diagnostica: attesa del mixer (occupato da audio, stem, caricamenti...) o esecuzione lenta
+    if t.elapsed() > std::time::Duration::from_millis(15) {
+        eprintln!("[{:.0}] get_state lento: attesa mixer {:.0} ms, totale {:.0} ms", engine::now_ms(), wait.as_secs_f64() * 1000.0, t.elapsed().as_secs_f64() * 1000.0);
+    }
+    Ok(s)
 }
 
 // ---------------------------------------------------------------- libreria
@@ -587,9 +664,21 @@ fn lib_add_files(lib: State<'_, Arc<Library>>, paths: Vec<String>) -> Vec<i64> {
     files.iter().filter_map(|p| lib.add_file(p).ok()).collect()
 }
 
+// async + thread a parte: la ricerca interroga tutto il database (anche mentre l'analisi in coda scrive) e, come comando sincrono, bloccava
+// il thread principale, da cui passano anche le risposte dello stato del motore (waveform a scatti)
 #[tauri::command]
-fn lib_search(lib: State<'_, Arc<Library>>, query: String, playlist: Option<i64>, sort: String, desc: bool) -> Vec<LibTrack> {
-    lib.search(&query, playlist, &sort, desc)
+async fn lib_search(lib: State<'_, Arc<Library>>, query: String, playlist: Option<i64>, sort: String, desc: bool) -> Result<Vec<LibTrack>, String> {
+    let l = lib.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let t = std::time::Instant::now();
+        let r = l.search(&query, playlist, &sort, desc);
+        if t.elapsed() > std::time::Duration::from_millis(20) {
+            eprintln!("[{:.0}] lib_search lento: {:.0} ms ({} brani)", engine::now_ms(), t.elapsed().as_secs_f64() * 1000.0, r.len());
+        }
+        r
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -1035,6 +1124,7 @@ fn queue_analysis(app: &tauri::AppHandle, q: &Arc<AnalysisQueue>, lib: &Arc<Libr
         q.workers.fetch_add(1, SeqCst);
         let (q, lib, app) = (q.clone(), lib.clone(), app.clone());
         std::thread::spawn(move || {
+            stems::background_priority();
             loop {
                 let Some(path) = q.pending.lock().pop_front() else { break };
                 if lib.analysis_get(&path).is_none() {

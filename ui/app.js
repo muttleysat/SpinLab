@@ -203,7 +203,7 @@ const mmss = (s) => { s = Math.max(0, Math.round(s || 0)); return `${String(Math
 
 /* =================================================================== DECKS */
 const decks = [0, 1].map(() => ({
-  wave: null, beats: [], downbeat: 0, dur: 0, snap: null, t: 0, over: null, zoom: 7, scrub: null, art: null, armT: 0, armR: 0.9,
+  wave: null, beats: [], labels: [], downbeat: 0, dur: 0, snap: null, t: 0, over: null, zoom: 7, scrub: null, art: null, armT: 0, armR: 0.9,
   fx: { kind: "echo", on: false, wet: 0.5, param: 0.5, param2: 0.5, div: 3, feel: 0 }, hcPage: 0, pk: [0, 0], pkT: [0, 0], mode: "hc0", jumpSize: 4, rollBase: 0.125, brakeT: 1.5, meta: null, stTouch: 0, stGains: [1, 1, 1, 1], stMem: [1, 1, 1, 1], stText: "",
 }));
 let audioLatency = 0; // secondi di buffer del dispositivo: la grafica si ritarda di tanto per coincidere con il suono
@@ -414,7 +414,7 @@ function bindDeck(i) {
   $$("[data-loop]", el).forEach((b) => (b.onclick = () => dc(i, "loop_" + b.dataset.loop)));
   // griglia e tonalita': finestrelle
   D.grid.onclick = (e) => { e.stopPropagation(); openPop(i, "grid", D.grid); };
-  D.anchor.onclick = async (e) => { e.stopPropagation(); const g = await inv("grid_cmd", { deck: i, cmd: "anchor_here", a: 0 }); if (g) { decks[i].beats = g.beats; decks[i].downbeat = g.downbeat; } };
+  D.anchor.onclick = async (e) => { e.stopPropagation(); const g = await inv("grid_cmd", { deck: i, cmd: "anchor_here", a: 0 }); if (g) { decks[i].beats = g.beats; decks[i].labels = g.labels || []; decks[i].downbeat = g.downbeat; } };
   D.r("keybtn").onclick = (e) => { e.stopPropagation(); openPop(i, "key", D.r("keybtn")); };
 
   // scrubbing: tieni premuto il mouse sulla forma d'onda o sul piatto e trascina. Il deck viene "tenuto" (muto e fermo)
@@ -487,11 +487,12 @@ function openPop(i, kind, anchor) {
       <button data-grid="anchor_here" title="Porta il marker più vicino esattamente sulla testina">&#9875;</button>
       <button data-grid="bar_shift" data-a="1" title="Sposta il &laquo;1&raquo; di un battito">+1</button>
       <button data-grid="reset" title="Ripristina la griglia calcolata automaticamente">&#8634;</button></div>
-      <div class="row"><button data-r="gridfixed" title="FLUIDA: segue le variazioni di tempo del brano. FISSA: BPM costante">FLUIDA</button>
+      <div class="row"><button data-gmode="0" title="AUTO: un solo tempo finché i battiti non si scostano di oltre 30 ms per almeno 32 battiti, poi un nuovo tratto">AUTO</button><button data-gmode="1" title="FISSA: un solo tempo e una sola fase per tutto il brano (brani a tempo costante)">FISSA</button><button data-gmode="2" title="FLESSIBILE: segue un batterista vero battuta per battuta">FLESS.</button></div>
+      <div class="row">
       <button data-r="quant" title="Quantizza cue e loop sui battiti">QUANTIZE</button></div>`;
-    const gridCmd = async (cmd, a) => { const g = await inv("grid_cmd", { deck: i, cmd, a }); if (!g) return; d.beats = g.beats; d.downbeat = g.downbeat; };
+    const gridCmd = async (cmd, a) => { const g = await inv("grid_cmd", { deck: i, cmd, a }); if (!g) return; d.beats = g.beats; d.labels = g.labels || []; d.downbeat = g.downbeat; };
     $$("[data-grid]", pop).forEach((b) => (b.onclick = (e) => gridCmd(b.dataset.grid, (+b.dataset.a || 0) * (e.shiftKey ? 0.2 : 1))));
-    $('[data-r="gridfixed"]', pop).onclick = () => gridCmd("fixed", d.snap?.grid_fixed ? 0 : 1);
+    $$("[data-gmode]", pop).forEach((b) => (b.onclick = () => gridCmd("mode", +b.dataset.gmode)));
     $('[data-r="quant"]', pop).onclick = () => dc(i, "quantize", d.snap?.quantize ? 0 : 1);
   } else {
     pop.innerHTML = `<small>TONALITÀ</small>
@@ -542,7 +543,7 @@ async function setDeckArt(i, path) {
 async function ejectDeck(i) {
   const d = decks[i];
   await dc(i, "unload");
-  d.wave = null; d.beats = []; d.downbeat = 0; d.dur = 0; d.over = null; d.scrub = null; d.art = null; d.meta = null; d.title_ = ""; d.loading = null; d.stText = "";
+  d.wave = null; d.beats = []; d.labels = []; d.downbeat = 0; d.dur = 0; d.over = null; d.scrub = null; d.art = null; d.meta = null; d.title_ = ""; d.loading = null; d.stText = "";
   DK[i].art.style.backgroundImage = ""; DK[i].art.textContent = i + 1;
 }
 
@@ -562,7 +563,7 @@ async function loadTrack(i, path) {
   const d = decks[i], D = DK[i];
   // il deck si svuota subito: niente brano vecchio (ne' audio) mentre il nuovo si carica
   await dc(i, "unload");
-  d.wave = null; d.beats = []; d.downbeat = 0; d.dur = 0; d.over = null; d.scrub = null; d.art = null; d.stTouch = 0; d.stGains = [1, 1, 1, 1]; d.stMem = [1, 1, 1, 1];
+  d.wave = null; d.beats = []; d.labels = []; d.downbeat = 0; d.dur = 0; d.over = null; d.scrub = null; d.art = null; d.stTouch = 0; d.stGains = [1, 1, 1, 1]; d.stMem = [1, 1, 1, 1];
   d.meta = lib.rows.find((t) => t.path === path) || null;
   d.artPath = path;
   D.title.textContent = "Caricamento…"; D.artist.textContent = "";
@@ -573,7 +574,7 @@ async function loadTrack(i, path) {
     const t0 = performance.now();
     const info = await inv("load_track", { deck: i, path });
     if (my !== d.loadSeq) return; // un'altra richiesta e' arrivata dopo: vale quella
-    d.wave = info.wave; d.beats = info.beats; d.downbeat = info.downbeat; d.dur = info.duration; d.over = null; d.scrub = null;
+    d.wave = info.wave; d.beats = info.beats; d.labels = info.labels || []; d.downbeat = info.downbeat; d.dur = info.duration; d.over = null; d.scrub = null;
     D.tempo._set(0.5);
     D.title.title = `Caricato in ${info.ms} ms (decodifica ${info.decode_ms} ms, analisi ${info.cached ? "dal database" : "calcolata ora"}, interfaccia ${Math.round(performance.now() - t0 - info.ms)} ms)`;
     if (info.ms + (performance.now() - t0 - info.ms) > 1500) toast(`Caricamento lento: ${D.title.title}`);
@@ -662,6 +663,17 @@ function drawZoom(i, pos) {
     if (bar) { g.fillStyle = "rgba(255,255,255,.9)"; g.fillRect(x, 0, 2, H); }
     else { g.fillStyle = "rgba(255,255,255,.22)"; g.fillRect(x, 0, 1, H); g.fillStyle = "rgba(255,255,255,.7)"; g.fillRect(x, H * 0.76, 1, H * 0.24); }
     if (bar && win < 20) { g.fillStyle = "#fff"; g.fillText(String(Math.floor((b - d.downbeat) / 4) + 1), x + 4, H * 0.17); }
+  }
+  // etichette BPM dove il tempo cambia (un brano a tempo fisso non ne ha)
+  if (d.labels && d.labels.length) {
+    g.font = `bold ${Math.round(H * 0.15)}px sans-serif`;
+    for (const [lt, lb] of d.labels) {
+      const x = Math.round((lt - t0) * pps), txt = String(Math.round(lb)), w = g.measureText(txt).width + 10;
+      if (x + w < 0 || x > W) continue;
+      g.fillStyle = "rgba(255,255,255,.35)"; g.fillRect(x, 0, 1, H);
+      g.fillStyle = "rgba(60,64,74,.92)"; g.fillRect(x, H * 0.62, w, H * 0.19);
+      g.fillStyle = "#e8ecf4"; g.fillText(txt, x + 5, H * 0.62 + H * 0.15);
+    }
   }
   const s = d.snap;
   const mark = (t, color) => { const x = (t - t0) * pps; if (x >= 0 && x < W) { g.fillStyle = color; g.fillRect(x, 0, 2, H); g.beginPath(); g.moveTo(x - 6, 0); g.lineTo(x + 8, 0); g.lineTo(x + 1, 10); g.fill(); } };
@@ -922,6 +934,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ---- aggiornamento stato */
+let stateOff = null;
 async function poll() {
   try {
     const tq = performance.now();
@@ -930,7 +943,14 @@ async function poll() {
     perfPush(perf.ipc, performance.now() - tq);
     if (!splash.ok.audio) splashStep("audio");
     const now = performance.now();
-    s.decks.slice(0, 2).forEach((ds, i) => { decks[i].snap = ds; decks[i].t = now; updateDeckUI(i, ds); });
+    // istante dello stato nell'orologio dell'interfaccia: tempo del motore + scarto minimo visto (il campione con la risposta piu'
+    // veloce); cosi' il ritardo variabile della risposta non sposta la posizione. Lo scarto risale piano per seguire la deriva degli orologi.
+    if (s.t_ms != null) {
+      const off = now - s.t_ms;
+      stateOff = stateOff == null || off < stateOff ? off : stateOff + 0.02;
+    }
+    const tsnap = s.t_ms != null && stateOff != null ? s.t_ms + stateOff : now;
+    s.decks.slice(0, 2).forEach((ds, i) => { decks[i].snap = ds; decks[i].t = tsnap; updateDeckUI(i, ds); });
     setMeter($("#masterMeter"), s.master_level);
     $("#autoGain").classList.toggle("on", !!s.auto_gain);
     const cpu = Math.min(100, Math.round((s.cpu ?? 0) * 100));
@@ -987,7 +1007,7 @@ function updateDeckUI(i, s) {
   // pop-up aperti: aggiorna lo stato
   if (d.pop && d.pop.isConnected) {
     const p = d.pop, q = (n) => $(`[data-r="${n}"]`, p);
-    if (q("gridfixed")) { q("gridfixed").textContent = s.grid_fixed ? "FISSA" : "FLUIDA"; q("gridfixed").classList.toggle("on", s.grid_fixed); q("quant").classList.toggle("on", s.quantize); }
+    if (q("quant")) { $$("[data-gmode]", p).forEach((b) => b.classList.toggle("on", +b.dataset.gmode === (s.grid_mode || 0))); q("quant").classList.toggle("on", s.quantize); }
     if (q("keylock")) { q("keylock").classList.toggle("on", s.keylock); q("keynow").textContent = s.key_orig ? `${s.key_orig} → ${s.key_now}` : "--"; q("shift").textContent = (s.key_shift > 0 ? "+" : "") + s.key_shift + " st"; }
   }
   // stem (stato dell'ultimo brano caricato)
@@ -1010,7 +1030,7 @@ function smoothPos(i) {
   return d.vp;
 }
 // misure per la diagnostica (Ctrl+Maiusc+D): intervallo fra i fotogrammi, tempo di disegno e andata e ritorno con il motore
-const perf = { fr: [], draw: [], ipc: [], zoom: 0, over: 0, plat: 0, n: 0 };
+const perf = { fr: [], draw: [], ipc: [], zoom: 0, over: 0, plat: 0, n: 0, lib: 0, libRows: 0 };
 const perfPush = (a, v, max = 240) => { a.push(v); if (a.length > max) a.shift(); };
 function frame(t) {
   if (t - lastFrame < FRAME_MIN_MS) { requestAnimationFrame(frame); return; }
@@ -1038,17 +1058,24 @@ function frame(t) {
 `
       + `disegno: ${avg(perf.draw).toFixed(1)} ms in media (massimo ${Math.max(0, ...perf.draw).toFixed(0)}) · zoom ${(perf.zoom / n).toFixed(1)} · panoramica ${(perf.over / n).toFixed(1)} · piatto ${(perf.plat / n).toFixed(1)}
 `
-      + `stato dal motore: ${avg(perf.ipc).toFixed(1)} ms in media · 95% ${pct(perf.ipc, 0.95).toFixed(1)} · massimo ${Math.max(0, ...perf.ipc).toFixed(0)} ms · variazione ${(pct(perf.ipc, 0.95) - pct(perf.ipc, 0.05)).toFixed(1)} ms`;
+      + `stato dal motore: ${avg(perf.ipc).toFixed(1)} ms in media · 95% ${pct(perf.ipc, 0.95).toFixed(1)} · massimo ${Math.max(0, ...perf.ipc).toFixed(0)} ms · variazione ${(pct(perf.ipc, 0.95) - pct(perf.ipc, 0.05)).toFixed(1)} ms`
+      + `\nultima ricostruzione della lista: ${perf.lib.toFixed(0)} ms (${perf.libRows} righe)`;
     perf.zoom = perf.over = perf.plat = 0; perf.n = 0;
   }, 1000);
-  document.addEventListener("keydown", (e) => {
-    if (!(e.ctrlKey && e.shiftKey && (e.key === "D" || e.key === "d"))) return;
-    e.preventDefault();
+  const toggleHud = () => {
     if (hud) { hud.remove(); hud = null; return; }
     hud = document.createElement("pre");
     hud.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:9999;margin:0;padding:8px 10px;background:#000c;color:#7df0b6;font:11px/1.45 Consolas,monospace;border:1px solid #1a82b8;border-radius:6px;pointer-events:none;white-space:pre";
     document.body.appendChild(hud);
-  });
+  };
+  // Ctrl+Maiusc+D, oppure F9, oppure un clic sul numero della CPU in alto (la scorciatoia puo' essere intercettata da altri programmi)
+  window.addEventListener("keydown", (e) => {
+    if (!((e.ctrlKey && e.shiftKey && (e.key === "D" || e.key === "d")) || e.key === "F9")) return;
+    e.preventDefault();
+    toggleHud();
+  }, true);
+  document.addEventListener("DOMContentLoaded", () => { const c = $("#cpuPct"); if (c) { c.style.cursor = "pointer"; c.title = "Diagnostica prestazioni (come Ctrl+Maiusc+D o F9)"; c.addEventListener("click", toggleHud); } });
+  if (document.readyState !== "loading") { const c = $("#cpuPct"); if (c) { c.style.cursor = "pointer"; c.title = "Diagnostica prestazioni (come Ctrl+Maiusc+D o F9)"; c.addEventListener("click", toggleHud); } }
 }
 
 /* ==================================================== BARRA SUPERIORE E MIXER */
@@ -1328,6 +1355,7 @@ async function refreshLib() {
 function stars(n) { return `<span class="stars">${[1, 2, 3, 4, 5].map((k) => `<i data-star="${k}" class="${k <= n ? "on" : ""}">★</i>`).join("")}</span>`; }
 
 function renderRows() {
+  const tR0 = performance.now();
   const tb = $("#tracks tbody");
   tb.innerHTML = lib.rows.map((t) => `<tr data-id="${t.id}" class="${lib.sel.has(t.id) ? "sel" : ""}${anaPct.has(t.path) ? " ana" : ""}" style="--p:${anaPct.get(t.path) ?? 0}%">
     <td class="num"><button class="pv" data-pv title="Anteprima in cuffia (Maiusc+clic: parte da metà brano). Con l'anteprima attiva, clic o trascinamento sulla riga per spostarsi nel brano">▶</button></td>
@@ -1340,6 +1368,7 @@ function renderRows() {
     <td class="rt">${stars(t.rating)}</td></tr>`).join("");
   markPreview();
   $$(".cover[data-art]", tb).forEach((el) => coverObs.observe(el));
+  perf.lib = performance.now() - tR0; perf.libRows = lib.rows.length;
 }
 // copertine delle righe: si caricano solo quando la riga e' visibile
 const coverObs = new IntersectionObserver((ents) => ents.forEach((en) => {
@@ -1435,7 +1464,13 @@ $("#side").addEventListener("contextmenu", (e) => {
 $("#newPl").onclick = async () => { const n = prompt("Nome della playlist"); if (n?.trim()) { const id = await inv("playlist_create", { name: n.trim() }); await refreshPlaylists(); selectPlaylist(id); } };
 
 /* avanzamento dell'analisi del singolo brano: barra trasparente sulla riga e percentuale nella colonna BPM */
-let anaRefresh = 0;
+let anaRefresh = 0, libRefreshAt = 0;
+// battiti affinati con la rete neurale a brano gia' caricato: la griglia del deck si aggiorna da sola
+T.event.listen("grid-refined", (e) => {
+  const [deck, , beats, labels, downbeat] = e.payload, d = decks[deck];
+  if (!d || d.wave == null) return;
+  d.beats = beats; d.labels = labels || []; d.downbeat = downbeat;
+});
 T.event.listen("analysis-track", (e) => {
   const [path, pct] = e.payload;
   const row = lib.rows.find((t) => t.path === path);
@@ -1448,13 +1483,19 @@ T.event.listen("analysis-track", (e) => {
     }
   }
   decks.forEach((d, i) => { if (d.loading === path && pct < 100) $(`.deck[data-i="${i}"] .title`).textContent = `Analisi in corso… ${pct}%`; });
-  if (pct >= 100) { clearTimeout(anaRefresh); anaRefresh = setTimeout(refreshLib, 250); }
+  // la tabella si ricostruisce da zero (centinaia di righe): durante l'analisi in coda, un'analisi ogni pochi secondi, la lista non va
+  // rifatta a ogni brano (scatti nella waveform). Al massimo una volta ogni 30 s; l'ultima volta, a coda finita (analysis-progress).
+  if (pct >= 100) {
+    clearTimeout(anaRefresh);
+    anaRefresh = setTimeout(() => { libRefreshAt = performance.now(); refreshLib(); }, Math.max(250, 30000 - (performance.now() - libRefreshAt)));
+  }
 });
 
 /* stato dell'analisi in background dei brani delle playlist */
 T.event.listen("analysis-progress", (e) => {
   const [done, total] = e.payload;
   $("#scanStatus").textContent = total ? `Analisi brani… ${done}/${total}` : "";
+  if (!total) { clearTimeout(anaRefresh); libRefreshAt = performance.now(); refreshLib(); }   // coda finita: aggiorna la lista una volta
 });
 
 $$("#tracks th[data-s]").forEach((th) => (th.onclick = () => {
