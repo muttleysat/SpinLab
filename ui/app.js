@@ -141,14 +141,14 @@ function makeKnob(el, { value, def, onChange }) {
   const draw = () => { el.style.setProperty("--a", (-135 + v * 270) + "deg"); el.style.setProperty("--p", v); };
   const set = (x, emit = true) => { v = clamp01(x); draw(); if (emit) onChange(v); };
   let st = null;
-  el.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; el.setPointerCapture(e.pointerId); st = { x: e.clientX, y: e.clientY, v, fine: false }; });
+  el.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; el.setPointerCapture(e.pointerId); st = { x: e.clientX, y: e.clientY, v, fine: false }; el.classList.add("drag"); });
   el.addEventListener("pointermove", (e) => {
     if (!st) return;
     /* Cockpit (tocco): spostandosi di lato mentre si trascina la regolazione diventa fine (1/4 della velocita'), senza salti */
     if (!st.fine && (document.body.classList.contains("cockpit") || document.body.classList.contains("mob")) && Math.abs(e.clientX - st.x) > 24) st = { x: e.clientX, y: e.clientY, v, fine: true };
     set(st.v + (st.y - e.clientY) / (e.shiftKey || st.fine ? 600 : 150));
   });
-  ["pointerup", "pointercancel"].forEach((ev) => el.addEventListener(ev, () => (st = null)));
+  ["pointerup", "pointercancel"].forEach((ev) => el.addEventListener(ev, () => { st = null; el.classList.remove("drag"); }));
   el.addEventListener("dblclick", () => set(def));
   el.addEventListener("wheel", (e) => { e.preventDefault(); set(v + (e.deltaY < 0 ? 0.03 : -0.03)); }, { passive: false });
   el._set = (x) => { if (!st) { v = clamp01(x); draw(); } };
@@ -198,7 +198,7 @@ const PAL = [
 ];
 /* palette dei deck (Impostazioni → INTERFACCIA): colore di ogni deck, delle forme d'onda, del piatto e dei controlli; si ricorda */
 const PALETTES = {
-  viola: ["Viola neon", "#b45cff", "#b45cff"],
+  viola: ["Viola neon (guida di stile)", "#b780ff", "#b780ff"],
   classica: ["Classica: blu e arancio", "#18b6ff", "#ff7a1a"],
   ciano: ["Ciano e magenta", "#00e5ff", "#ff3d9a"],
   acido: ["Verde acido e ambra", "#39ff88", "#ffb020"],
@@ -208,9 +208,9 @@ const PALETTES = {
 };
 const hexRgb = (h) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16));
 const mixHex = (a, b, t) => "#" + hexRgb(a).map((x, k) => Math.round(x + (hexRgb(b)[k] - x) * t).toString(16).padStart(2, "0")).join("");
-const palFrom = (c) => ({ c, lo: mixHex(c, "#000000", 0.35), mid: c, hi: mixHex(c, "#ffffff", 0.82) });
+const palFrom = (c) => (c.toLowerCase() === "#b780ff" ? { c, lo: "#7a52b8", mid: "#b780ff", hi: "#e6d9ff" } : { c, lo: mixHex(c, "#000000", 0.35), mid: c, hi: mixHex(c, "#ffffff", 0.82) });
 function palGet() {
-  let k = "viola", c = ["#b45cff", "#ff7a1a"];
+  let k = "viola", c = ["#b780ff", "#ff7a1a"];
   try { k = localStorage.getItem("spinlab.palette") || "viola"; c = JSON.parse(localStorage.getItem("spinlab.palette.custom") || "null") || c; } catch (e) {}
   if (!PALETTES[k]) k = "viola";
   return { k, c1: k === "custom" ? c[0] : PALETTES[k][1], c2: k === "custom" ? c[1] : PALETTES[k][2], custom: c };
@@ -223,7 +223,7 @@ function applyPalette() {
   try { decks.forEach((d) => { d.zt = null; d.over = null; }); if (DK[0]) { buildTargets(); setTarget(target); } } catch (e) {}
 }
 applyPalette();
-const HC = ["#ff3b4e", "#ffc21a", "#35e08a", "#18b6ff", "#ff7a1a", "#b45cff", "#ff3d9a", "#18e0d0"];
+const HC = ["#4a3a70", "#59417f", "#684b91", "#7a52b8", "#9169c5", "#a47ad6", "#b780ff", "#d2b5f5"];
 const REV_SEC = 1.8; // un giro del piatto (33 giri e 1/3 al minuto)
 const camelotColor = (k) => { const n = parseInt(k, 10); return n ? `hsl(${((n - 1) * 30 + 190) % 360} 75% 64%)` : "inherit"; };
 const mmss = (s) => { s = Math.max(0, Math.round(s || 0)); return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
@@ -346,8 +346,8 @@ function bindDeck(i) {
   };
   const D = DK[i];
   D.play.onclick = () => dc(i, "play");
-  D.cue.addEventListener("pointerdown", () => dc(i, "cue_press"));
-  ["pointerup", "pointerleave"].forEach((ev) => D.cue.addEventListener(ev, () => dc(i, "cue_release")));
+  D.cue.addEventListener("pointerdown", () => { d.cueDown = true; dc(i, "cue_press"); });
+  ["pointerup", "pointerleave"].forEach((ev) => D.cue.addEventListener(ev, () => { d.cueDown = false; dc(i, "cue_release"); }));
   // SYNC e' un interruttore per deck: puo' essere acceso su tutti i deck e resta acceso (anche cambiando brano) finche' non lo spegni
   D.sync.onclick = () => dc(i, d.snap?.sync ? "sync_off" : "sync");
   // rientro graduale del pitch verso 0: un clic avvia, un altro lo ferma dove si trova
@@ -423,7 +423,7 @@ function bindDeck(i) {
   };
   D.hot.forEach((b, k) => {
     let held = false;
-    b.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; held = true; b.setPointerCapture(e.pointerId); d.padAction(k, true, e); });
+    b.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; held = true; b.setPointerCapture(e.pointerId); if (b.classList.contains("set")) { b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse"); } d.padAction(k, true, e); });
     const up = () => { if (held) { held = false; d.padAction(k, false); } };
     ["pointerup", "pointercancel"].forEach((ev) => b.addEventListener(ev, up));
     // col mouse il clic destro cancella subito; col tocco il tocco prolungato genera lo stesso evento, quindi si chiede conferma
@@ -514,7 +514,6 @@ function openPop(i, kind, anchor) {
   if (kind === "grid") {
     pop.innerHTML = `<small>GRIGLIA (salvata per questo brano)</small>
       <div class="row"><button data-grid="halve" title="Dimezza il BPM (un marker ogni due)">&frac12;</button><button data-grid="double" title="Raddoppia il BPM (aggiunge i marker intermedi)">&times;2</button>
-      <button data-grid="anchor_here" title="Porta il marker più vicino esattamente sulla testina">&#9875;</button>
       <button data-grid="reset" title="Ripristina la griglia calcolata automaticamente">&#8634;</button></div>
       <div class="row"><button data-gmode="0" title="AUTO: un solo tempo finché i battiti non si scostano di oltre 30 ms per almeno 32 battiti, poi un nuovo tratto">AUTO</button><button data-gmode="1" title="FISSA: un solo tempo e una sola fase per tutto il brano (brani a tempo costante)">FISSA</button><button data-gmode="2" title="FLESSIBILE: segue un batterista vero battuta per battuta">FLESS.</button></div>
       <div class="row">
@@ -689,8 +688,8 @@ function drawZoom(i, pos) {
   g.font = `${Math.round(H * 0.16)}px sans-serif`;
   for (let b = lo; b < d.beats.length && d.beats[b] <= t0 + win; b++) {
     const x = Math.round((d.beats[b] - t0) * pps), bar = (((b - d.downbeat) % 4) + 4) % 4 === 0;
-    if (bar) { g.fillStyle = "rgba(255,255,255,.9)"; g.fillRect(x, 0, 2, H); }
-    else { g.fillStyle = "rgba(255,255,255,.22)"; g.fillRect(x, 0, 1, H); g.fillStyle = "rgba(255,255,255,.7)"; g.fillRect(x, H * 0.76, 1, H * 0.24); }
+    if (bar) { g.fillStyle = "rgba(230,217,255,.8)"; g.fillRect(x, 0, 2, H); }
+    else { g.fillStyle = "rgba(183,128,255,.2)"; g.fillRect(x, 0, 1, H); g.fillStyle = "rgba(183,128,255,.6)"; g.fillRect(x, H * 0.76, 1, H * 0.24); }
     if (bar && win < 20) { g.fillStyle = "#fff"; g.fillText(String(Math.floor((b - d.downbeat) / 4) + 1), x + 4, H * 0.17); }
   }
   // etichette BPM dove il tempo cambia (un brano a tempo fisso non ne ha)
@@ -710,8 +709,8 @@ function drawZoom(i, pos) {
     mark(s.cue, "#ffb020"); s.hot_cues.forEach((t, k) => t != null && mark(t, HC[k % 8]));
     if (s.loop_on || s.loop_out > s.loop_in) {
       const x0 = (s.loop_in - t0) * pps, x1 = (s.loop_out - t0) * pps;
-      g.fillStyle = s.loop_on ? "rgba(53,224,138,.22)" : "rgba(255,255,255,.07)"; g.fillRect(x0, 0, x1 - x0, H);
-      g.fillStyle = s.loop_on ? "#35e08a" : "#8a96b4"; g.fillRect(x0, 0, 2, H); g.fillRect(x1 - 2, 0, 2, H);
+      g.fillStyle = s.loop_on ? "rgba(183,128,255,.22)" : "rgba(255,255,255,.07)"; g.fillRect(x0, 0, x1 - x0, H);
+      g.fillStyle = s.loop_on ? "#b780ff" : "#858d99"; g.fillRect(x0, 0, 2, H); g.fillRect(x1 - 2, 0, 2, H);
     }
   }
   g.fillStyle = "#fff"; g.shadowColor = "#fff"; g.shadowBlur = 8; g.fillRect(Math.round(W / 2) - 1, 0, 2, H); g.shadowBlur = 0;
@@ -780,7 +779,7 @@ function drawOver(i, pos) {
   d.snap?.hot_cues.forEach((t, k) => { if (t != null) { g.fillStyle = HC[k % 8]; g.fillRect((t / d.dur) * W, 0, 2, H); } });
   // finestra della forma d'onda ingrandita
   const wx = ((pos - d.zoom / 2) / d.dur) * W, ww = (d.zoom / d.dur) * W;
-  g.strokeStyle = "rgba(255,255,255,.9)"; g.lineWidth = Math.max(1, W / 700); g.strokeRect(wx, 1, Math.max(4, ww), H - 2);
+  g.fillStyle = "rgba(122,82,184,.28)"; g.fillRect(wx, 0, Math.max(4, ww), H); g.strokeStyle = "rgba(230,217,255,.85)"; g.lineWidth = Math.max(1, W / 700); g.strokeRect(wx, 1, Math.max(4, ww), H - 2);
   g.fillStyle = "#fff"; g.fillRect(px - 1, 0, 2, H);
 }
 
@@ -788,44 +787,34 @@ function drawOver(i, pos) {
    (solchi, spazi fra i brani, micrograffi, polvere) e poi ruotato; i riflessi di luce restano fermi, come nella realta'.
    Braccio in stile Technics SL-1200: perno cardanico, tubo a S, testina con cartuccia, contrappeso. */
 function vinylTexture(rv, dpr) {
+  // disco nero lucido (guida 4.1): fondo quasi nero, solchi fitti e tenui, qualche riflesso sottile; ruota con il piatto
   const S = Math.ceil(rv * 2) + 2, c = document.createElement("canvas");
   c.width = c.height = S;
   const g = c.getContext("2d"), cx = S / 2, cy = S / 2, TAU = Math.PI * 2;
   let seed = 987654321; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
   const gr = g.createRadialGradient(cx, cy, rv * 0.3, cx, cy, rv);
-  gr.addColorStop(0, "#171c26"); gr.addColorStop(0.55, "#0d1118"); gr.addColorStop(1, "#07090d");
+  gr.addColorStop(0, "#15171c"); gr.addColorStop(0.6, "#0c0d11"); gr.addColorStop(1, "#060709");
   g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, rv, 0, TAU); g.fill();
-  // solchi fitti con intensita' irregolare; fra un brano e l'altro la superficie e' liscia
-  const gaps = [[0.50, 0.515], [0.64, 0.655], [0.78, 0.795], [0.88, 0.895]];
-  g.lineWidth = Math.max(0.6, dpr * 0.6);
-  for (let r = rv * 0.405; r < rv * 0.955; r += 1.45 * dpr) {
-    const f = r / rv; if (gaps.some(([a, b]) => f > a && f < b)) continue;
-    g.strokeStyle = `rgba(255,255,255,${(0.015 + rnd() * 0.055).toFixed(3)})`;
+  g.lineWidth = Math.max(0.6, dpr * 0.55);
+  for (let r = rv * 0.43; r < rv * 0.975; r += 1.25 * dpr) {
+    g.strokeStyle = `rgba(255,255,255,${(0.018 + rnd() * 0.04).toFixed(3)})`;
     g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke();
   }
-  g.lineWidth = 1.3 * dpr;
-  for (const [a, b] of gaps) { g.strokeStyle = "rgba(255,255,255,.075)"; g.beginPath(); g.arc(cx, cy, rv * (a + b) / 2, 0, TAU); g.stroke(); }
-  // anello di uscita vicino all'etichetta e bordo con bisello
-  g.strokeStyle = "rgba(255,255,255,.06)"; g.lineWidth = 2.5 * dpr; g.beginPath(); g.arc(cx, cy, rv * 0.385, 0, TAU); g.stroke();
-  g.strokeStyle = "rgba(255,255,255,.12)"; g.lineWidth = 1.6 * dpr; g.beginPath(); g.arc(cx, cy, rv - 0.9 * dpr, 0, TAU); g.stroke();
-  g.strokeStyle = "rgba(0,0,0,.5)"; g.lineWidth = 1.2 * dpr; g.beginPath(); g.arc(cx, cy, rv - 3 * dpr, 0, TAU); g.stroke();
-  // micrograffi e polvere: sono quello che fa vedere il disco girare
-  for (let k = 0; k < 50; k++) {
-    const r = rv * (0.42 + rnd() * 0.52), a0 = rnd() * TAU, len = 0.03 + rnd() * 0.3;
-    g.strokeStyle = `rgba(255,255,255,${(0.04 + rnd() * 0.1).toFixed(3)})`; g.lineWidth = dpr * (0.5 + rnd() * 0.6);
+  // due solchi di separazione fra i brani
+  for (const f of [0.62, 0.8]) { g.strokeStyle = "rgba(0,0,0,.7)"; g.lineWidth = 2 * dpr; g.beginPath(); g.arc(cx, cy, rv * f, 0, TAU); g.stroke();
+    g.strokeStyle = "rgba(255,255,255,.07)"; g.lineWidth = 0.8 * dpr; g.beginPath(); g.arc(cx, cy, rv * f + 1.4 * dpr, 0, TAU); g.stroke(); }
+  // micrograffi: fanno vedere il disco girare
+  for (let k = 0; k < 40; k++) {
+    const r = rv * (0.45 + rnd() * 0.5), a0 = rnd() * TAU, len = 0.03 + rnd() * 0.25;
+    g.strokeStyle = `rgba(255,255,255,${(0.03 + rnd() * 0.07).toFixed(3)})`; g.lineWidth = dpr * (0.5 + rnd() * 0.5);
     g.beginPath(); g.arc(cx, cy, r, a0, a0 + len); g.stroke();
-  }
-  for (let k = 0; k < 34; k++) {
-    const r = rv * (0.4 + rnd() * 0.56), a = rnd() * TAU;
-    g.fillStyle = `rgba(225,230,240,${(0.15 + rnd() * 0.3).toFixed(2)})`;
-    g.beginPath(); g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, dpr * (0.5 + rnd() * 0.9), 0, TAU); g.fill();
   }
   return c;
 }
 
 function drawTonearm(g, dpr, rv, cx, cy, tx, ty) {
   const TAU = Math.PI * 2, u = rv / 200; // unita': 1/200 del raggio del disco
-  const px = cx + rv * 1.03, py = cy - rv * 0.9;
+  const px = cx + rv * 1.03, py = cy - rv * 0.78;
   // direzione perno -> puntina e testina con il suo angolo di offset
   const dPT = Math.hypot(tx - px, ty - py) || 1, ux = (tx - px) / dPT, uy = (ty - py) / dPT;
   const hs = 40 * u, off = 0.32, co = Math.cos(off), so = Math.sin(off);
@@ -885,73 +874,145 @@ function drawTonearm(g, dpr, rv, cx, cy, tx, ty) {
 function drawPlatter(i, pos) {
   // anche se largo 0 (piatto non ancora misurato, modello C): il rapporto fra pixel e misura esploderebbe e il disegno lancerebbe un errore
   const cv = DK[i].plat; if (!cv.width || !cv.clientWidth || cv.offsetParent === null) return;
-  const g = cv.getContext("2d"), W = cv.width, H = cv.height, d = decks[i], s = d.snap, pal = PAL[i];
+  const g = cv.getContext("2d"), W = cv.width, H = cv.height, d = decks[i], s = d.snap;
   const dpr = W / Math.max(1, cv.clientWidth);
   g.clearRect(0, 0, W, H);
   const R = Math.min(W, H) * 0.47, cx = W / 2, cy = H / 2, TAU = Math.PI * 2;
   const ang = (pos / REV_SEC) * TAU, loaded = !!s?.loaded && d.dur > 0;
-  const rim = R - 4 * dpr, rv = R - 14 * dpr;
-  // anello al neon: tenue, con la parte gia' suonata piu' accesa
-  // anello luminoso sotto il piatto: sfumature della stessa tinta del deck (piu' chiara, piena, piu' scura) che girano con il disco
+  const rim = R * 0.955, rv = R * 0.8;                  // bordo cromato fra rim e rv, disco dentro rv
+
+  // ---- stato dell'illuminazione (guida 4.3): senza brano basso e fermo; in pausa medio e fermo; in play la luce corre con il disco
+  // (l'angolo viene dalla posizione: velocita' e verso reali); scratch: intensita' secondo la velocita' reale; CUE tenuto in play: ambra
+  const now = performance.now(), dtA = Math.max(1, now - (d.glT || now - 16)) / 1000;
+  const vel = Math.abs(ang - (d.glA ?? ang)) / dtA; d.glA = ang; d.glT = now;
+  d.glV = (d.glV || 0) * 0.8 + Math.min(4, vel / (TAU / REV_SEC)) * 0.2;
+  const scr = d.scrub != null || !!s?.held, cueOn = !!d.cueDown && !!s?.playing;
+  const amp = !loaded ? 0.4 : scr ? Math.min(1.3, 0.75 + d.glV * 0.3) : s?.playing ? 1 : 0.65;
+  const C = cueOn ? { deep: "#5a3a00", main: "#ffb300", hi: "#ffe6a8" } : { deep: "#4a3a70", main: "#b780ff", hi: "#efe6ff" };
+
+  // ---- alone esterno: luce morbida + filo luminoso; due archi piu' chiari che girano con il disco
   g.save();
-  g.lineWidth = 7 * dpr; g.shadowColor = pal.c; g.shadowBlur = (loaded ? 26 : 12) * dpr; g.globalAlpha = loaded ? 1 : 0.45;
+  g.globalAlpha = Math.min(1, amp);
+  g.shadowColor = C.main; g.shadowBlur = 34 * dpr * Math.min(1.2, amp);
+  g.strokeStyle = C.main; g.lineWidth = 6 * dpr; g.beginPath(); g.arc(cx, cy, R * 0.975, 0, TAU); g.stroke(); g.stroke();
+  g.shadowBlur = 14 * dpr;
   if (g.createConicGradient) {
-    const rg2 = g.createConicGradient(ang, cx, cy), lt = mixHex(pal.c, "#ffffff", 0.45), dk = mixHex(pal.c, "#000000", 0.45);
-    [[0, lt], [0.18, pal.c], [0.36, dk], [0.5, pal.c], [0.68, lt], [0.86, dk], [1, lt]].forEach(([q, col]) => rg2.addColorStop(q, col));
-    g.strokeStyle = rg2;
-  } else g.strokeStyle = pal.c;
-  g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
+    const cg = g.createConicGradient(ang, cx, cy);
+    [[0, C.hi], [0.06, C.main], [0.2, C.deep], [0.3, C.deep], [0.44, C.main], [0.5, C.hi], [0.56, C.main], [0.7, C.deep], [0.8, C.deep], [0.94, C.main], [1, C.hi]].forEach(([q, col]) => cg.addColorStop(q, col));
+    g.strokeStyle = cg;
+  } else g.strokeStyle = C.main;
+  g.lineWidth = 3.5 * dpr; g.beginPath(); g.arc(cx, cy, R * 0.975, 0, TAU); g.stroke();
   g.restore();
-  // bordo del piatto in alluminio con i puntini dello stroboscopio (girano col piatto)
-  g.save(); g.translate(cx, cy);
-  const rg = g.createRadialGradient(0, 0, rv, 0, 0, rim);
-  rg.addColorStop(0, "#69728a"); rg.addColorStop(0.45, "#c7cdda"); rg.addColorStop(1, "#7b8499");
-  g.fillStyle = rg; g.beginPath(); g.arc(0, 0, rim, 0, TAU); g.arc(0, 0, rv, 0, TAU, true); g.fill();
-  g.rotate(ang);
-  const mid = (rim + rv) / 2, nd = 90;
-  g.fillStyle = "rgba(25,29,38,.85)";
-  for (let k = 0; k < nd; k += 2) { g.save(); g.rotate((k / nd) * TAU); g.fillRect(-0.8 * dpr, -mid - 1.7 * dpr, 1.6 * dpr, 3.4 * dpr); g.restore(); }
+
+  // ---- luce sotto il bordo: si vede attraverso i fori
+  g.save();
+  const ug = g.createRadialGradient(cx, cy, rv, cx, cy, rim);
+  ug.addColorStop(0, C.deep); ug.addColorStop(0.5, C.main); ug.addColorStop(1, C.deep);
+  g.globalAlpha = 0.35 + Math.min(0.65, amp * 0.6);
+  g.fillStyle = ug; g.beginPath(); g.arc(cx, cy, rim, 0, TAU); g.arc(cx, cy, rv, 0, TAU, true); g.fill();
   g.restore();
-  // disco (texture ruotata) e luci fisse
-  if (!d.tex || d.tex.key !== Math.round(rv)) d.tex = { key: Math.round(rv), cv: vinylTexture(rv, dpr) };
-  g.save(); g.translate(cx, cy); g.rotate(ang); g.drawImage(d.tex.cv, -d.tex.cv.width / 2, -d.tex.cv.height / 2); g.restore();
-  const rl = rv * 0.34;
-  if (g.createConicGradient) {
-    const cg = g.createConicGradient(-0.9, cx, cy);
-    [[0, 0], [0.035, 0], [0.085, 0.2], [0.135, 0], [0.5, 0], [0.535, 0], [0.585, 0.17], [0.635, 0], [1, 0]].forEach(([p, a]) => cg.addColorStop(p, `rgba(255,255,255,${a})`));
-    g.save(); g.beginPath(); g.arc(cx, cy, rv * 0.985, 0, TAU); g.arc(cx, cy, rl, 0, TAU, true); g.clip();
-    g.fillStyle = cg; g.fillRect(cx - rv, cy - rv, rv * 2, rv * 2); g.restore();
-  }
-  const sh = g.createRadialGradient(cx - rv * 0.35, cy - rv * 0.4, rv * 0.1, cx, cy, rv);
-  sh.addColorStop(0, "rgba(255,255,255,.05)"); sh.addColorStop(1, "rgba(0,0,0,.28)");
-  g.fillStyle = sh; g.beginPath(); g.arc(cx, cy, rv, 0, TAU); g.arc(cx, cy, rl, 0, TAU, true); g.fill();
-  // etichetta con la copertina (ruota col disco), bordo di carta e foro con il perno cromato
+
+  // ---- bordo in alluminio spazzolato: riflessi fissi (la luce non gira con il piatto), fori tondi che girano
+  if (!d.ring || d.ring.key !== Math.round(R)) d.ring = { key: Math.round(R), cv: ringTexture(R, rim, rv, dpr) };
+  g.drawImage(d.ring.cv, cx - d.ring.cv.width / 2, cy - d.ring.cv.height / 2);
+  const holes = 30, hr = (rim - rv) * 0.33, mid = (rim + rv) / 2;
   g.save(); g.translate(cx, cy); g.rotate(ang);
-  g.beginPath(); g.arc(0, 0, rl, 0, TAU); g.clip();
-  if (d.art && d.art.naturalWidth) g.drawImage(d.art, -rl, -rl, rl * 2, rl * 2);
-  else {
-    const lg = g.createRadialGradient(0, 0, 0, 0, 0, rl); lg.addColorStop(0, pal.c); lg.addColorStop(1, "#0a0f18");
-    g.fillStyle = lg; g.fillRect(-rl, -rl, rl * 2, rl * 2);
-    g.fillStyle = "rgba(255,255,255,.85)"; g.font = `600 ${rl * 0.7}px sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(i + 1), 0, 0);
+  for (let k = 0; k < holes; k++) {
+    const a = (k / holes) * TAU, hx = Math.cos(a) * mid, hy = Math.sin(a) * mid;
+    const ox = -Math.cos(a) * hr * 0.25, oy = -Math.sin(a) * hr * 0.25;     // il fondo luminoso e' spostato verso il centro: parete esterna in ombra
+    g.fillStyle = "#040406"; g.beginPath(); g.ellipse(hx, hy, hr * 0.82, hr * 1.25, a, 0, TAU); g.fill();
+    const hg = g.createRadialGradient(hx + ox, hy + oy, 0, hx + ox, hy + oy, hr * 0.9);
+    hg.addColorStop(0, `rgba(${cueOn ? "255,200,90" : "214,180,255"},${(0.35 + Math.min(0.6, amp * 0.55)).toFixed(2)})`); hg.addColorStop(0.55, `rgba(${cueOn ? "180,110,0" : "110,70,170"},${(0.25 + amp * 0.3).toFixed(2)})`); hg.addColorStop(1, "rgba(4,4,6,0)");
+    g.fillStyle = hg; g.beginPath(); g.ellipse(hx, hy, hr * 0.82, hr * 1.25, a, 0, TAU); g.fill();
+    // labbro del foro: ombra sul lato in alto a sinistra, luce sul lato opposto (luce fissa dall'alto a sinistra)
+    const la = Math.atan2(-1, -1) - ang - a;
+    g.lineWidth = 1.6 * dpr; g.strokeStyle = "rgba(0,0,0,.75)"; g.beginPath(); g.ellipse(hx, hy, hr * 0.82, hr * 1.25, a, la - 1.2, la + 1.2); g.stroke();
+    g.lineWidth = 1.1 * dpr; g.strokeStyle = "rgba(255,255,255,.55)"; g.beginPath(); g.ellipse(hx, hy, hr * 0.82, hr * 1.25, a, la + Math.PI - 1.1, la + Math.PI + 1.1); g.stroke();
   }
-  const lv = g.createRadialGradient(0, 0, rl * 0.55, 0, 0, rl); lv.addColorStop(0, "rgba(0,0,0,0)"); lv.addColorStop(1, "rgba(0,0,0,.45)");
-  g.fillStyle = lv; g.fillRect(-rl, -rl, rl * 2, rl * 2);
-  g.fillStyle = "rgba(255,255,255,.9)"; g.beginPath(); g.arc(0, -rl * 0.84, 2.2 * dpr, 0, TAU); g.fill();
   g.restore();
-  g.strokeStyle = "rgba(0,0,0,.6)"; g.lineWidth = 2 * dpr; g.beginPath(); g.arc(cx, cy, rl, 0, TAU); g.stroke();
-  g.strokeStyle = pal.c; g.globalAlpha = 0.85; g.lineWidth = 1.6 * dpr; g.beginPath(); g.arc(cx, cy, rl + 1.6 * dpr, 0, TAU); g.stroke(); g.globalAlpha = 1;
-  const sp = g.createRadialGradient(cx - 1.2 * dpr, cy - 1.2 * dpr, 0.5, cx, cy, 5 * dpr); sp.addColorStop(0, "#ffffff"); sp.addColorStop(0.6, "#aeb7c8"); sp.addColorStop(1, "#4d5668");
-  g.fillStyle = sp; g.beginPath(); g.arc(cx, cy, 4.6 * dpr, 0, TAU); g.fill();
-  // braccio: appoggia sul disco quando c'e' un brano e scende verso il centro mentre il brano avanza
+
+  // ---- disco (texture che ruota), riflessi fissi a ventaglio
+  const vr = rv - 2.5 * dpr;
+  if (!d.tex || d.tex.key !== Math.round(vr)) d.tex = { key: Math.round(vr), cv: vinylTexture(vr, dpr) };
+  g.save(); g.translate(cx, cy); g.rotate(ang); g.drawImage(d.tex.cv, -d.tex.cv.width / 2, -d.tex.cv.height / 2); g.restore();
+  { const sg = g.createRadialGradient(cx, cy, rv - 9 * dpr, cx, cy, rv);   // il bordo rialzato fa ombra sul disco
+    sg.addColorStop(0, "rgba(0,0,0,0)"); sg.addColorStop(1, "rgba(0,0,0,.85)");
+    g.fillStyle = sg; g.beginPath(); g.arc(cx, cy, rv, 0, TAU); g.arc(cx, cy, rv - 9 * dpr, 0, TAU, true); g.fill(); }
+  g.strokeStyle = "#000"; g.lineWidth = 2 * dpr; g.beginPath(); g.arc(cx, cy, rv - 0.8 * dpr, 0, TAU); g.stroke();
+  const rl = vr * 0.4;
+  if (g.createConicGradient) {
+    const sh = g.createConicGradient(-0.75, cx, cy);
+    [[0, 0], [0.04, 0], [0.09, 0.22], [0.14, 0.05], [0.2, 0], [0.5, 0], [0.54, 0], [0.59, 0.16], [0.64, 0.03], [0.7, 0], [1, 0]].forEach(([p, a]) => sh.addColorStop(p, `rgba(235,235,250,${a})`));
+    g.save(); g.beginPath(); g.arc(cx, cy, vr, 0, TAU); g.arc(cx, cy, rl, 0, TAU, true); g.clip();
+    g.fillStyle = sh; g.fillRect(cx - vr, cy - vr, vr * 2, vr * 2); g.restore();
+  }
+
+  // ---- etichetta nera con anelli e mozzo cromato (girano con il disco)
+  g.save(); g.translate(cx, cy); g.rotate(ang);
+  const lg = g.createRadialGradient(-rl * 0.25, -rl * 0.3, 0, 0, 0, rl); lg.addColorStop(0, "#1c1e24"); lg.addColorStop(1, "#08090c");
+  g.fillStyle = lg; g.beginPath(); g.arc(0, 0, rl, 0, TAU); g.fill();
+  g.strokeStyle = "rgba(201,206,216,.18)"; g.lineWidth = 1.2 * dpr; g.beginPath(); g.arc(0, 0, rl * 0.93, 0, TAU); g.stroke();
+  g.strokeStyle = "rgba(201,206,216,.10)"; g.lineWidth = 1 * dpr; g.beginPath(); g.arc(0, 0, rl * 0.72, 0, TAU); g.stroke();
+  g.fillStyle = "rgba(255,255,255,.45)"; g.beginPath(); g.arc(0, -rl * 0.83, 1.4 * dpr, 0, TAU); g.fill();
+  g.restore();
+  // mozzo: disco metallico, anello scuro, perno
+  const hub = rl * 0.62;
+  const mg = g.createLinearGradient(cx - hub, cy - hub, cx + hub, cy + hub);
+  [[0, "#454b56"], [0.25, "#f1f3f6"], [0.5, "#858d99"], [0.75, "#c9ced8"], [1, "#454b56"]].forEach(([p, col]) => mg.addColorStop(p, col));
+  g.fillStyle = mg; g.beginPath(); g.arc(cx, cy, hub, 0, TAU); g.fill();
+  g.fillStyle = "#0b0c10"; g.beginPath(); g.arc(cx, cy, hub * 0.74, 0, TAU); g.fill();
+  g.strokeStyle = "rgba(201,206,216,.55)"; g.lineWidth = 1.5 * dpr; g.beginPath(); g.arc(cx, cy, hub * 0.5, 0, TAU); g.stroke();
+  const sp = g.createRadialGradient(cx - hub * 0.08, cy - hub * 0.08, 0.5, cx, cy, hub * 0.28);
+  sp.addColorStop(0, "#ffffff"); sp.addColorStop(0.55, "#c9ced8"); sp.addColorStop(1, "#454b56");
+  g.fillStyle = sp; g.beginPath(); g.arc(cx, cy, hub * 0.26, 0, TAU); g.fill();
+  g.fillStyle = "#0b0c10"; g.beginPath(); g.arc(cx, cy, hub * 0.09, 0, TAU); g.fill();
+  // braccio: appoggia sul disco quando c'e' un brano e scende verso il centro mentre il brano avanza; a riposo sta sul suo supporto
+  const ar = R * 1.08;                                   // misura del braccio: perno fuori dal piatto, in alto a destra
+  // il braccio ha lunghezza fissa e ruota attorno al perno (come un braccio vero): a riposo e' quasi verticale accanto al piatto,
+  // sul disco la puntina parte dai solchi esterni e avanza verso il centro mentre il brano procede
+  const px = cx + ar * 1.03, py = cy - ar * 0.78, phi = 0.8;
+  const outx = cx + Math.cos(phi) * vr * 0.95, outy = cy + Math.sin(phi) * vr * 0.95;
+  const L = Math.hypot(outx - px, outy - py), thOut = Math.atan2(outy - py, outx - px);
+  if (!d.armGeo || d.armGeo.k !== Math.round(R)) {           // angolo per cui la puntina arriva a meta' disco (fine dei solchi)
+    let th = thOut;
+    for (let k = 0; k < 400; k++) { const t2 = thOut + k * 0.002, x = px + Math.cos(t2) * L - cx, y = py + Math.sin(t2) * L - cy; th = t2; if (Math.hypot(x, y) <= vr * 0.5) break; }
+    d.armGeo = { k: Math.round(R), thIn: th };
+  }
   d.armT += ((loaded ? 1 : 0) - d.armT) * 0.1;
-  const prog = loaded ? Math.min(1, pos / d.dur) : 0, phi = 0.8;
-  d.armR = 0.92 - 0.5 * prog;
-  const onx = cx + Math.cos(phi) * rv * d.armR, ony = cy + Math.sin(phi) * rv * d.armR;
-  const parkx = cx + rv * 1.1, parky = cy - rv * 0.12;
-  // appoggio del braccio (quando e' a riposo)
-  g.fillStyle = "#1e232d"; g.beginPath(); g.roundRect(parkx - 8 * dpr, parky + 7 * dpr, 20 * dpr, 12 * dpr, 4 * dpr); g.fill();
-  const tx = parkx + (onx - parkx) * d.armT, ty = parky + (ony - parky) * d.armT;
-  drawTonearm(g, dpr, rv, cx, cy, tx, ty);
+  const prog = loaded ? Math.min(1, pos / d.dur) : 0;
+  const thPlay = thOut + (d.armGeo.thIn - thOut) * prog, thRest = Math.PI / 2 - 0.04;
+  const th = thRest + (thPlay - thRest) * d.armT;
+  const tx = px + Math.cos(th) * L, ty = py + Math.sin(th) * L;
+  // supporto del braccio, sotto la testina a riposo
+  const rx = px + Math.cos(thRest) * L, ry = py + Math.sin(thRest) * L;
+  g.fillStyle = "#1f2330"; g.beginPath(); g.roundRect(rx - 9 * dpr, ry - 4 * dpr, 20 * dpr, 12 * dpr, 4 * dpr); g.fill();
+  drawTonearm(g, dpr, ar, cx, cy, tx, ty);
+}
+
+/* bordo in alluminio spazzolato (fisso): anello con riflessi angolari, bisello interno ed esterno */
+function ringTexture(R, rim, rv, dpr) {
+  const S = Math.ceil(rim * 2) + 4, c = document.createElement("canvas");
+  c.width = c.height = S;
+  const g = c.getContext("2d"), cx = S / 2, cy = S / 2, TAU = Math.PI * 2;
+  if (g.createConicGradient) {
+    const mg = g.createConicGradient(-0.5, cx, cy);
+    [[0, "#c9ced8"], [0.08, "#f1f3f6"], [0.16, "#858d99"], [0.28, "#454b56"], [0.4, "#858d99"], [0.5, "#c9ced8"], [0.58, "#f1f3f6"], [0.66, "#858d99"], [0.78, "#454b56"], [0.9, "#858d99"], [1, "#c9ced8"]].forEach(([p, col]) => mg.addColorStop(p, col));
+    g.fillStyle = mg;
+  } else g.fillStyle = "#858d99";
+  g.beginPath(); g.arc(cx, cy, rim, 0, TAU); g.arc(cx, cy, rv, 0, TAU, true); g.fill();
+  // profilo bombato (3D): scuro sul bordo interno, riflesso pieno a un terzo, poi di nuovo scuro verso l'esterno
+  const pg = g.createRadialGradient(cx, cy, rv, cx, cy, rim);
+  [[0, "rgba(0,0,0,.7)"], [0.12, "rgba(0,0,0,.25)"], [0.32, "rgba(255,255,255,.28)"], [0.45, "rgba(255,255,255,.05)"], [0.7, "rgba(0,0,0,.12)"], [0.9, "rgba(0,0,0,.45)"], [1, "rgba(0,0,0,.75)"]].forEach(([p, col]) => pg.addColorStop(p, col));
+  g.fillStyle = pg; g.beginPath(); g.arc(cx, cy, rim, 0, TAU); g.arc(cx, cy, rv, 0, TAU, true); g.fill();
+  // spazzolatura: cerchi sottilissimi chiari e scuri
+  let seed = 12345; const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  g.lineWidth = 0.6 * dpr;
+  for (let r = rv + 1; r < rim - 1; r += 0.9 * dpr) { g.strokeStyle = rnd() < 0.5 ? `rgba(255,255,255,${(rnd() * 0.12).toFixed(3)})` : `rgba(0,0,0,${(rnd() * 0.12).toFixed(3)})`; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke(); }
+  // bisello: bordo esterno chiaro, interno scuro
+  g.lineWidth = 1.6 * dpr; g.strokeStyle = "rgba(255,255,255,.55)"; g.beginPath(); g.arc(cx, cy, rim - 0.8 * dpr, 0, TAU); g.stroke();
+  g.strokeStyle = "rgba(0,0,0,.6)"; g.lineWidth = 1.5 * dpr; g.beginPath(); g.arc(cx, cy, rim - 2.4 * dpr, 0, TAU); g.stroke();
+  g.strokeStyle = "rgba(255,255,255,.4)"; g.lineWidth = 1.2 * dpr; g.beginPath(); g.arc(cx, cy, rv + 0.8 * dpr, 0, TAU); g.stroke();
+  return c;
 }
 
 /* barra spaziatrice: play/stop del deck sotto il mouse, altrimenti dell'ultimo deck usato */
@@ -1010,6 +1071,8 @@ function updateDeckUI(i, s) {
   setText(D.key, s.key_now || "--");
   D.key.title = s.key_orig ? `Originale ${s.key_orig} (${s.key_orig_name}) → ora ${s.key_now} (${s.key_now_name})` : "";
   setText(D.remain, "-" + mmss(s.duration - s.pos));
+  // negli ultimi 20 secondi il conto alla rovescia lampeggia in rosso: il brano sta per finire
+  D.remain.classList.toggle("ending", !!s.loaded && s.duration > 0 && s.duration - s.pos <= 20 && s.duration - s.pos > 0);
   setText(D.time, `${mmss(s.pos)} / ${mmss(s.duration)}`);
   if (D._playing !== s.playing) { D._playing = s.playing; D.play.innerHTML = s.playing ? IC.pause : IC.play; }
   D.play.classList.toggle("on", s.playing);
@@ -1306,7 +1369,7 @@ function sendStems(i) {
   }, 50);
 }
 function touchStems(i) { decks[i].stTouch = performance.now(); updateStemsUI(true); sendStems(i); }
-$("#stemCols").innerHTML = STEMS.map((s) => `<div class="stcol" data-k="${s.k}" style="--c:${s.c}"><div class="sic">${s.ic}</div><div class="sn">${s.n}</div><div class="knob" data-f="${s.k}" title="Volume dello stem · doppio clic: pieno"></div><div class="ms"><button class="m" data-m="${s.k}" title="Muto">M</button><button class="s" data-s="${s.k}" title="Solo">S</button></div></div>`).join("");
+$("#stemCols").innerHTML = STEMS.map((s) => `<div class="stcol" data-k="${s.k}"><div class="sic">${s.ic}</div><div class="sn">${s.n}</div><div class="knob" data-f="${s.k}" title="Volume dello stem · doppio clic: pieno"></div><div class="ms"><button class="m" data-m="${s.k}" title="Muto">M</button><button class="s" data-s="${s.k}" title="Solo">S</button></div></div>`).join("");
 $$("#stemCols .knob").forEach((f) => makeKnob(f, { value: 1, def: 1, onChange: (v) => { const d = decks[target], k = +f.dataset.f; d.stGains[k] = v; if (v > 0.001) d.stMem[k] = v; touchStems(target); } }));
 const toggleStem = (k) => { const d = decks[target]; if (d.stGains[k] > 0.001) { d.stMem[k] = d.stGains[k]; d.stGains[k] = 0; } else d.stGains[k] = d.stMem[k] || 1; touchStems(target); };
 $$("#stemCols [data-m]").forEach((b) => (b.onclick = () => toggleStem(+b.dataset.m)));
@@ -1396,7 +1459,7 @@ function renderRows() {
     <td class="cv"><span class="cover" data-art="${esc(t.path)}"></span></td>
     <td title="${esc(t.title)}">${esc(t.title)}</td><td>${esc(t.artist)}</td>
     <td class="${t.analyzed && !anaPct.has(t.path) ? "" : "na"}" title="${t.analyzed ? "Analizzato" : "Non ancora analizzato: viene analizzato quando lo metti in una playlist"}">${anaPct.has(t.path) ? anaPct.get(t.path) + "%" : t.bpm ? Math.round(t.bpm) : ""}</td>
-    <td class="kc" style="color:${camelotColor(t.key)}">${esc(t.key)}</td><td>${esc(t.genre)}</td>
+    <td class="kc">${esc(t.key)}</td><td>${esc(t.genre)}</td>
     <td>${fmt(t.duration)}</td>
     <td class="ld">${[0, 1].map((d) => `<button data-d="${d}">${d + 1}</button>`).join("")}</td>
     <td class="rt">${stars(t.rating)}</td></tr>`).join("");
