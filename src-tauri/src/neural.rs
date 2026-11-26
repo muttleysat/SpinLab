@@ -2,7 +2,8 @@
 //! `beat-this` (MIT, runtime rten in puro Rust). E' l'ingresso della griglia (vedi gridfit.rs): il rilevatore DSP di analysis.rs
 //! resta il primo passaggio veloce, questo lo affina in sottofondo (3-6 s a brano) e sostituisce i battiti salvati.
 //!
-//! I modelli (mel 270 KB + beat "small" 10 MB) si scaricano al primo uso nella cartella dei dati, con verifica SHA-256.
+//! I modelli (mel 270 KB + beat "small" 10 MB) viaggiano nell'installer (models/beat-this); se mancano si scaricano al primo uso nella
+//! cartella dei dati, con verifica SHA-256.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -47,7 +48,29 @@ mod imp {
         Some(h.finalize().iter().map(|b| format!("{b:02x}")).collect())
     }
 
+    /// il modello incluso nell'installer (cartella «models/beat-this» accanto al programma, o in Contents/Resources su macOS):
+    /// se c'e' ed e' integro si usa quello, senza scaricare niente
+    fn bundled(name: &str, sha: &str) -> Option<PathBuf> {
+        let mut dirs: Vec<PathBuf> = vec![];
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(d) = exe.parent() {
+                dirs.push(d.join("models"));
+                dirs.push(d.join("resources").join("models"));
+                for up in d.ancestors().take(4) {
+                    dirs.push(up.join("models"));
+                    dirs.push(up.join("Resources").join("models"));
+                    dirs.push(up.join("src-tauri").join("models"));
+                }
+            }
+        }
+        dirs.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("models"));
+        dirs.into_iter().map(|d| d.join("beat-this").join(name)).find(|p| p.is_file() && sha256_hex(p).as_deref() == Some(sha))
+    }
+
     fn ensure(dir: &Path, name: &str, sha: &str) -> Result<PathBuf, String> {
+        if let Some(p) = bundled(name, sha) {
+            return Ok(p);
+        }
         let dest = models_dir(dir).join(name);
         if dest.exists() && sha256_hex(&dest).as_deref() == Some(sha) {
             return Ok(dest);

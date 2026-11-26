@@ -25,7 +25,7 @@ All'avvio compare la schermata di SpinLab con una barra di avanzamento: sparisce
 - **In basso al centro.** La libreria: ricerca, tabella dei brani, scheda **TAG & INFO**.
 - **In basso a destra.** Il pannello con **AUTOMIX**, **SAMPLER**, **DRUMS**, **STEMS** e, sotto, gli **FX**.
 
-La grafica si adatta alla finestra: se la riduci molto, si rimpicciolisce in blocco.
+La grafica si adatta alla finestra: se la riduci molto, si rimpicciolisce in blocco. Su un **monitor ultrawide** (dal formato 2,4:1 in su, per esempio 32:9) la disposizione cambia da sola: vedi [Aspetto: skin, colori e monitor ultrawide](#aspetto-skin-colori-e-monitor-ultrawide).
 
 **Scorciatoie**
 
@@ -48,6 +48,7 @@ La grafica si adatta alla finestra: se la riduci molto, si rimpicciolisce in blo
 - **Playlist.** **+** accanto a PLAYLIST ne crea una. Trascina i brani su una playlist per aggiungerli. Tasto destro su una playlist: rinomina, elimina, **Crea stem di tutta la playlist**. Aggiungere un brano a una playlist ne avvia l'analisi completa.
 - **TAG & INFO.** Il pulsante con la «i» accanto alla ricerca apre il pannello per titolo, artista, album, genere, tag, valutazione a stelle e commento.
 - **Doppio clic su un brano** lo carica sul primo deck libero.
+- **Vista LIBRARY.** Con **LIBRARY** nella barra in alto la libreria prende più spazio. Nel pannello di destra le sezioni (stem, sampler, drum, automix) restano della loro misura e sotto compare il **riquadro del brano selezionato**: copertina, titolo, artista, BPM, tonalità, durata, album, genere, tag, valutazione, se è analizzato, formato, commento e percorso del file. Con più brani selezionati ne indica il numero.
 - **Tasto destro su un brano.** Carica sul deck 1 o 2, aggiungi a una playlist (esistente o nuova con la selezione), analizza (BPM, tonalità, griglia), crea o elimina gli stem preparati, rimuovi dalla playlist (se ne hai una aperta).
 
 ---
@@ -55,6 +56,9 @@ La grafica si adatta alla finestra: se la riduci molto, si rimpicciolisce in blo
 ## I deck
 
 Ogni deck mostra due waveform: quella grande (zoom, scorre) e quella piccola (panoramica dell'intero brano), il piatto, i pulsanti e il fader del pitch.
+
+- **Il conto alla rovescia** in alto a destra (il tempo che manca alla fine) **lampeggia in rosso negli ultimi 20 secondi** del brano, per avvisare che sta per finire. Con «Riduci movimento» attivo nel sistema resta rosso fisso.
+- **Il piatto** si illumina secondo lo stato del deck: tenue senza brano, fermo in pausa, con la luce che corre insieme al disco mentre suona, più acceso durante lo scratch e color ambra quando tieni premuto CUE mentre il brano suona. Nella skin Dark Club il braccio del giradischi appoggia la puntina sul disco quando carichi un brano e avanza verso il centro mentre il brano procede.
 
 ### Trasporto
 
@@ -70,20 +74,28 @@ Tieni premuto il mouse sulla waveform grande e trascina: il brano segue come un 
 
 ### Griglia e tonalità
 
-- **GRID** apre la correzione della griglia: spostamento fine (Maiusc = 1 ms), dimezza o raddoppia il BPM, «1» sulla testina, ancora sul marker, azzeramento. **FLUIDA** segue le variazioni di tempo del brano, **FISSA** usa un BPM costante.
+La griglia dei battiti viene calcolata dall'analisi e, quando possibile, affinata da una rete neurale (Beat This!) che riconosce i battiti anche nei brani suonati dal vivo.
+
+- **⚓ (ancora)**, sul deck sopra **GRID**: porta esattamente sulla testina il marker più vicino. Serve per correggere un punto dove la griglia si è spostata; la correzione si attenua verso le ancore vicine, quindi se ne possono mettere più d'una nello stesso brano.
+- **GRID** apre la finestra della griglia, salvata per quel brano:
+  - **½** dimezza il BPM (un marker ogni due), **×2** lo raddoppia, **↺** torna alla griglia calcolata automaticamente.
+  - **AUTO** usa un solo tempo finché i battiti non se ne allontanano a lungo, poi apre un nuovo tratto: va bene per quasi tutto. **FISSA** usa un tempo e una fase costanti per tutto il brano (musica elettronica, brani fatti al computer). **FLESS.** segue un batterista vero battuta per battuta (rock, funk, disco anni '70, dal vivo).
+  - **QUANTIZE** come il pulsante QUANT.
 - **QUANT** fa agganciare cue, loop, roll e hot cue ai battiti della griglia.
 - **KEY** apre la tonalità: **KEY LOCK** tiene la tonalità quando cambi il pitch, il passo Camelot ±1 e le correzioni di mezzo tono.
 
-### I quattro pad
+### I pad
 
 Il pulsante sopra i pad cambia la loro funzione:
 
-| Modalità | Cosa fanno i 4 pad |
+| Modalità | Cosa fanno i pad |
 |---|---|
-| **HOT CUE 1–4** e **5–8** | Un clic salva il punto o ci salta. Maiusc + clic, oppure tasto destro, lo cancella. |
+| **HOT CUE 1–8** | Otto pad su due file. Un clic salva il punto o ci salta. Maiusc + clic, oppure tasto destro, lo cancella. Un hot cue vuoto è spento; uno memorizzato si accende del suo colore e fa un breve lampo quando lo richiami. |
 | **BEAT JUMP** | Salta di −2, −1, +1, +2 volte la misura scelta con ‹ ›. |
 | **LOOP ROLL** | Ripete un tratto finché tieni premuto. I pad fanno 1×, 2×, 4× e 8× la lunghezza base (da 1/16 a 1 battito, con ‹ ›). |
 | **FRENO · SPIN · REV · SLIP** | **BRAKE**: il disco si ferma finché tieni premuto. **SPIN**: spinback. **REV**: reverse finché premi. **SLIP**: acceso/spento. |
+
+Nelle modalità diverse dagli hot cue si usano i primi quattro pad. Nelle interfacce compatte per telefono (Cockpit e simili) si vedono gli hot cue 1–4.
 
 **SLIP**: durante roll, freno e reverse il brano continua «in silenzio» e al rilascio ti ritrovi dove sarebbe arrivato. **Q** attiva la quantizzazione.
 
@@ -96,7 +108,7 @@ Il pulsante sopra i pad cambia la loro funzione:
 
 ## Il mixer, le cuffie e il preascolto
 
-Ogni canale ha fader, EQ a tre bande, filtro e un indicatore di livello dopo il fader. Il **crossfader** è in basso; doppio clic lo centra.
+Ogni canale ha fader, EQ a tre bande (**HI**, **MID**, **LOW**), **FILTER** e un indicatore di livello dopo il fader. Le manopole si girano trascinando in su e in giù (con Maiusc la regolazione è fine) o con la rotella; il doppio clic le riporta al valore iniziale. L'arco colorato attorno alla manopola mostra il valore. Il **crossfader** è in basso; doppio clic lo centra.
 
 **AUTO GAIN** porta un brano appena caricato alla stessa sonorità di quello che sta suonando. **AUTO STEM** separa in anticipo gli stem di ogni brano caricato.
 
@@ -118,7 +130,7 @@ Il pannello **FX** lavora sul deck scelto con i pulsanti **DECK** (1 / 2) sopra 
 
 ## Stem
 
-Gli stem separano un brano in **voce**, **batteria**, **basso** e **altro**. Nel pannello **STEMS** ogni stem ha un fader, un pulsante muto (**M**) e un solo (**S**). I preset **ACAPELLA**, **INSTRUMENTAL** e **ALL** sistemano tutto con un clic.
+Gli stem separano un brano in **voce**, **batteria**, **basso** e **altro**. Nel pannello **STEMS** ogni stem ha una manopola del volume (la ghiera a segmenti si accende in proporzione), un pulsante muto (**M**) e un solo (**S**). Un clic sull'icona o sul nome dello stem lo esclude o lo riammette. I preset **ACAPELLA**, **INSTRUMENTAL** e **ALL** sistemano tutto con un clic.
 
 SpinLab funziona in due modi:
 
@@ -190,6 +202,10 @@ Il video non cambia il modo di suonare: l'audio comanda sempre. Un video si cari
 La modalità si accende **da sola** quando carichi un video su un deck e si spegne quando sui deck restano solo brani audio. Con la modalità spenta il programma non usa risorse per il video e non apre nessuna finestra.
 
 Il pulsante **VIDEO**, in alto vicino all'orologio, la forza a mano: a ogni clic passi alla scelta successiva tra **automatica**, **sempre accesa** (utile per vedere le visualizzazioni anche con soli brani audio) e **sempre spenta**. Quando è accesa il pulsante si illumina e accanto compaiono i menu delle transizioni e delle visualizzazioni e l'indicazione della qualità in uso.
+
+### Il deck con un video
+
+Quando un deck ha un video, il deck cambia aspetto da solo: al posto delle forme d'onda e del piatto compare lo **schermo con l'anteprima del video**, muta e a tempo con la musica. La **panoramica del brano** sta nella fascia sopra i pad, accanto al pulsante del pitch, e si usa come sempre (clic o trascinamento per spostarsi). Trascinando in orizzontale sullo schermo si fa lo **scratch** (tutta la larghezza vale 4 secondi). Il deck con un brano audio resta classico; quando togli il video, il deck torna come prima.
 
 ### Formati supportati
 
@@ -298,6 +314,36 @@ I video musicali e i filmati sono coperti da diritti d'autore: ciò che proietti
 **La registrazione MP4 non parte o il video è a scatti.** Controlla che FFmpeg sia disponibile e che l'uscita video mostri l'immagine (premi **H** nella finestra di uscita: «disegno: WebGL»). Con un computer lento scegli una qualità più bassa nel dialogo di registrazione.
 
 **Nel pannello compaiono misure a zero o «non misurata».** La prima analisi non è riuscita (di solito manca FFmpeg o la scheda grafica non è stata letta). Riavvia il programma: si ripete da sola; oppure scegli un profilo a mano.
+
+---
+
+## Aspetto: skin, colori e monitor ultrawide
+
+Tutto si sceglie in **Impostazioni → INTERFACCIA** e si applica subito; la scelta si ricorda.
+
+### Skin
+
+| Skin | Aspetto |
+|---|---|
+| **Dark Club** (predefinita) | Grafite e alluminio con luci viola, piatto con bordo forato e braccio del giradischi. |
+| **Industrial** | Metallo scuro, lamiera forata e mandorlata, luci ambra; piatto motorizzato con l'anello di luce ambra. |
+| **Retro Hardware** | Alluminio spazzolato, tasti color crema, accenti rossi; un tasto attivo resta premuto e la sua scritta si illumina. |
+
+Nelle skin Industrial e Retro il piatto gira come un piatto a motore: l'anello esterno, le viti e il mozzo girano alla velocità reale, mentre i riflessi del metallo restano fermi.
+
+### Colore del tema
+
+Ogni skin ha il suo colore (viola, ambra o rosso), che vale per luci, manopole, piatti, forme d'onda e hot cue. Per cambiarlo scegli la tinta sulla **barra colorata** e la sfumatura nel **quadrato** sopra (come in Photoshop), oppure scrivi il codice esadecimale. Sotto vedi un'**anteprima reale** dell'interfaccia che cambia mentre scegli. **↺ Ripristina colore predefinito** torna al colore della skin. PLAY verde, CUE ambra e i meter verde-giallo-rosso restano fissi perché hanno un significato.
+
+### Monitor ultrawide
+
+Quando la finestra è almeno 2,4 volte più larga che alta (per esempio un monitor 32:9 a schermo intero), SpinLab usa una disposizione dedicata:
+
+- **a sinistra** deck e mixer, nelle stesse proporzioni di un monitor normale;
+- **sotto i deck**, affiancati: gli **stem** (sempre visibili), il pannello scelto fra **SAMPLER**, **DRUMS** e **AUTOMIX** e gli **FX**;
+- **a destra** cartelle, playlist ed elenco dei brani a tutta altezza.
+
+In questa disposizione la libreria è sempre aperta, quindi la vista LIBRARY non serve. Se stringi la finestra torna la disposizione normale. Sui monitor tradizionali non cambia nulla.
 
 ---
 

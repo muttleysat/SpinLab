@@ -31,6 +31,7 @@ pub fn model_path(dir: &Path) -> PathBuf {
             dirs.push(d.join("resources").join("models"));
             for up in d.ancestors().take(4) {
                 dirs.push(up.join("models"));
+                dirs.push(up.join("Resources").join("models")); // macOS: SpinLab.app/Contents/Resources/models
                 dirs.push(up.join("src-tauri").join("models"));
             }
         }

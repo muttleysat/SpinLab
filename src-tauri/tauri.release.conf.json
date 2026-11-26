@@ -8,7 +8,9 @@
       "../THIRD-PARTY-LICENSES.md": "licenses/THIRD-PARTY-LICENSES.md",
       "binaries/licenses/FFMPEG-LICENSE.txt": "licenses/FFMPEG-LICENSE.txt",
       "binaries/licenses/FFMPEG-BUILD.txt": "licenses/FFMPEG-BUILD.txt",
-      "binaries/licenses/ffmpeg": "licenses/ffmpeg"
+      "binaries/licenses/ffmpeg": "licenses/ffmpeg",
+      "models/beat-this/mel_spectrogram.onnx": "models/beat-this/mel_spectrogram.onnx",
+      "models/beat-this/beat_this_small.onnx": "models/beat-this/beat_this_small.onnx"
     },
     "externalBin": [
       "binaries/ffmpeg"
