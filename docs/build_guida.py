@@ -192,7 +192,10 @@ section.hide { display: none; } img.logo { height: 120px; width: auto; display: 
 
 
 def main():
-    body, toc = convert(SRC.read_text(encoding="utf-8"))
+    md = SRC.read_text(encoding="utf-8")
+    # il collegamento alla versione inglese serve solo su GitHub: nella guida dentro il programma (senza internet) si toglie
+    md = "\n".join(l for l in md.splitlines() if not l.startswith("[English](MANUALE.en.md)"))
+    body, toc = convert(md)
     # la prima sezione (prima del primo H2) e' il titolo: resta fuori dalle sezioni cercabili
     nav = "\n".join(f'<a href="#{sid}">{html.escape(t)}</a>' for sid, t in toc)
     OUT.write_text(PAGE.replace("@@TOC@@", nav).replace("@@BODY@@", body), encoding="utf-8", newline="\n")

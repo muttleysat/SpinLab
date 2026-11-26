@@ -1,5 +1,7 @@
 # SpinLab DJ — Manuale
 
+[English](MANUALE.en.md) · **Italiano**
+
 ![ASIO Compatible - ASIO is a registered trademark of Steinberg Media Technologies GmbH](../ui/assets/asio-logo-bw.png)
 
 SpinLab DJ è un programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, uscita video per schermi e proiettori, registrazione del master e supporto per qualsiasi controller MIDI. Questo manuale spiega come usarlo, come collegare un controller e come risolvere i problemi più comuni.

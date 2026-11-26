@@ -1,5 +1,7 @@
 # SpinLab DJ - note per chi sviluppa
 
+[English](SVILUPPO.en.md) · **Italiano**
+
 Questo file NON fa parte del manuale per gli utenti (non finisce nella guida dentro il programma). Vedi anche `docs/ASIO-licenza.md` per gli obblighi legati ad ASIO.
 
 ## Compilare il programma
@@ -34,7 +36,8 @@ Per ogni versione:
 3. Crea gli installer:
    - **Windows**, dalla cartella `src-tauri`: `cargo tauri build --config tauri.release.conf.json` → `target/release/bundle/nsis` (e `msi`).
    - **macOS**: `zsh tools/build_mac.sh` → `src-tauri/target/release/bundle/dmg/SpinLab_<versione>_aarch64.dmg` (con lo SHA-256).
-   Con `tauri.release.conf.json` l'installer include modelli, FFmpeg, DLL e licenze.
+   Con `tauri.release.conf.json` l'installer include modelli, FFmpeg, DLL e licenze. Su Windows `tauri.windows.conf.json` aggiunge le
+   librerie Visual C++ (`src-tauri/libs/vcredist`) e WebView2 offline: l'installer basta da solo anche su un Windows appena installato.
 4. Su GitHub: **Releases → Draft a new release**, tag `v<versione>`, descrizione (modello in `docs/release/`), allega gli installer, **Publish**.
 
 ## Icone

@@ -1,5 +1,7 @@
 # ASIO: licenza e obblighi (promemoria interno)
 
+[English](ASIO-licenza.en.md) · **Italiano**
+
 Documento per chi sviluppa e distribuisce SpinLab DJ. Non fa parte del manuale per gli utenti. Riassume l'accordo «Steinberg ASIO SDK Licensing Agreement 2.0.5» (SDK 2.3.4) e le «ASIO Usage Guidelines». **Non è un parere legale**: per le decisioni importanti fa fede il testo originale, nel pacchetto dell'SDK.
 
 ## Prima di distribuire (anche gratis, fuori dal proprio gruppo)

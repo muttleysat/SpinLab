@@ -1,5 +1,7 @@
 # Licenza e condizioni d'uso - SpinLab DJ
 
+[English](EULA.en.md) · **Italiano**
+
 > Testo informativo da far rivedere a un legale prima della pubblicazione. Ultima revisione: 26 novembre 2026.
 
 ## 1. Software libero

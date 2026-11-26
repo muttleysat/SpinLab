@@ -1,5 +1,7 @@
 # FFmpeg in SpinLab — licenza, inclusione e aggiornamento
 
+[English](FFMPEG.en.md) · **Italiano**
+
 Per chi sviluppa e per chi cura la parte legale. Riassume come FFmpeg è incluso nel programma, quale licenza si applica e cosa va fatto per rispettarla. Non è un parere legale: i punti da far verificare sono indicati (decisione D-10 in [DECISIONI.md](DECISIONI.md)).
 
 ## In breve

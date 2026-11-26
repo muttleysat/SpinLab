@@ -1,148 +1,151 @@
 # SpinLab DJ
 
-[![Dona con PayPal](https://img.shields.io/badge/Dona_con-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ)
+**English** · [Italiano](README.it.md)
+
+[![Donate with PayPal](https://img.shields.io/badge/Donate_with-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ)
 
 <img src="ui/assets/asio-logo-bw.png" alt="ASIO Compatible - ASIO is a registered trademark of Steinberg Media Technologies GmbH" width="110" align="right">
 
-**Software libero e gratuito** (licenza GNU GPL 3.0) per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, **uscita video** per schermi e proiettori (con transizioni, visualizzazioni e registrazione del set in MP4), registrazione del master, **skin** e colori a scelta e supporto per qualsiasi controller MIDI. Per Windows e macOS.
+**Free and open-source DJ software** (GNU GPL 3.0) with two decks, mixer, effects, stem separation, drum machine, sampler, **video output** for screens and projectors (with transitions, visualizers and MP4 set recording), master recording, **skins** and custom colours, and support for any MIDI controller. For Windows and macOS.
 
-**Versione attuale: 0.2.0** per Windows e macOS (Apple Silicon) — scarica dalle [Release](https://github.com/muttleysat/SpinLab/releases); le novità sono in [CHANGELOG.md](CHANGELOG.md).
+**Current version: 0.2.0** for Windows and macOS (Apple Silicon) — download it from the [Releases](https://github.com/muttleysat/SpinLab/releases); what's new is in [CHANGELOG.md](CHANGELOG.md).
 
-L'installer contiene già tutto (modello degli stem, modelli dei battiti, FFmpeg): dopo l'installazione non viene scaricato niente e il programma funziona senza internet. Non serve nessuna registrazione.
+The installer already contains everything (stem model, beat models, FFmpeg): nothing is downloaded after installation and the program works offline. No registration is required.
 
-## Schermate
+> The program's interface is currently in Italian.
 
-<p align="center"><img src="docs/screenshots/mixer.jpg" alt="Mixer con due deck, waveform con la griglia, piatti, mixer, libreria e stem" width="100%"></p>
+## Screenshots
+
+<p align="center"><img src="docs/screenshots/mixer.jpg" alt="Mixer with two decks, waveforms with beatgrid, platters, mixer, library and stems" width="100%"></p>
 
 | | |
 |---|---|
-| <img src="docs/screenshots/libreria.jpg" alt="Libreria"> | <img src="docs/screenshots/video.jpg" alt="Modalità video"> |
-| **Libreria**: cartelle, playlist, BPM e tonalità, dettagli del brano | **Modalità video**: video sui deck, transizioni e visualizzazioni |
-| <img src="docs/screenshots/skin-industrial.jpg" alt="Skin Industrial"> | <img src="docs/screenshots/skin-retro.jpg" alt="Skin Retro Hardware"> |
-| **Skin Industrial** | **Skin Retro Hardware** |
-| <img src="docs/screenshots/impostazioni.jpg" alt="Impostazioni audio"> | |
-| **Impostazioni**: ASIO, uscita e cuffie, buffer | |
+| <img src="docs/screenshots/libreria.jpg" alt="Library"> | <img src="docs/screenshots/video.jpg" alt="Video mode"> |
+| **Library**: folders, playlists, BPM and key, track details | **Video mode**: videos on the decks, transitions and visualizers |
+| <img src="docs/screenshots/skin-industrial.jpg" alt="Industrial skin"> | <img src="docs/screenshots/skin-retro.jpg" alt="Retro Hardware skin"> |
+| **Industrial skin** | **Retro Hardware skin** |
+| <img src="docs/screenshots/impostazioni.jpg" alt="Audio settings"> | |
+| **Settings**: ASIO, master and headphone outputs, buffer | |
 
-## Sostieni SpinLab
+## Support SpinLab
 
-<a href="https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ"><img src="https://img.shields.io/badge/Dona_con-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Dona con PayPal" height="44"></a>
+<a href="https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ"><img src="https://img.shields.io/badge/Donate_with-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate with PayPal" height="44"></a>
 
-SpinLab è gratuito. Se ti è utile puoi offrire una **donazione libera** con [PayPal](https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ) (anche dal pulsante nella finestra Informazioni del programma).
+SpinLab is free. If you find it useful you can make a **donation of any amount** with [PayPal](https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ) (also from the button in the program's About window).
 
-## Cosa sa fare
+## Features
 
-### Deck
-- Due deck con forma d'onda a colori a scorrimento e panoramica dell'intero brano; scrub con il mouse sulla forma d'onda o sul piatto (scratch).
-- **PLAY**, **CUE** (tenuto premuto fa ascoltare dal punto di cue), **SYNC** di tempo e fase che resta attivo cambiando brano.
-- Pitch con escursione **±4, 8, 16, 50, 100%**; **→0** riporta il pitch a zero gradualmente, senza scatti.
-- **KEY LOCK** (tonalità ferma cambiando velocità), cambio di tonalità per semitoni e per passi della ruota Camelot.
-- **8 hot cue** per deck, **BEAT JUMP**, **LOOP ROLL**, **freno, spinback, reverse** e **SLIP**; **QUANTIZE** sui battiti.
-- Loop con dimezza/raddoppia, IN e OUT.
-- Conto alla rovescia che lampeggia in rosso negli ultimi 20 secondi del brano.
-- Forme d'onda verticali tra i fader, per lo scratch.
+### Decks
+- Two decks with scrolling colour waveform and an overview of the whole track; scrub with the mouse on the waveform or on the platter (scratch).
+- **PLAY**, **CUE** (hold to listen from the cue point), tempo and phase **SYNC** that stays on when you change track.
+- Pitch range **±4, 8, 16, 50, 100%**; **→0** brings the pitch back to zero gradually, without jumps.
+- **KEY LOCK** (key stays the same when the speed changes), key shift by semitones and by steps of the Camelot wheel.
+- **8 hot cues** per deck, **BEAT JUMP**, **LOOP ROLL**, **brake, spinback, reverse** and **SLIP**; **QUANTIZE** to the beat.
+- Loops with halve/double, IN and OUT.
+- Countdown that flashes red in the last 20 seconds of the track.
+- Vertical waveforms between the faders, for scratching.
 
-### Analisi e griglia dei battiti
-- Analisi automatica di **BPM, tonalità (Camelot) e griglia dei battiti**, in sottofondo.
-- Griglia affinata dalla rete neurale **Beat This!**, anche per i brani suonati dal vivo.
-- Modalità per brano: **AUTO**, **FISSA** (tempo costante) e **FLESS.** (segue un batterista vero battuta per battuta).
-- Correzioni rapide: dimezza o raddoppia il BPM, **ANCHOR** per rimettere la griglia sul battito in un punto preciso, ripristino.
+### Analysis and beatgrid
+- Automatic analysis of **BPM, key (Camelot) and beatgrid**, in the background.
+- Beatgrid refined by the **Beat This!** neural network, also for live-played tracks.
+- Per-track modes: **AUTO**, **FIXED** (constant tempo) and **FLEX** (follows a real drummer bar by bar).
+- Quick fixes: halve or double the BPM, **ANCHOR** to put the grid back on the beat at a precise point, reset.
 
 ### Mixer
-- Due canali con fader, **EQ a tre bande**, **filtro** e meter a LED; **crossfader**.
-- **AUTO GAIN**: ogni brano caricato prende la stessa sonorità di quello che suona.
-- **Cuffie** con preascolto (PFL) per canale, **CUE MIX** e volume dedicato; uscita cuffie su un'altra scheda o sui canali 3-4 della stessa.
+- Two channels with faders, **3-band EQ**, **filter** and LED meters; **crossfader**.
+- **AUTO GAIN**: every loaded track gets the same loudness as the one playing.
+- **Headphones** with per-channel pre-listen (PFL), **CUE MIX** and dedicated volume; headphone output on another sound card or on channels 3-4 of the same one.
 
-### Effetti
-- **ECHO, PING-PONG, REVERB, FLANGER, PHASER, BITCRUSH, GATER, SCATTER, NOISE** a tempo, con passo e feel (dritto, terzina, puntato).
-- Effetti sul brano: **BEAT JUMP, BRAKE, SPINBACK, REVERSE**.
+### Effects
+- Tempo-synced **ECHO, PING-PONG, REVERB, FLANGER, PHASER, BITCRUSH, GATER, SCATTER, NOISE**, with step and feel (straight, triplet, dotted).
+- Track effects: **BEAT JUMP, BRAKE, SPINBACK, REVERSE**.
 
-### Stem
-- Separazione di ogni brano in **voce, batteria, basso e altri strumenti** con il modello HT-Demucs.
-- **In tempo reale** mentre il brano suona oppure **preparati** in anticipo (caricamento immediato, qualità massima), anche per un'intera playlist.
-- Volume, muto e solo per ogni stem; preset **ACAPELLA**, **INSTRUMENTAL**, **ALL**.
+### Stems
+- Separation of every track into **vocals, drums, bass and other instruments** with the HT-Demucs model.
+- **In real time** while the track plays, or **prepared** in advance (instant loading, maximum quality), also for a whole playlist.
+- Volume, mute and solo for each stem; **ACAPELLA**, **INSTRUMENTAL**, **ALL** presets.
 
 ### AUTOMIX
-- Suona da solo i brani della libreria con transizioni a tempo: ordine come in elenco, per BPM o **intelligente** (tonalità e tempo più vicini).
-- Transizioni da 4 a 32 battute, stile **scambio dei bassi**, dissolvenza o taglio rapido; coda modificabile e salvata fra le sessioni.
+- Plays the library tracks on its own with beat-matched transitions: list order, by BPM or **smart** (closest key and tempo).
+- Transitions from 4 to 32 bars, **bass swap**, fade or quick cut style; editable queue saved between sessions.
 
-### Batteria e campionatore
-- **DRUMS**: 16 pad con campioni, dalla tastiera, dal mouse o dai pad MIDI; gate, aftertouch, intonazione, gruppi choke.
-- **SAMPLER**: 8 pad per suoni lunghi e loop, con **SYNC** sul tempo del deck che suona.
+### Drums and sampler
+- **DRUMS**: 16 sample pads, from the keyboard, the mouse or MIDI pads; gate, aftertouch, tuning, choke groups.
+- **SAMPLER**: 8 pads for long sounds and loops, with **SYNC** to the tempo of the playing deck.
 
 ### Video
-- **Video sui due deck**, a tempo con la musica: si caricano, si fermano, si spostano e si scratchano come un brano.
-- Uscita in una finestra o **a schermo intero su un secondo schermo o proiettore**, con collegamento a caldo.
-- **13 transizioni** (dissolvenza, taglio, dissolvenza al nero, flash, wipe, zoom, glitch, pixel, caleidoscopio, ondulazione, cubo 3D, vortice, stroboscopio a tempo) guidate dal crossfader o dai fader dei canali.
-- Per i brani senza video: **scheda con copertina, titolo e artista** oppure **10 visualizzazioni animate** a tempo di musica.
-- Qualità adattata al computer, con profili da 480p a 1080p 60 e adattamento durante il set.
-- Il deck con un video diventa uno schermo con l'anteprima.
+- **Videos on both decks**, in time with the music: they load, pause, seek and scratch like a track.
+- Output in a window or **full screen on a second screen or projector**, hot-pluggable.
+- **13 transitions** (fade, cut, fade to black, flash, wipe, zoom, glitch, pixel, kaleidoscope, ripple, 3D cube, vortex, beat-synced strobe) driven by the crossfader or the channel faders.
+- For tracks without video: **card with cover, title and artist** or **10 animated visualizers** in time with the music.
+- Quality adapted to the computer, with profiles from 480p to 1080p 60 and adjustment during the set.
+- A deck with a video becomes a preview screen.
 
-### Registrazione
-- Registrazione del master in **WAV** (16 o 24 bit) o **MP3** (fino a 320 kbps).
-- Registrazione del set in **MP4 con il video** (H.264 + AAC).
-- Avvio e stop con un clic dal pulsante ● in alto.
+### Recording
+- Master recording in **WAV** (16 or 24 bit) or **MP3** (up to 320 kbps).
+- Set recording in **MP4 with the video** (H.264 + AAC).
+- Start and stop with one click from the ● button at the top.
 
-### Libreria
-- Esplora cartelle, playlist, ricerca per titolo, artista, tag, tonalità e BPM.
-- Tag, valutazione a stelle e commenti; **anteprima in cuffia** dei brani con scrub.
-- Riquadro con le informazioni del brano selezionato.
+### Library
+- Folder browser, playlists, search by title, artist, tag, key and BPM.
+- Tags, star rating and comments; **headphone preview** of tracks with scrub.
+- Panel with the details of the selected track.
 
-### Controller MIDI
-- Funziona con **qualsiasi controller MIDI**: assegnazione con **Learn**, più assegnazioni per comando, **SHIFT**, livelli dei pad, jog con calibrazione, encoder, effetti e **LED**.
+### MIDI controllers
+- Works with **any MIDI controller**: mapping with **Learn**, several mappings per command, **SHIFT**, pad layers, jog with calibration, encoders, effects and **LEDs**.
 
-### Aspetto
-- Tre **skin**: **Dark Club** (grafite e luci viola), **Industrial** (metallo scuro e luci ambra), **Retro Hardware** (alluminio spazzolato, tasti crema, accenti rossi), con piatti motorizzati che girano alla velocità reale.
-- **Colore del tema a scelta** con selettore e anteprima dal vivo dell'interfaccia.
-- Layout dedicato per i **monitor ultrawide** (32:9): deck e mixer a sinistra, libreria a tutta altezza.
+### Look
+- Three **skins**: **Dark Club** (graphite and purple lights), **Industrial** (dark metal and amber lights), **Retro Hardware** (brushed aluminium, cream buttons, red accents), with motorised platters turning at real speed.
+- **Custom theme colour** with a picker and live preview of the interface.
+- Dedicated layout for **ultrawide monitors** (32:9): decks and mixer on the left, full-height library.
 
 ### Audio
-- **ASIO** su Windows per la latenza più bassa (oltre a WASAPI); **Core Audio** su Mac.
-- Buffer e frequenza di campionamento regolabili.
+- **ASIO** on Windows for the lowest latency (besides WASAPI); **Core Audio** on Mac.
+- Adjustable buffer and sample rate.
 
-### Altro
-- Guida completa dentro il programma (pulsante **?**), anche senza internet.
+### Other
+- Complete guide inside the program (**?** button), also offline.
 
-## Documentazione
+## Documentation
 
-- **[Manuale completo](docs/MANUALE.md)**: uso del programma, controller MIDI, impostazioni audio, soluzione dei problemi.
-- **[Novità](CHANGELOG.md)**: cosa è cambiato in ogni versione.
-- **[FFmpeg](docs/FFMPEG.md)**: licenza, inclusione nell'installer e aggiornamento di FFmpeg.
-- **[Decisioni](docs/DECISIONI.md)**: le decisioni aperte che spettano al responsabile del prodotto (con opzioni e raccomandazioni) e quelle già prese.
-- **[Video](docs/VIDEO.md)**: documentazione tecnica del modulo video (architettura, messaggi, sincronia, profili); i requisiti sono in [PRD-video.md](docs/PRD-video.md).
-- Dentro il programma: il pulsante **?** in alto a destra apre la stessa guida, anche senza internet.
+- **[User manual](docs/MANUALE.en.md)**: using the program, MIDI controllers, audio settings, troubleshooting ([Italiano](docs/MANUALE.md)).
+- **[Changelog](CHANGELOG.md)**: what changed in each version.
+- **[FFmpeg](docs/FFMPEG.en.md)**: licence, inclusion in the installer and updating FFmpeg.
+- **[Developer guide](docs/SVILUPPO.en.md)**: building, installers, models.
+- Internal design notes (decisions, video module) are in Italian: [DECISIONI.md](docs/DECISIONI.md), [VIDEO.md](docs/VIDEO.md), [PRD-video.md](docs/PRD-video.md).
+- Inside the program: the **?** button at the top right opens the same guide, also offline.
 
-Il manuale si scrive in `docs/MANUALE.md`. Dopo ogni modifica, per aggiornare la guida che si apre nel programma:
+The manual is written in `docs/MANUALE.md` (Italian; the English translation is `docs/MANUALE.en.md`). After every change, to update the guide that opens inside the program:
 
 ```
 python docs/build_guida.py
 ```
 
-## Installare
+## Install
 
-- **Windows**: installer `SpinLab_<versione>_x64-setup.exe`; le versioni installate si aggiornano da sole.
-- **macOS** (Apple Silicon): `SpinLab_<versione>_aarch64.dmg` dalle [Release di GitHub](https://github.com/muttleysat/SpinLab/releases). Il programma non è ancora firmato da Apple: la prima volta aprilo con clic destro → **Apri**, oppure da Impostazioni di Sistema → Privacy e sicurezza → **Apri comunque**.
+- **Windows**: installer `SpinLab_<version>_x64-setup.exe`.
+- **macOS** (Apple Silicon): `SpinLab_<version>_aarch64.dmg` from the [GitHub Releases](https://github.com/muttleysat/SpinLab/releases). The program is not signed by Apple yet: the first time, open it with right click → **Open**, or from System Settings → Privacy & Security → **Open Anyway**.
 
-## Compilare
+## Build
 
-Su Windows servono Git, Rust con gli strumenti C++ di Visual Studio, LLVM/clang, l'SDK ASIO di Steinberg (non incluso per la sua licenza; i percorsi si impostano in `src-tauri/.cargo/config.toml`) e FFmpeg nel PATH. Su macOS bastano Git, Rust e gli strumenti da riga di comando di Xcode.
+On Windows you need Git, Rust with the Visual Studio C++ tools, LLVM/clang, Steinberg's ASIO SDK (not included because of its licence; the paths are set in `src-tauri/.cargo/config.toml`) and FFmpeg in the PATH. On macOS, Git, Rust and the Xcode command-line tools are enough.
 
-Per l'installer completo (modello degli stem, FFmpeg, licenze) prima `python tools/fetch_model.py` e `python tools/fetch_ffmpeg.py`, poi `cargo tauri build --config tauri.release.conf.json` (vedi `docs/SVILUPPO.md`).
+For the complete installer (stem model, FFmpeg, licences) first run `python tools/fetch_model.py` and `python tools/fetch_ffmpeg.py`, then `cargo tauri build --config tauri.release.conf.json` (see [docs/SVILUPPO.en.md](docs/SVILUPPO.en.md)).
 
 ```
 cargo install tauri-cli --version "^2"
 cd src-tauri
-cargo tauri dev        # per provare
-cargo tauri build      # per creare l'installer
+cargo tauri dev        # to try it
+cargo tauri build      # to build the installer
 ```
 
-Dettagli per chi sviluppa in `docs/SVILUPPO.md`.
+More details for developers in [docs/SVILUPPO.en.md](docs/SVILUPPO.en.md).
 
 ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.
 
-## Licenza
+## Licence
 
-SpinLab DJ è software libero: puoi usarlo, studiarlo, modificarlo e ridistribuirlo secondo i termini della **GNU General Public License,
-versione 3 o successiva** (file [LICENSE](LICENSE)). È distribuito senza alcuna garanzia. Alcune parti della griglia dei battiti derivano da
-[openDJ](https://github.com/openwave-studio/opendj) (GPL-2.0 o successiva): vedi [NOTICE](NOTICE). Le licenze dei componenti di terze parti
-sono in [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
-
+SpinLab DJ is free software: you can use, study, modify and redistribute it under the terms of the **GNU General Public License,
+version 3 or later** (file [LICENSE](LICENSE)). It comes with no warranty. Some parts of the beatgrid are derived from
+[openDJ](https://github.com/openwave-studio/opendj) (GPL-2.0 or later): see [NOTICE](NOTICE). The licences of third-party components
+are in [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).

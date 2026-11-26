@@ -1,5 +1,7 @@
 # Informativa sulla privacy - SpinLab DJ
 
+[English](PRIVACY.en.md) · **Italiano**
+
 > Testo da far rivedere a un legale o a un consulente privacy prima della pubblicazione. Ultima revisione: 26 novembre 2026, sul
 > comportamento della versione 0.2.0.
 
