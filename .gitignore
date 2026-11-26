@@ -23,6 +23,8 @@ server/inc/config.php
 server/updates/*.exe
 server/updates/*.msi
 server/updates/*.sig
+server/updates/*.tar.gz
+server/updates/*.dmg
 server/updates/latest.json
 
 # impostazioni locali dell'editor
