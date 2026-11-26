@@ -69,9 +69,9 @@
   <aside id="side">
     <button id="sideBar" type="button" aria-expanded="false"><span class="sb-k">ESPLORA</span><span id="sideCur">Scegli una cartella o una playlist</span><span class="sb-ar" aria-hidden="true">▾</span></button>
     <div class="side-title">ESPLORA</div>
-    <div id="tree"></div>
+    <div id="tree" data-noi18n></div>
     <div class="side-title">PLAYLIST <button id="newPl" title="Nuova playlist">+</button></div>
-    <div id="plList"></div>
+    <div id="plList" data-noi18n></div>
     <div id="scanStatus"></div>
     <button id="sideGo" type="button">MOSTRA I BRANI ›</button>
     <div id="stemBar" hidden><div class="sbh"><span class="sbn"></span><span class="sbp"></span></div><i><b></b></i></div>
@@ -270,6 +270,8 @@ SOFTWARE.</pre></details>
   </div>
   <div class="spane" id="sp-video" hidden><div id="vpMount"></div></div>
   <div class="spane" id="sp-ui" hidden>
+    <label>Lingua<select id="uiLang"><option value="auto">Automatica (lingua del sistema)</option><option value="it" data-noi18n>Italiano</option><option value="en" data-noi18n>English</option></select></label>
+    <p class="hint">La lingua cambia subito. Automatica usa l'italiano se il sistema è in italiano, altrimenti l'inglese.</p>
     <div id="uiModeBox">
     <label>Interfaccia<select id="uiMode">
       <option value="auto">Automatica: sui telefoni A in verticale e B compatto in orizzontale, desktop altrove</option>
@@ -309,6 +311,9 @@ SOFTWARE.</pre></details>
 </dialog>
 <div id="ctx" hidden></div>
 <div id="ghost" hidden></div>
+<script src="i18n/en.js"></script>
+<script src="i18n.js"></script>
+<script>I18N.apply();</script>
 <script src="app.js"></script>
 <script src="video-trans.js"></script>
 <script src="video-gl.js"></script>

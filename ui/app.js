@@ -271,7 +271,7 @@ function deckHTML(i) {
   return `<div class="deck${i % 2 ? " rev" : ""}" data-i="${i}">
   <div class="dhead">
     <div class="art" data-r="art">${i + 1}</div>
-    <div class="meta"><div class="title" data-r="title">Trascina qui un brano o usa ${IC.note.replace(/width="22" height="22"/, 'width="13" height="13" style="display:inline;vertical-align:-2px"')}</div><div class="artist"><span data-r="artist"></span><span class="stm" data-r="stm"></span></div></div>
+    <div class="meta"><div class="title" data-r="title">Trascina qui un brano o usa ${IC.note.replace(/width="22" height="22"/, 'width="13" height="13" style="display:inline;vertical-align:-2px"')}</div><div class="artist"><span data-r="artist" data-noi18n></span><span class="stm" data-r="stm"></span></div></div>
     <div class="dload"><button data-r="load" title="Carica sul deck il brano selezionato in libreria (senza selezione apre la scelta file)">LOAD</button><button data-r="eject" title="Svuota il deck">&#9167;</button></div>
     <div class="led" data-r="beat"></div>
     <div class="kv key"><small>KEY</small><b data-r="key">--</b></div>
@@ -1566,7 +1566,7 @@ function renderRows() {
   tb.innerHTML = lib.rows.map((t) => `<tr data-id="${t.id}" class="${lib.sel.has(t.id) ? "sel" : ""}${anaPct.has(t.path) ? " ana" : ""}" style="--p:${anaPct.get(t.path) ?? 0}%">
     <td class="num"><button class="pv" data-pv title="Anteprima in cuffia (Maiusc+clic: parte da metà brano). Con l'anteprima attiva, clic o trascinamento sulla riga per spostarsi nel brano">▶</button></td>
     <td class="cv"><span class="cover" data-art="${esc(t.path)}"></span></td>
-    <td title="${esc(t.title)}">${esc(t.title)}</td><td>${esc(t.artist)}</td>
+    <td data-noi18n title="${esc(t.title)}">${esc(t.title)}</td><td data-noi18n>${esc(t.artist)}</td>
     <td class="${t.analyzed && !anaPct.has(t.path) ? "" : "na"}" title="${t.analyzed ? "Analizzato" : "Non ancora analizzato: viene analizzato quando lo metti in una playlist"}">${anaPct.has(t.path) ? anaPct.get(t.path) + "%" : t.bpm ? Math.round(t.bpm) : ""}</td>
     <td class="kc">${esc(t.key)}</td><td>${esc(t.genre)}</td>
     <td>${fmt(t.duration)}</td>
@@ -1801,11 +1801,11 @@ function showTrackInfo() {
   const row = (k, v) => (v || v === 0 ? `<dt>${k}</dt><dd>${v}</dd>` : "");
   const file = (t.path || "").split(/[\\/]/).pop(), ext = (file.match(/\.([^.]+)$/) || [])[1];
   box.dataset.path = t.path;
-  box.innerHTML = `<div class="li-head"><span class="li-cov"></span><div class="li-tt"><b>${esc(t.title || file)}</b><span>${esc(t.artist || "")}</span></div></div>
+  box.innerHTML = `<div class="li-head"><span class="li-cov"></span><div class="li-tt" data-noi18n><b>${esc(t.title || file)}</b><span>${esc(t.artist || "")}</span></div></div>
     <dl>${row("BPM", t.bpm ? (+t.bpm).toFixed(1) : "")}${row("Tonalità", t.key ? `<span style="color:${camelotColor(t.key)}">${esc(t.key)}</span>` : "")}${row("Durata", t.duration ? fmt(t.duration) : "")}
     ${row("Album", esc(t.album || ""))}${row("Genere", esc(t.genre || ""))}${row("Tag", esc(t.tags || ""))}${row("Valutazione", t.rating ? stars(t.rating) : "")}
     ${row("Analisi", t.analyzed ? "fatta" : "non ancora")}${row("Formato", ext ? esc(ext.toUpperCase()) : "")}${row("Commento", esc(t.comment || ""))}</dl>
-    <div class="li-path" title="${esc(t.path)}">${esc(t.path)}</div>`;
+    <div class="li-path" data-noi18n title="${esc(t.path)}">${esc(t.path)}</div>`;
   getArt(t.path, 160).then((a) => { if (a && box.dataset.path === t.path) { const c = $(".li-cov", box); if (c) c.style.backgroundImage = `url(${a})`; } });
 }
 function showInspector() {
@@ -2124,8 +2124,9 @@ function showAudioStatus(i, msg) {
 $("#audioBtn").onclick = openAudioSettings;
 // guida: il manuale (guida.html, generato da docs/MANUALE.md) in una finestra; i link «data-help» aprono la sezione giusta
 function openHelp(section) {
-  const f = $("#helpFrame"), url = "guida.html" + (section ? "#" + section : "");
-  if (!f.getAttribute("src")) f.src = url; else if (section) f.contentWindow.location.hash = section;
+  const f = $("#helpFrame"), url = (I18N.lang === "en" ? "guida.en.html" : "guida.html") + (section ? "#" + section : "");
+  // la guida va ricaricata se e' quella dell'altra lingua (cambio di lingua con la guida gia' aperta una volta)
+  if (!(f.getAttribute("src") || "").startsWith(url.split("#")[0])) f.src = url; else if (section) f.contentWindow.location.hash = section;
   if (!$("#helpDlg").open) $("#helpDlg").showModal();
 }
 $("#helpBtn").onclick = () => openHelp();
@@ -2227,3 +2228,9 @@ initTree();
   };
   setInterval(tick, 200);
 })();
+
+/* lingua dell'interfaccia (Impostazioni → INTERFACCIA): automatica, italiano o inglese, cambio immediato (vedi i18n.js) */
+{
+  const sel = $("#uiLang");
+  if (sel) { sel.value = I18N.chosen(); sel.onchange = () => I18N.set(sel.value); }
+}

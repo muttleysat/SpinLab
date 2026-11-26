@@ -191,15 +191,37 @@ section.hide { display: none; } img.logo { height: 120px; width: auto; display: 
 """
 
 
-def main():
-    md = SRC.read_text(encoding="utf-8")
-    # il collegamento alla versione inglese serve solo su GitHub: nella guida dentro il programma (senza internet) si toglie
-    md = "\n".join(l for l in md.splitlines() if not l.startswith("[English](MANUALE.en.md)"))
+def build(src: Path, out: Path, lang: str, ids=None):
+    """Una guida: `ids` (dalla guida italiana) da' alle sezioni gli stessi identificatori in ogni lingua, cosi' i link «data-help»
+    del programma aprono la sezione giusta anche in inglese (le due versioni del manuale hanno le stesse sezioni, nello stesso ordine)."""
+    md = src.read_text(encoding="utf-8")
+    # il collegamento all'altra lingua serve solo su GitHub: nella guida dentro il programma (senza internet) si toglie
+    md = "\n".join(l for l in md.splitlines() if not re.match(r"^(\*\*English\*\* · |\[English\]\(MANUALE\.en\.md\))", l))
     body, toc = convert(md)
-    # la prima sezione (prima del primo H2) e' il titolo: resta fuori dalle sezioni cercabili
+    if ids is not None:
+        own = re.findall(r'<h[23] id="([^"]+)"', body)
+        if len(own) != len(ids):
+            print(f"attenzione: {src.name} ha {len(own)} titoli, la guida italiana {len(ids)}: i link alle sezioni possono non funzionare")
+        else:
+            it = iter(ids)
+            body = re.sub(r'(<h[23] id=")[^"]+(")', lambda m: m.group(1) + next(it) + m.group(2), body)
+            mp = dict(zip(own, ids))
+            body = re.sub(r'href="#([^"]+)"', lambda m: f'href="#{mp.get(m.group(1), m.group(1))}"', body)
+            toc = [(mp.get(sid, sid), t) for sid, t in toc]
     nav = "\n".join(f'<a href="#{sid}">{html.escape(t)}</a>' for sid, t in toc)
-    OUT.write_text(PAGE.replace("@@TOC@@", nav).replace("@@BODY@@", body), encoding="utf-8", newline="\n")
-    print(f"scritto {OUT.relative_to(ROOT)}: {len(toc)} sezioni, {OUT.stat().st_size // 1024} KB")
+    page = PAGE
+    if lang == "en":
+        page = page.replace('<html lang="it">', '<html lang="en">').replace("SpinLab DJ - Guida", "SpinLab DJ - Guide").replace("Cerca nella guida…", "Search the guide…")
+    out.write_text(page.replace("@@TOC@@", nav).replace("@@BODY@@", body), encoding="utf-8", newline="\n")
+    print(f"scritto {out.relative_to(ROOT)}: {len(toc)} sezioni, {out.stat().st_size // 1024} KB")
+    return re.findall(r'<h[23] id="([^"]+)"', body)
+
+
+def main():
+    ids = build(SRC, OUT, "it")
+    en = ROOT / "docs" / "MANUALE.en.md"
+    if en.exists():
+        build(en, ROOT / "ui" / "guida.en.html", "en", ids)
 
 
 if __name__ == "__main__":

@@ -288,9 +288,9 @@ function amRender() {
   const st = $("#amStatus"), sm = AM.msg || ""; if (st.textContent !== sm) st.textContent = sm;
   amSyncPreview();
   const cur = amSnap(AM.cur), list = [], SHOW = 40, base = AM.on ? AM.idx : 0;
-  const row = (t, k) => `<div class="amq${k === 0 ? " next" : ""}" data-k="${base + k}"><b>${k + 1}.</b><em title="${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}">${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}</em><span>${t.bpm ? Math.round(t.bpm) : "–"} ${esc(t.key || "")}</span>`
+  const row = (t, k) => `<div class="amq${k === 0 ? " next" : ""}" data-k="${base + k}"><b>${k + 1}.</b><em data-noi18n title="${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}">${esc(t.title || t.path)}${t.artist ? " — " + esc(t.artist) : ""}</em><span>${t.bpm ? Math.round(t.bpm) : "–"} ${esc(t.key || "")}</span>`
     + `<i data-act="top" title="Mettilo per primo">⤒</i><i data-act="up" title="Sposta su">▲</i><i data-act="dn" title="Sposta giù">▼</i><i data-act="del" title="Toglilo dalla coda">✕</i></div>`;
-  if (AM.on && cur.loaded) list.push(`<div class="amq now"><em>▶ ${esc(cur.name || "")}</em></div>`);
+  if (AM.on && cur.loaded) list.push(`<div class="amq now"><em data-noi18n>▶ ${esc(cur.name || "")}</em></div>`);
   const left = AM.queue.length - base;
   if (AM.on) list.push(`<div class="amh">PROSSIMI${AM.opt.loop ? " (poi ricomincia)" : ""} · ${left} in coda</div>`);
   else {

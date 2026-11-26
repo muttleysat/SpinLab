@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SpinLab DJ - Guide</title>
+<style>
+:root { --bg: #0b0f18; --panel: #101726; --line: #25324d; --text: #dbe4f5; --dim: #8393b3; --accent: #18b6ff; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 system-ui, "Segoe UI", sans-serif; }
+#wrap { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 100vh; }
+nav { position: sticky; top: 0; align-self: start; height: 100vh; overflow: auto; padding: 16px 12px; border-right: 1px solid var(--line); background: var(--panel); }
+nav input { width: 100%; padding: 7px 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--text); margin-bottom: 10px; }
+nav a { display: block; padding: 5px 8px; border-radius: 6px; color: var(--dim); text-decoration: none; font-size: 13px; }
+nav a:hover, nav a.on { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--text); }
+main { padding: 22px 38px 80px; max-width: 920px; }
+h1 { font-size: 26px; margin: 0 0 8px; } h2 { font-size: 20px; margin: 34px 0 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+h3 { font-size: 15px; margin: 22px 0 6px; color: var(--accent); letter-spacing: .3px; }
+p, li { max-width: 78ch; } li { margin: 3px 0; }
+code { background: color-mix(in srgb, var(--accent) 14%, transparent); padding: 1px 5px; border-radius: 4px; font: 12.5px ui-monospace, Consolas, monospace; }
+pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow: auto; } pre code { background: none; padding: 0; }
+blockquote { margin: 12px 0; padding: 8px 14px; border-left: 3px solid var(--accent); background: var(--panel); color: var(--dim); border-radius: 0 8px 8px 0; }
+.tw { overflow-x: auto; margin: 10px 0; } table { border-collapse: collapse; font-size: 13px; min-width: 60%; }
+th, td { text-align: left; padding: 6px 10px; border: 1px solid var(--line); vertical-align: top; } th { background: var(--panel); }
+a { color: var(--accent); } mark { background: #ffd34d66; color: inherit; border-radius: 3px; }
+section.hide { display: none; } img.logo { height: 120px; width: auto; display: block; margin: 8px 0; border-radius: 4px; }
+@media (max-width: 820px) { #wrap { grid-template-columns: 1fr; } nav { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); } main { padding: 16px; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+<nav><input id="q" type="search" placeholder="Search the guide…" autocomplete="off">
+<a href="#primo-avvio">First launch</a>
+<a href="#la-schermata">The screen</a>
+<a href="#libreria-e-playlist">Library and playlists</a>
+<a href="#i-deck">The decks</a>
+<a href="#il-mixer-le-cuffie-e-il-preascolto">The mixer, headphones and pre-listen</a>
+<a href="#effetti">Effects</a>
+<a href="#stem">Stems</a>
+<a href="#automix">AUTOMIX</a>
+<a href="#batteria-e-campionatore">Drums and sampler</a>
+<a href="#video">Video</a>
+<a href="#aspetto-skin-colori-e-monitor-ultrawide">Look: skins, colours and ultrawide monitors</a>
+<a href="#registrare-il-master">Recording the master</a>
+<a href="#impostazioni-audio">Audio settings</a>
+<a href="#controller-midi">MIDI controllers</a>
+<a href="#soluzione-dei-problemi">Troubleshooting</a>
+<a href="#licenza-donazioni-e-crediti">Licence, donations and credits</a>
+</nav>
+<main>
+<h1 id="spinlab-dj-user-manual">SpinLab DJ — User manual</h1>
+<p><img src="assets/asio-logo-bw.png" alt="ASIO Compatible - ASIO is a registered trademark of Steinberg Media Technologies GmbH" class="logo"></p>
+<p>SpinLab DJ is DJ software with two decks, mixer, effects, stem separation, drum machine, sampler, video output for screens and projectors, master recording and support for any MIDI controller. This manual explains how to use it, how to connect a controller and how to solve the most common problems.</p>
+<blockquote>The program's interface is in Italian. Buttons and commands are written here as they appear on screen; where the label is Italian, the English meaning follows in brackets the first time. Hovering the mouse over almost any button shows a tooltip.</blockquote>
+<section data-title="First launch">
+<h2 id="primo-avvio">First launch</h2>
+<p>At startup the SpinLab screen appears with a progress bar: it disappears by itself when the audio engine and the library are ready.</p>
+<ol><li><b>Choose the sound card.</b> Open <b>SETTINGS</b> (or the gear at the top right) → <b>AUDIO</b> tab. If you have a card with an ASIO driver (for example Focusrite) choose the <b>ASIO®</b> driver: latency is much lower and the drum pads respond immediately. Otherwise leave <b>Windows (WASAPI)</b>. Press <b>Applica</b> (Apply).</li><li><b>Choose the headphones.</b> In the same panel, «Uscita cuffie» (headphone output). See <a href="#impostazioni-audio">Audio settings</a>.</li><li><b>Add your music.</b> In the <b>ESPLORA</b> (browse) column on the left choose a folder: the tracks appear in the table. They are analysed (BPM, key, beatgrid) in the background.</li><li><b>Load a track.</b> Select a track and press <b>LOAD</b> in its row, or drag it onto a deck.</li></ol>
+</section>
+<section data-title="The screen">
+<h2 id="la-schermata">The screen</h2>
+<ul><li><b>Top bar.</b> Navigation (<b>LIBRARY</b>, <b>MIXER</b>, <b>RECORD</b>, <b>SETTINGS</b>), <b>REC</b> indicator while recording, processor load (<b>CPU</b>), clock, headphone controls (buttons 1 and 2, <b>CUE MIX</b>, <b>PHONES</b>) and <b>MASTER</b> volume. To the right of the volume there are the <b>i</b> (about SpinLab: licence, version, credits and the <b>Dona con PayPal</b> — Donate with PayPal — button) and the <b>?</b> (this guide).</li><li><b>Centre.</b> The two decks with their waveforms and, in between, the two-channel mixer with the crossfader.</li><li><b>Bottom left.</b> Folder browser and playlists.</li><li><b>Bottom centre.</b> The library: search, track table, <b>TAG &amp; INFO</b> panel.</li><li><b>Bottom right.</b> The panel with <b>AUTOMIX</b>, <b>SAMPLER</b>, <b>DRUMS</b>, <b>STEMS</b> and, below, the <b>FX</b>.</li></ul>
+<p>The graphics adapt to the window: if you make it much smaller, everything shrinks together. On an <b>ultrawide monitor</b> (2.4:1 and wider, for example 32:9) the layout changes by itself: see <a href="#aspetto-skin-colori-e-monitor-ultrawide">Look: skins, colours and ultrawide monitors</a>.</p>
+<p><b>Shortcuts</b></p>
+<div class='tw'><table><thead><tr><th>Key</th><th>What it does</th></tr></thead><tbody><tr><td>Space bar</td><td>Play / pause of the deck under the mouse (otherwise the last one used)</td></tr><tr><td>Up / down arrow</td><td>Browse the library tracks</td></tr><tr><td>Enter</td><td>Load the selected track on the deck in use</td></tr><tr><td>Delete</td><td>Remove the selected tracks from the open playlist</td></tr><tr><td>Z X C V · A S D F · Q W E R · 1 2 3 4</td><td>Drum pads (with the DRUMS tab open)</td></tr><tr><td>Shift + click on a drum pad</td><td>Softer hit</td></tr></tbody></table></div>
+</section>
+<section data-title="Library and playlists">
+<h2 id="libreria-e-playlist">Library and playlists</h2>
+<ul><li><b>Folder browser.</b> Choose a folder: SpinLab reads its tracks and analyses them. The <code>stems</code> subfolder (see <a href="#stem">Stems</a>) is ignored.</li><li><b>Search.</b> The field at the top searches by title, artist, tag, key and BPM. Columns are sorted with a click on the header.</li><li><b>Headphone preview.</b> The triangle button next to a track plays it in the headphones without going through the master. Shift + click starts from the middle of the track. Click or drag on the row to move through it.</li><li><b>Playlists.</b> <b>+</b> next to PLAYLIST creates one. Drag tracks onto a playlist to add them. Right click on a playlist: rename, delete, <b>Crea stem di tutta la playlist</b> (create stems for the whole playlist). Adding a track to a playlist starts its full analysis.</li><li><b>TAG &amp; INFO.</b> The button with the «i» next to the search opens the panel for title, artist, album, genre, tags, star rating and comment.</li><li><b>Double click on a track</b> loads it on the first free deck.</li><li><b>LIBRARY view.</b> With <b>LIBRARY</b> in the top bar the library takes more space. In the right panel the sections (stems, sampler, drums, automix) keep their size and below them appears the <b>selected track panel</b>: cover, title, artist, BPM, key, duration, album, genre, tags, rating, whether it is analysed, format, comment and file path. With several tracks selected it shows how many.</li><li><b>Right click on a track.</b> Load on deck 1 or 2, add to a playlist (existing, or a new one with the selection), analyse (BPM, key, grid), create or delete the prepared stems, remove from the playlist (if one is open).</li></ul>
+</section>
+<section data-title="The decks">
+<h2 id="i-deck">The decks</h2>
+<p>Each deck shows two waveforms: the large one (zoomed, scrolling) and the small one (overview of the whole track), the platter, the buttons and the pitch fader.</p>
+<ul><li><b>The countdown</b> at the top right (the time left until the end) <b>flashes red in the last 20 seconds</b> of the track, to warn you that it is about to end. With «Reduce motion» turned on in the system it stays steady red.</li><li><b>The platter</b> lights up according to the deck state: dim without a track, still when paused, with the light running along with the record while it plays, brighter while scratching and amber when you hold CUE while the track plays. In the Dark Club skin the tone arm puts the needle on the record when you load a track and moves towards the centre as the track goes on.</li></ul>
+<h3 id="trasporto">Transport</h3>
+<ul><li><b>PLAY</b> and <b>CUE</b>. Holding CUE plays the track from the cue point until you release it.</li><li><b>LOAD</b> loads the track selected in the library; the button next to it empties the deck.</li><li><b>The pitch</b> is set with the fader on the right. <b>±8</b> (or the value shown) changes the range: 4, 8, 16, 50, 100%. Double click on the fader brings it back to zero at once.</li><li><b>→0</b> (below the pitch value) brings it back to zero <b>gradually</b>, without audible jumps: the pitch moves towards 0 at a constant speed of 0.5 percentage points per second (from +8% it takes 16 seconds, from +2% four). The button lights up while the return is in progress and a second click stops it where it is. Moving the fader by hand, loading a track or turning on SYNC interrupts it; if the deck was following SYNC, SYNC turns off, as when you move the pitch by hand. The button is unlit when the pitch is already at 0.</li><li><b>SYNC</b> aligns tempo and phase to the leading deck. It stays on even after loading another track.</li></ul>
+<h3 id="scrub">Scrub</h3>
+<p>Hold the mouse on the large waveform and drag: the track follows like a record (dragging to the left moves forward). The platter can also be turned with the mouse. On the small waveform a click moves the playhead to that point.</p>
+<h3 id="griglia-e-tonalità">Beatgrid and key</h3>
+<p>The beatgrid is computed by the analysis and, when possible, refined by a neural network (Beat This!) that recognises the beats even in live-played tracks.</p>
+<ul><li><b>⚓ (anchor)</b>, on the deck above <b>GRID</b>: moves the nearest marker exactly onto the playhead. Use it to fix a point where the grid has drifted; the correction fades out towards the neighbouring anchors, so you can place more than one in the same track.</li><li><b>GRID</b> opens the grid window, saved for that track:</li><li><b>½</b> halves the BPM (one marker every two), <b>×2</b> doubles it, <b>↺</b> returns to the automatically computed grid.</li><li><b>AUTO</b> uses a single tempo until the beats drift away from it for a long time, then starts a new section: fine for almost everything. <b>FISSA</b> (fixed) uses a constant tempo and phase for the whole track (electronic music, tracks made on a computer). <b>FLESS.</b> (flexible) follows a real drummer bar by bar (rock, funk, 70s disco, live recordings).</li><li><b>QUANTIZE</b> like the QUANT button.</li><li><b>QUANT</b> snaps cues, loops, rolls and hot cues to the beats of the grid.</li><li><b>KEY</b> opens the key panel: <b>KEY LOCK</b> keeps the key when you change the pitch, Camelot step ±1 and semitone corrections.</li></ul>
+<h3 id="i-pad">The pads</h3>
+<p>The button above the pads changes their function:</p>
+<div class='tw'><table><thead><tr><th>Mode</th><th>What the pads do</th></tr></thead><tbody><tr><td><b>HOT CUE 1–8</b></td><td>Eight pads in two rows. A click stores the point or jumps to it. Shift + click, or right click, deletes it. An empty hot cue is unlit; a stored one lights up in its colour and flashes briefly when you recall it.</td></tr><tr><td><b>BEAT JUMP</b></td><td>Jumps by −2, −1, +1, +2 times the size chosen with ‹ ›.</td></tr><tr><td><b>LOOP ROLL</b></td><td>Repeats a section while you hold it. The pads play 1×, 2×, 4× and 8× the base length (from 1/16 to 1 beat, with ‹ ›).</td></tr><tr><td><b>FRENO · SPIN · REV · SLIP</b></td><td><b>BRAKE</b>: the record stops while you hold it. <b>SPIN</b>: spinback. <b>REV</b>: reverse while held. <b>SLIP</b>: on/off.</td></tr></tbody></table></div>
+<p>In the modes other than hot cues the first four pads are used.</p>
+<p><b>SLIP</b>: during roll, brake and reverse the track keeps going «silently» and on release you find yourself where it would have got to. <b>Q</b> turns quantize on.</p>
+<h3 id="loop">Loops</h3>
+<ul><li><b>‹ ›</b> halves and doubles the loop, the number in the middle turns it on or off.</li><li><b>IN</b> and <b>OUT</b> set start and end; OUT activates it.</li></ul>
+</section>
+<section data-title="The mixer, headphones and pre-listen">
+<h2 id="il-mixer-le-cuffie-e-il-preascolto">The mixer, headphones and pre-listen</h2>
+<p>Each channel has a fader, 3-band EQ (<b>HI</b>, <b>MID</b>, <b>LOW</b>), <b>FILTER</b> and a post-fader level meter. Knobs are turned by dragging up and down (with Shift the adjustment is fine) or with the mouse wheel; double click returns them to their initial value. The coloured arc around the knob shows the value. The <b>crossfader</b> is at the bottom; double click centres it.</p>
+<p><b>AUTO GAIN</b> brings a newly loaded track to the same loudness as the one playing. <b>AUTO STEM</b> separates in advance the stems of every loaded track.</p>
+<p><b>Headphones.</b> Buttons <b>1</b> and <b>2</b> at the top turn on the pre-listen (PFL) of the channels. <b>CUE MIX</b> balances between the two sides, <b>PHONES</b> is the volume. PFL can also be turned on from the headphone icon on the platter.</p>
+</section>
+<section data-title="Effects">
+<h2 id="effetti">Effects</h2>
+<p>The <b>FX</b> panel works on the deck chosen with the <b>DECK</b> buttons (1 / 2) above the pads; it stays aligned with the channel strip.</p>
+<ul><li><b>Signal effects:</b> ECHO, PING-PONG, REVERB, FLANGER, PHASER, BITCRUSH, GATER, SCATTER, NOISE.</li><li><b>Track effects:</b> BEAT JUMP, BRAKE, SPINBACK, REVERSE. They act on the record, not on the signal.</li><li><b>TIME</b> and <b>FEEL</b> (straight, triplet, dotted) set the step of tempo-synced effects.</li><li><b>The three knobs</b> change name depending on the effect. For example in the echo they are <b>TONE</b>, <b>FEEDBACK</b> and <b>MIX</b>.</li><li>The button next to the effect name turns it on. For brake and reverse, holding it for more than 0.35 seconds makes the effect last as long as you press.</li></ul>
+</section>
+<section data-title="Stems">
+<h2 id="stem">Stems</h2>
+<p>Stems split a track into <b>vocals</b>, <b>drums</b>, <b>bass</b> and <b>other</b>. In the <b>STEMS</b> panel each stem has a volume knob (the segmented ring lights up in proportion), a mute button (<b>M</b>) and a solo button (<b>S</b>). A click on the stem's icon or name excludes or re-enables it. The <b>ACAPELLA</b>, <b>INSTRUMENTAL</b> and <b>ALL</b> presets set everything with one click.</p>
+<p>SpinLab works in two ways:</p>
+<ul><li><b>Real time.</b> Stems are separated while the track plays, using the processor. Nothing needs to be prepared.</li><li><b>Prepared.</b> Stems are computed beforehand and saved. Loading is practically instant and quality is maximum. They are the choice for slower PCs.</li></ul>
+<p>In <b>Impostazioni → STEM</b> (Settings → STEM) choose the mode: <b>Automatico</b> (automatic, based on the measured speed of the PC), <b>Sempre in tempo reale</b> (always real time) or <b>Solo stem preparati</b> (prepared stems only). The <b>Misura la velocità di questo PC</b> (measure this PC's speed) button repeats the measurement. Real time needs at least 2× playback speed, because two decks separate at the same time.</p>
+<p><b>Preparing stems.</b> Right click on a track (or several tracks) or on a playlist → <b>Crea stem</b> (create stems). They are saved in a <code>stems</code> folder next to the tracks, losslessly compressed (about 45% of the original size). <b>Elimina gli stem preparati</b> (delete prepared stems) deletes them.</p>
+<p>There is a single separation model. In «Solo stem preparati», a track without stems shows a notice inviting you to prepare them.</p>
+</section>
+<section data-title="AUTOMIX">
+<h2 id="automix">AUTOMIX</h2>
+<p>AUTOMIX plays the library tracks on its own, one after the other, with beat-matched transitions as a DJ would. It is in the <b>AUTOMIX</b> tab of the bottom-right panel.</p>
+<p><b>How to use it</b></p>
+<ol><li>Choose which tracks to play: open a playlist or a folder, or run a search. AUTOMIX uses the tracks you see in the table, starting from the selected one.</li><li>Choose <b>Ordine</b> (order), <b>Transizione</b> (transition) and <b>Stile</b> (style) (see below).</li><li>Press <b>AVVIA AUTOMIX</b> (start). If a deck is already playing, that track continues and the following ones start at its end.</li><li><b>FERMA AUTOMIX</b> (stop) stops it: the decks stay as they are. <b>Salta</b> (skip) moves immediately to the next track with a transition.</li></ol>
+<p><b>The settings</b></p>
+<ul><li><b>Ordine</b> (order). <i>Come in elenco</i> (list order, as in the table), <i>BPM crescente</i> or <i>BPM decrescente</i> (ascending or descending BPM; tracks without BPM go last), <i>Intelligente</i> (smart: after each track it picks the one with the closest key, Camelot code, and tempo, for more harmonic mixes) or <i>Casuale</i> (random).</li><li><b>The queue can be edited.</b> Below the settings there is the list of the next tracks. On each row: ⤒ puts it first, ▲ and ▼ move it, ✕ removes it. When stopped, <i>ripristina</i> (reset) undoes the changes; changing the order rebuilds the queue from scratch.</li><li><b>Transizione</b> (transition). How many bars the mix lasts: 4, 8, 16 or 32. At 120 BPM, 16 bars are about 32 seconds.</li><li><b>Stile</b> (style). <i>Scambio dei bassi</i> (bass swap): the new track comes in without bass and halfway through the transition the bass moves from one track to the other, so two basslines never add up. <i>Dissolvenza semplice</i> (simple fade): crossfader only. <i>Taglio rapido</i> (quick cut): two bars, without tempo matching.</li><li><b>Ripeti</b> (repeat). When the queue ends, it starts again.</li></ul>
+<p><b>What the program does</b></p>
+<ul><li>About 75 seconds before the end of the playing track, it loads the next one on the other deck.</li><li>It matches tempo and beats with <b>SYNC</b>. If the two tracks have tempos that are too different (more than 12%, after accounting for doubling and halving) it does not sync them and makes a quick transition.</li><li>When the transition is over it empties the old deck, and the new track gently returns to its original tempo.</li></ul>
+<p><b>Good to know</b></p>
+<ul><li>Tracks must have been analysed (tempo and key). Without analysis the transition is a simple fade without sync.</li><li>If you move the crossfader or the bass by hand during a mix, AUTOMIX puts them back at the next step.</li><li>From a MIDI controller you can map <b>AUTOMIX avvia / ferma</b> (start / stop) and <b>AUTOMIX: salta</b> (skip).</li></ul>
+</section>
+<section data-title="Drums and sampler">
+<h2 id="batteria-e-campionatore">Drums and sampler</h2>
+<h3 id="batteria-drums">Drums (DRUMS)</h3>
+<p>16 pads with single samples, to play with the mouse, the keyboard (Z X C V · A S D F · Q W E R · 1 2 3 4) or a controller. The drum kit starts empty at every launch; only the pads' MIDI notes are remembered.</p>
+<ul><li><b>Load a sample:</b> click on an empty pad, or drag a file onto the pad. Maximum 30 seconds.</li><li><b>Right click on a pad:</b> MIDI learn, <b>gate</b> mode (plays while you hold it), <b>aftertouch</b>, tuning (±12 semitones), <b>choke group</b> (for example closed and open hi-hat silencing each other), volume, MIDI note, clear.</li><li><b>Aftertouch.</b> Pressing the pad after the hit makes the sound grow. The target is per pad: off, volume (up to +60%), pitch (up to +7 semitones) or both. It works with per-pad and channel aftertouch. A coloured bar on the pad shows the pressure.</li><li><b>Default MIDI notes:</b> the 16 pads respond to notes 36–51.</li></ul>
+<h3 id="campionatore-sampler">Sampler (SAMPLER)</h3>
+<p>8 pads for longer sounds. Drag a file (or a library track) onto a pad. Click: it starts, another click: it stops. Right click: loop, BPM, replace. Keys <b>1–8</b> on the keyboard. With <b>SYNC</b> the samples start on the beat of the playing deck and follow tempo and phase.</p>
+</section>
+<section data-title="Video">
+<h2 id="video">Video</h2>
+<p>SpinLab can show a picture on an external screen or projector while you play: the <b>videos</b> you load on the decks or, for tracks without video, the <b>cover with title and artist</b> or an <b>animated visualizer</b> in time with the music. The two decks are mixed with the crossfader, with a transition of your choice.</p>
+<p>Video does not change the way you play: the audio is always in charge. A video loads, pauses, seeks and scratches like a track, and the beatgrid, BPM, key and stems work on its audio as for any other file.</p>
+<h3 id="attivare-la-modalità-video">Turning on VIDEO mode</h3>
+<p>The mode turns on <b>by itself</b> when you load a video on a deck and turns off when only audio tracks are left on the decks. With the mode off the program uses no resources for video and opens no window.</p>
+<p>The <b>VIDEO</b> button, at the top near the clock, forces it by hand: each click moves to the next choice among <b>automatic</b>, <b>always on</b> (useful to see the visualizers with audio tracks only) and <b>always off</b>. When it is on the button lights up and next to it appear the transition and visualizer menus and the quality in use.</p>
+<h3 id="il-deck-con-un-video">The deck with a video</h3>
+<p>When a deck has a video, it changes appearance by itself: instead of the waveforms and the platter it shows the <b>video preview screen</b>, muted and in time with the music. The <b>track overview</b> is in the strip above the pads, next to the pitch button, and works as usual (click or drag to move). Dragging horizontally on the screen <b>scratches</b> (the full width is 4 seconds). A deck with an audio track stays classic; when you remove the video, the deck goes back to how it was.</p>
+<h3 id="formati-supportati">Supported formats</h3>
+<p>The library recognises <b>mp4, m4v, mov, mkv, webm, avi, ts, mpg, mpeg</b>. Videos downloaded from YouTube and converted to <b>mp4 (H.264)</b> are the simplest case and work out of the box.</p>
+<ul><li>The <b>picture</b> is played by the program's web engine: formats that the system (Windows or macOS) cannot read are not shown. H.264 is always the safest; for other codecs (H.265, VP9, AV1…) it depends on the computer.</li><li>The <b>audio</b> is decoded like a track's. Less common formats need FFmpeg, as for tracks: see <b>Troubleshooting</b>.</li><li>The output is limited to 1080p: 4K videos, if the system can read them, are shown at a lower resolution, and HDR is not handled.</li></ul>
+<h3 id="luscita-su-schermo-o-proiettore">Output to a screen or projector</h3>
+<p>The output window opens by itself with VIDEO mode. To send it to an external monitor, a projector or a TV (HDMI, DisplayPort, USB-C), <b>right click the VIDEO button</b> and choose the screen from the list; <b>Finestra normale</b> (normal window) keeps it in a window on the program's monitor. The choice is remembered.</p>
+<ul><li>If the chosen screen is <b>unplugged</b> while you play, the output moves to a normal window and a notice appears: music and video do not stop. When you <b>plug it back in</b> it returns to full screen.</li><li>In the output window, <b>H</b> shows or hides the measurements (dropped frames, offset from the audio, quality in use) and <b>Esc</b> closes it.</li></ul>
+<h3 id="transizioni">Transitions</h3>
+<p>The drop-down menu next to the VIDEO button chooses the effect with which the mix goes from one deck to the other. By default the mix follows the <b>crossfader</b>; if you mix with the channel volume faders and leave the crossfader still, you can choose <b>i fader dei canali</b> (the channel faders) in <b>Impostazioni → VIDEO → Miscela</b> (Settings → VIDEO → Mix), or from the right click on the VIDEO button: in that case the crossfader is ignored and the video moves from one deck to the other according to the volume of the two channels (if one is at zero only the other is shown; with equal volumes, the mix is halfway; with both at zero the picture stays as it was). The effect follows the position of the mix: on the left you see deck 1, on the right deck 2, in the middle the transition. It can be changed during the set too.</p>
+<p>The transitions are: <b>Dissolvenza</b> (fade), <b>Taglio</b> (cut), <b>Dissolvenza al nero</b> (fade to black), <b>Flash bianco</b> (white flash), <b>Wipe</b>, <b>Zoom a spinta</b> (push zoom), <b>Glitch</b>, <b>Pixel</b>, <b>Caleidoscopio</b> (kaleidoscope), <b>Ondulazione</b> (ripple), <b>Cubo 3D</b> (3D cube), <b>Vortice</b> (vortex) and <b>Stroboscopio sul ritmo</b> (beat strobe). The last one alternates the two decks in time with the <b>beatgrid</b>, so it works best with tracks whose grid is right.</p>
+<p>If only one deck has something to show, that one is shown without effects. With the <b>Bassa</b> (low) quality (see below) only the first five, the lightest, are available; the others appear disabled.</p>
+<h3 id="brani-senza-video-scheda-e-visualizzazioni">Tracks without video: card and visualizers</h3>
+<p>A deck with a track without video still takes part in the mix. The second menu next to the VIDEO button chooses what to show:</p>
+<ul><li><b>Scheda del brano</b> (track card): the cover (if the file has one) with title and artist, on a background that picks up its colours.</li><li><b>Ten visualizers</b>: Anelli (rings), Tunnel, Onde luminose (light waves), Griglia al neon (neon grid), Stelle (stars), Plasma, Barre (bars), Esagoni (hexagons), Fluido (fluid) and Raggi (rays). They pulse on the grid's <b>beat</b>, react to the deck's <b>level</b> and take their colour from the track's <b>key</b>.</li></ul>
+<p>The visualizers are abstract animations made for SpinLab. They can be used without any video, with VIDEO mode turned on by hand, to fill a screen while you play music only.</p>
+<h3 id="titolo-e-artista">Title and artist</h3>
+<p>Over the videos and visualizers, at the bottom left, appear the <b>title</b> and <b>artist</b> of the track on the dominant side of the crossfader, with a soft fade-in when the track changes. On visualizers a light dark shadow at the bottom keeps the text readable. The track card already contains title and artist.</p>
+<h3 id="scratch-salti-e-la-copia-di-lavoro">Scratching, jumps and the working copy</h3>
+<p>Common videos have a complete picture only every few seconds: to show an arbitrary point the program has to rebuild it, and this slows scratching and jumps. For this reason, when you load a video, SpinLab prepares in the background a light <b>working copy</b> (480p) in which every frame is complete:</p>
+<ul><li>The video starts immediately from the original; when the copy is ready it replaces it without you doing anything.</li><li>The copy is in a temporary folder and is <b>deleted by itself</b> when the video leaves the deck. At startup the program removes those left over from an abnormal shutdown. The original is never modified.</li><li>FFmpeg is needed. A copy takes about 85 MB for a four-minute video and is prepared in a few seconds.</li></ul>
+<h3 id="stem-sui-video">Stems on videos</h3>
+<p>Stems of videos are created as for tracks: right click on the video in the library or in a playlist → <b>Crea stem</b>. They are computed on the audio and stay saved for future use. For the modes and preparation see <b>Stems</b>.</p>
+<h3 id="qualità-e-prestazioni">Quality and performance</h3>
+<p>In <b>Impostazioni → VIDEO</b> (Settings → VIDEO) choose the output quality:</p>
+<div class='tw'><table><thead><tr><th>Profile</th><th>Resolution and frames</th><th>Transitions</th></tr></thead><tbody><tr><td><b>Bassa</b> (low)</td><td>up to 480p, 24 fps</td><td>only the five lightest</td></tr><tr><td><b>Media</b> (medium)</td><td>up to 720p, 30 fps</td><td>all</td></tr><tr><td><b>Alta</b> (high)</td><td>up to 1080p, 30 fps</td><td>all</td></tr><tr><td><b>Massima</b> (maximum)</td><td>up to 1080p, 60 fps</td><td>all</td></tr></tbody></table></div>
+<ul><li><b>Automatico</b> (automatic, recommended). A few seconds after startup, with the decks stopped, the program analyses the computer (processor, memory, graphics card, speed of graphics, video decoding and encoding) and chooses a starting profile. The measurement is repeated by itself only if the hardware changes or if the first one failed.</li><li><b>Ottimizza con un video in riproduzione</b> (optimise with a playing video). Start a video on a deck, press the button and for about 10 seconds the program tries the highest quality and steps down until the output is smooth; the result becomes the automatic profile.</li><li><b>During the set.</b> If the computer struggles, the output drops by one level by itself and a notice appears; if the load goes down for a while, it goes back up. The audio is never touched.</li><li><b>Manual choice.</b> A profile chosen from the menu stays in force until you go back to <b>Automatico</b>: while it is forced, the measurement does not change it.</li></ul>
+<p>To know which quality you are at, look at the label next to the VIDEO button (for example «1080p 60», orange if the output has been reduced because of the load) or at the <b>Uscita in questo momento</b> (output right now) line in the VIDEO tab. The tab also shows the data of the computer analysis.</p>
+<p>The profile limits the resolution and frame rate of the <b>full-screen</b> output: in a small window, or with a 25 fps video, different profiles look the same.</p>
+<h3 id="registrare-il-set-in-mp4">Recording the set in MP4</h3>
+<p>Besides the audio, SpinLab can record <b>the picture of the video output</b> (with transitions, visualizers, title and artist) and save it together with the master sound in a single <b>MP4</b> file (H.264 video, AAC audio).</p>
+<ol><li><b>RECORD</b> → in the <b>Formato</b> (format) menu choose <b>MP4 con video (H.264 + AAC)</b>.</li><li><b>Qualità del video</b> (video quality): <i>Come il profilo video in uso</i> (same as the video profile in use, recommended) or 480p 24 fps, 720p 30 fps, 1080p 30 fps, 1080p 60 fps. The recording quality is independent of the output quality: you can project at one resolution and record at another. The recorded video has the <b>same shape as the picture on the output</b> (16:9, 16:10…), without added black bars: if the original video is 4:3 you will still see the bands at the sides, which are part of the picture. 1080p at 60 fps needs a powerful computer.</li><li>Choose where to save the file and press <b>Avvia registrazione</b> (start recording). The video output turns on by itself for the whole duration (even if there are only audio tracks on the decks: you will see the chosen card or visualizer).</li><li><b>Stop</b> with a click on the <b>REC</b> indicator or on <b>STOP REC</b>. The file has to be finalised (audio and video are joined): it can take a few seconds, and a notice appears with the path and size.</li></ol>
+<p>Good to know:</p>
+<ul><li><b>FFmpeg</b> is needed (as for the working copies); if it is missing, recording does not start and a message explains it.</li><li>Recording captures what is shown on the output, so it needs <b>WebGL drawing</b> on (the simple mode without WebGL cannot be recorded).</li><li>If the computer cannot keep up, some frames are lost (the video looks a bit choppy) but <b>the audio is not interrupted</b>; at the end of the recording a notice shows the number of lost frames.</li><li>If something goes wrong after the recording (for example the join fails), the audio stays saved in a temporary file and the message says where.</li><li>The intermediate files are deleted by themselves when the final file is ready.</li></ul>
+<h3 id="cosa-non-cè-ancora">Not there yet</h3>
+<ul><li>Video on more than two decks and a video fader separate from the crossfader.</li></ul>
+<p>Music videos and films are protected by copyright: what you project, record or publish is your responsibility.</p>
+<h3 id="se-qualcosa-non-va-con-il-video">If something goes wrong with video</h3>
+<p><b>The screen stays black or an error appears.</b> The format is not read by the system. Press <b>H</b> in the output window: if you see an error on the deck, convert the video to mp4 (H.264).</p>
+<p><b>The video is choppy or keeps realigning.</b> Wait a few seconds after loading: the working copy has to finish (in <b>H</b> it shows «copia di lavoro: sì», working copy: yes). If that is not enough, lower the quality in <b>Impostazioni → VIDEO</b> or press <b>Ottimizza</b> (optimise).</p>
+<p><b>The video is not in time with the music.</b> A fixed difference between audio and picture is adjusted with the <b>Allineamento della grafica</b> (graphics alignment) slider (<b>Impostazioni → AUDIO</b>), the same as for the waveforms.</p>
+<p><b>I can't see the external screen in the list.</b> Connect it before opening the menu and check that the system recognises it. Two identical monitors (same name and same resolution) cannot be told apart: SpinLab picks the first one.</p>
+<p><b>Transitions are disabled or there is only one.</b> With the <b>Bassa</b> profile only the lightest remain. Choose another profile in the Settings.</p>
+<p><b>MP4 recording does not start or the video is choppy.</b> Check that FFmpeg is available and that the video output shows the picture (press <b>H</b> in the output window: «disegno: WebGL», drawing: WebGL). With a slow computer choose a lower quality in the recording dialog.</p>
+<p><b>The panel shows zero measurements or «non misurata» (not measured).</b> The first analysis did not succeed (usually FFmpeg is missing or the graphics card was not read). Restart the program: it repeats by itself; or choose a profile by hand.</p>
+</section>
+<section data-title="Look: skins, colours and ultrawide monitors">
+<h2 id="aspetto-skin-colori-e-monitor-ultrawide">Look: skins, colours and ultrawide monitors</h2>
+<p>Everything is chosen in <b>Impostazioni → INTERFACCIA</b> (Settings → INTERFACE) and applied immediately; the choice is remembered.</p>
+<h3 id="skin">Skins</h3>
+<div class='tw'><table><thead><tr><th>Skin</th><th>Look</th></tr></thead><tbody><tr><td><b>Dark Club</b> (default)</td><td>Graphite and aluminium with purple lights, platter with a perforated rim and a tone arm.</td></tr><tr><td><b>Industrial</b></td><td>Dark metal, perforated and diamond plate, amber lights; motorised platter with an amber light ring.</td></tr><tr><td><b>Retro Hardware</b></td><td>Brushed aluminium, cream-coloured buttons, red accents; an active button stays pressed and its label lights up.</td></tr></tbody></table></div>
+<p>In the Industrial and Retro skins the platter turns like a motorised platter: the outer ring, the screws and the hub turn at real speed, while the reflections on the metal stay still.</p>
+<h3 id="colore-del-tema">Theme colour</h3>
+<p>Each skin has its own colour (purple, amber or red), used for lights, knobs, platters, waveforms and hot cues. To change it pick the hue on the <b>colour bar</b> and the shade in the <b>square</b> above (as in Photoshop), or type the hexadecimal code. Below you see a <b>live preview</b> of the interface changing as you choose. <b>↺ Ripristina colore predefinito</b> (reset to default colour) returns to the skin's colour. Green PLAY, amber CUE and the green-yellow-red meters stay fixed because they carry a meaning.</p>
+<h3 id="monitor-ultrawide">Ultrawide monitors</h3>
+<p>When the window is at least 2.4 times wider than tall (for example a 32:9 monitor in full screen), SpinLab uses a dedicated layout:</p>
+<ul><li><b>on the left</b> decks and mixer, in the same proportions as on a normal monitor;</li><li><b>below the decks</b>, side by side: the <b>stems</b> (always visible), the panel chosen among <b>SAMPLER</b>, <b>DRUMS</b> and <b>AUTOMIX</b>, and the <b>FX</b>;</li><li><b>on the right</b> folders, playlists and track list at full height.</li></ul>
+<p>In this layout the library is always open, so the LIBRARY view is not needed. If you narrow the window the normal layout comes back. On traditional monitors nothing changes.</p>
+</section>
+<section data-title="Recording the master">
+<h2 id="registrare-il-master">Recording the master</h2>
+<p><b>RECORD</b> at the top opens the recording window, where you choose format, video quality and folder and press <b>Avvia registrazione</b> (start recording): the window closes and the <b>REC</b> indicator appears with the time. It records everything coming out of the master: decks with effects, sampler and drums. <b>After the first time</b> you can also start and stop with the round <b>●</b> button at the top, next to the clock: it uses the same settings and an automatic name (<code>SpinLab YYYY-MM-DD HH.MM.SS</code>) in the same folder, without reopening the window. While recording the button becomes the <b>REC</b> indicator (a click stops it) and the RECORD button becomes <b>STOP REC</b>.</p>
+<ol><li>Choose the format: WAV 16 or 24 bit, MP3 at 128, 192, 256 or 320 kbps, or <b>MP4 with video</b> (see <a href="#registrare-il-set-in-mp4">Recording the set in MP4</a>).</li><li>Choose where to save the file.</li><li><b>Avvia registrazione.</b> The <b>REC</b> indicator appears with the time. A click on the indicator, or on <b>STOP REC</b>, stops the recording.</li></ol>
+<p>Audio settings cannot be changed while recording.</p>
+</section>
+<section data-title="Audio settings">
+<h2 id="impostazioni-audio">Audio settings</h2>
+<p><b>SETTINGS</b> → <b>AUDIO</b> tab.</p>
+<ul><li><b>Driver audio</b> (audio driver). <b>Windows (WASAPI)</b> works with any card. <b>ASIO</b> uses the card's driver and gives much lower latency, but the card becomes dedicated to SpinLab.</li><li><b>Uscita principale (master)</b> (main output). With ASIO the list shows the installed ASIO drivers. To use the PC's built-in card choose the <b>Windows (WASAPI)</b> driver.</li><li><b>Frequenza e buffer</b> (sample rate and buffer). A small buffer gives less latency but more risk of dropouts: if you hear clicks, increase it. 128 frames is a good starting point with ASIO.</li><li><b>Uscita cuffie</b> (headphone output). This is the output for pre-listen and track preview. The list shows the Windows devices. Alternatively <b>Stesso dispositivo dell'uscita principale, canali 3-4</b> (same device as the main output, channels 3-4): master on channels 1-2 and headphones on channels 3-4 of the same card (needs an output with at least 4 channels).</li></ul>
+<h3 id="asio-da-dove-viene-il-driver">ASIO: where the driver comes from</h3>
+<p><b>SpinLab does not install any ASIO driver.</b> ASIO is a low-latency driver system: the driver is written and installed by the <b>sound card manufacturer</b> (for example Focusrite, Behringer, RME, MOTU, Denon DJ). When you install the card, its driver registers itself in Windows, and SpinLab lists it in the «Uscita audio principale» (main audio output) menu. Each user therefore uses the ASIO driver of <b>their own</b> card, already installed on their PC.</p>
+<ul><li><b>The card has an ASIO driver</b> (usually yes, for external sound cards and DJ and music interfaces): choose the <b>ASIO</b> driver and the card from the list.</li><li><b>The PC's built-in card or other cards without an ASIO driver</b>: use <b>Windows (WASAPI)</b>. It always works, with higher latency. If you still want ASIO on any card there are third-party universal drivers (for example ASIO4ALL or FlexASIO): if you install them, they appear in the list like the others.</li><li><b>With ASIO the card is dedicated to SpinLab</b>: other programs cannot use it at the same time.</li></ul>
+<p><b>After «Applica»</b> (Apply), the area below shows the output actually in use and the estimated latency. If the chosen output does not start, SpinLab goes back to Windows (WASAPI) and tells you why.</p>
+<p><b>Example setups</b></p>
+<div class='tw'><table><thead><tr><th>Situation</th><th>Master</th><th>Headphones</th></tr></thead><tbody><tr><td>External card with ASIO and a controller</td><td>ASIO → the card</td><td>Windows device of the controller's headphones (it usually appears with a name like «Line 3/4 (controller name)»)</td></tr><tr><td>Everything on the controller</td><td>The controller's ASIO or WASAPI</td><td>Same device, channels 3-4</td></tr><tr><td>PC only</td><td>WASAPI</td><td>A second device, or none</td></tr></tbody></table></div>
+</section>
+<section data-title="MIDI controllers">
+<h2 id="controller-midi">MIDI controllers</h2>
+<p>SpinLab works with any MIDI controller. Functions are mapped in the <b>SETTINGS → CONTROLLER MIDI</b> panel with MIDI learn. The mapping is saved automatically and can be exported and imported as text.</p>
+<h3 id="il-pannello">The panel</h3>
+<ul><li><b>Collegati</b> (connected) lists the controllers found. <b>Ultimo messaggio</b> (last message) shows in real time what arrives: use it to understand what a control sends.</li><li><b>Uscita LED</b> (LED output) is the port used to light the controller's LEDs.</li><li><b>Jog per giro</b> (jog per turn): how many messages the jog sends for one full turn of the platter. <b>Calibra il jog</b> (calibrate the jog) measures it by itself: press, turn the platter one full turn, press again.</li><li><b>Analizza un controllo</b> (analyse a control): records all messages for 8 seconds. Turn a control one way and then the other; the summary shows which message it sends and with which values. Useful to understand an encoder or the jog.</li><li><b>Ignora un tasto…</b> (ignore a key): for touch sensors (for example an encoder that sends a message when you touch it). Press, touch the sensor: that message no longer controls anything and learn skips it.</li><li><b>Cerca una funzione</b> (search a function) filters the list. Functions are grouped by deck and by mixer, library and effects.</li><li><b>Esporta / Importa / Cancella tutto</b> (export / import / clear all) to copy or reset the mapping.</li></ul>
+<h3 id="assegnare-una-funzione">Mapping a function</h3>
+<ol><li>Press <b>Learn</b> on the function's row.</li><li>Press the button, turn the knob or move the fader on the controller.</li><li>Learn recognises the type of control by itself: button, 7-bit fader, relative encoder (two's complement, offset 64, sign bit) or rotating absolute value (typical of a jog). If it gets it wrong, change the <b>Modo</b> (mode) in the row's menu.</li><li>To <b>remove</b> a mapping use the row's ✕. Esc cancels a Learn in progress.</li></ol>
+<p>For continuous controls (faders, knobs, encoders) Learn waits for a real movement: noise or sensors that always send the same value are not mapped.</p>
+<h3 id="più-assegnazioni">Multiple mappings</h3>
+<ul><li>A function can have <b>several mappings</b>: press <b>+ Altro</b> (+ another) to add one more (for example two buttons doing the same thing).</li><li>A <b>message</b> can control <b>several functions</b> (for example a single click triggering two things). When this happens, the row shows a warning «⚠ anche …» (also …) listing the other functions: it helps you find old forgotten mappings.</li></ul>
+<h3 id="shift">SHIFT</h3>
+<p>First map the controller's <b>SHIFT</b> button. To make a combination:</p>
+<ol><li>Press <b>Learn</b> on a function.</li><li><b>Hold SHIFT</b> on the controller.</li><li>Press the button to combine (for example a pad) and release.</li></ol>
+<p>The function becomes «SHIFT + pad». The same pad, without SHIFT, can control another function. If you have not mapped SHIFT yet, hold the button and press the other one: SpinLab understands by itself that the first one is SHIFT. You can also map two SHIFT buttons (one per deck).</p>
+<h3 id="livelli-dei-pad">Pad layers</h3>
+<p>If the controller has mode buttons for the pads (for example HOT CUE, LOOP, ROLL, BANK), SpinLab uses them as <b>layers</b>:</p>
+<ol><li>In the deck group map <b>Livello dei pad: Hot cue / Loop / Roll / Bank</b> (pad layer) to the four mode buttons.</li><li>Press <b>Learn</b> on a function, press the mode button (for example LOOP), then the pad.</li><li>The mapping is valid only in that layer. The <b>Livello</b> (layer) menu on the row lets you correct it.</li></ol>
+<p>If a layer has no mappings for a pad, the «Ogni livello» (every layer) one applies. Layers are independent per deck, and at startup the pads are in Hot cue.</p>
+<h3 id="jog-encoder-e-tasti-speciali">Jog, encoders and special buttons</h3>
+<ul><li><b>Jog.</b> With the platter touched it scratches; with the track playing and the platter not touched, it does a small pitch bend. Map the rotation to <b>Jog (scratch e pitch bend)</b> and the touch to <b>Jog: tocco del piatto</b> (platter touch).</li><li><b>Encoder as a button.</b> On a button function (for example <b>Loop × 2</b>) you can use an encoder's rotation: Learn recognises it and sets «Encoder: solo rotazione oraria» (clockwise rotation only). For the other direction use the Modo menu.</li><li><b>Loop IN / OUT with a single button:</b> first click = IN, second = OUT, third = exits the loop.</li><li><b>Roll:</b> longer / shorter length / encoder.</li><li><b>Library:</b> browse the tracks (one encoder per deck, even 10 tracks per step) and load the chosen track.</li></ul>
+<h3 id="effetti-dal-controller">Effects from the controller</h3>
+<p>The <b>Effetti del controller</b> (controller effects) group is meant for controllers with a single set of effect controls:</p>
+<ul><li><b>Assign the effect to deck 1 / 2.</b> Pressed together (within 0.4 seconds) they apply to both decks.</li><li><b>Effect on / off</b> on the assigned decks.</li><li><b>Parameter (encoder)</b> with the <b>encoder click</b> switching between the first and second parameter (for example TONE and FEEDBACK). The underlined name in the FX panel shows which one is active.</li><li><b>MIX dry / wet</b> (knob).</li><li><b>Next / previous effect</b> or an effect-selection encoder.</li></ul>
+<p>Encoder steps have acceleration and a small ramp so they don't sound stepped. Steps right before a click are discarded, because they are only the movement caused by pressing.</p>
+<h3 id="led">LEDs</h3>
+<p>Choose the port in <b>Uscita LED</b>. Every button mapping has two values (on and off) that SpinLab sends to the controller when the function changes state. It works only if the controller accepts LED messages via MIDI.</p>
+</section>
+<section data-title="Troubleshooting">
+<h2 id="soluzione-dei-problemi">Troubleshooting</h2>
+<p><b>The ASIO driver does not start and I stay on Windows (WASAPI).</b> Read the message below «Applica». Common causes: another program keeps the driver open (another copy of SpinLab, the card's control panel, a DAW); a controller with a sound card that is connected may have its ASIO driver loaded; SpinLab opens only the driver you choose and does not touch the others. Close extra copies of SpinLab from the Task Manager.</p>
+<p><b>Clicks or dropouts in the audio.</b> Increase the buffer. With ASIO try 256.</p>
+<p><b>The headphones are silent.</b></p>
+<ul><li>The headphone output has to be chosen among the Windows devices. Pre-listen has its own PFL buttons (1 and 2 at the top, or the icon on the platter) and the <b>PHONES</b> volume.</li><li>For «Stesso dispositivo, canali 3-4» the main output must have at least 4 channels.</li></ul>
+<p><b>The jog goes in one direction only, or in jumps.</b> The mode is wrong. Redo Learn turning the platter for a second, or choose <i>Assoluto, usato come differenza</i> (absolute, used as a difference) in the Modo menu. If it is too fast, use <b>Calibra il jog</b>.</p>
+<p><b>Scratching sounds distorted.</b> Recalibrate «Jog per giro». A value that is too low makes the record run.</p>
+<p><b>Learn maps by itself.</b> The controller is sending messages without you touching anything (noise, sensors). Learn for continuous controls waits for a real movement. If it continues, use <b>Ignora un tasto…</b>.</p>
+<p><b>An encoder moves two things.</b> Look at the «⚠ anche …» warnings in the list: an old mapping on the same message moves other functions. Delete it with the ✕.</p>
+<p><b>The video is not shown, is choppy or not in time.</b> See <a href="#video">Video</a>, in particular «If something goes wrong with video».</p>
+<p><b>Stems are slow or don't start.</b> See <b>Impostazioni → STEM</b>: with «Solo stem preparati» prepare the tracks first (right click → Crea stem).</p>
+</section>
+<section data-title="Licence, donations and credits">
+<h2 id="licenza-donazioni-e-crediti">Licence, donations and credits</h2>
+<p>SpinLab DJ is <b>free and open-source software</b>: you can use, study, modify and redistribute it under the <b>GNU GPL 3.0 or later</b>. No registration is required and the program does not connect to the internet. The source code and new versions are on GitHub (https://github.com/muttleysat/SpinLab).</p>
+<p>If you find SpinLab useful you can support it with a <b>donation of any amount</b>: the <b>Dona con PayPal</b> button in the About window (the <b>i</b> at the top right), which opens PayPal in the browser.</p>
+<p>The beatgrid fitting is derived from openDJ (GPL-2.0 or later). Third-party components (FFmpeg, ONNX Runtime, HT-Demucs, Beat This! and the engine's libraries) and their licences are listed in the program's «licenses» folder.</p>
+<p>ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</p>
+<p><img src="assets/asio-logo-bw.png" alt="ASIO Compatible" class="logo"></p>
+</section>
+</main>
+</div>
+<script>
+(function () {
+  const secs = [...document.querySelectorAll("main section")], links = [...document.querySelectorAll("nav a")];
+  const q = document.getElementById("q"), strip = () => document.querySelectorAll("mark").forEach((m) => m.replaceWith(m.textContent));
+  function mark(node, re) {
+    for (const c of [...node.childNodes]) {
+      if (c.nodeType === 3) {
+        const t = c.nodeValue; if (!re.test(t)) continue; re.lastIndex = 0;
+        const f = document.createDocumentFragment(); let last = 0, m;
+        while ((m = re.exec(t))) { f.append(t.slice(last, m.index)); const k = document.createElement("mark"); k.textContent = m[0]; f.append(k); last = m.index + m[0].length; }
+        f.append(t.slice(last)); c.replaceWith(f);
+      } else if (c.nodeType === 1 && c.tagName !== "MARK") mark(c, re);
+    }
+  }
+  q.addEventListener("input", () => {
+    strip(); const v = q.value.trim().toLowerCase();
+    secs.forEach((s, i) => { const hit = !v || s.textContent.toLowerCase().includes(v); s.classList.toggle("hide", !hit); links[i].style.display = hit ? "" : "none"; });
+    if (v.length > 1) { const re = new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"); secs.forEach((s) => !s.classList.contains("hide") && mark(s, re)); }
+  });
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { links.forEach((l) => l.classList.toggle("on", l.getAttribute("href") === "#" + e.target.querySelector("h2").id)); } }), { rootMargin: "-10% 0px -80% 0px" });
+  secs.forEach((s) => io.observe(s));
+})();
+</script>
+</body>
+</html>
