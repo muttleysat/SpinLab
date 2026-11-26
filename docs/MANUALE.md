@@ -95,7 +95,7 @@ Il pulsante sopra i pad cambia la loro funzione:
 | **LOOP ROLL** | Ripete un tratto finché tieni premuto. I pad fanno 1×, 2×, 4× e 8× la lunghezza base (da 1/16 a 1 battito, con ‹ ›). |
 | **FRENO · SPIN · REV · SLIP** | **BRAKE**: il disco si ferma finché tieni premuto. **SPIN**: spinback. **REV**: reverse finché premi. **SLIP**: acceso/spento. |
 
-Nelle modalità diverse dagli hot cue si usano i primi quattro pad. Nelle interfacce compatte per telefono (Cockpit e simili) si vedono gli hot cue 1–4.
+Nelle modalità diverse dagli hot cue si usano i primi quattro pad.
 
 **SLIP**: durante roll, freno e reverse il brano continua «in silenzio» e al rilascio ti ritrovi dove sarebbe arrivato. **Q** attiva la quantizzazione.
 
@@ -295,7 +295,6 @@ Cose da sapere:
 ### Cosa non c'è ancora
 
 - Il video su più di due deck e un fader video separato dal crossfader.
-- Il video sulle versioni per telefono.
 
 I video musicali e i filmati sono coperti da diritti d'autore: ciò che proietti, registri o pubblichi è responsabilità tua.
 

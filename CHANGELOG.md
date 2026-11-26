@@ -44,9 +44,6 @@ Rispetto alla 0.1.1 (31 ottobre 2026, la versione di prova dell'aggiornamento au
 ### AUTOMIX
 - Coda salvata fra una sessione e l'altra, riordino e aggiunta dei brani trascinandoli; il pulsante Avvia non perde più i clic.
 
-### Telefono e orologio
-- Interfacce per telefono (Stack, Focus + Platter, Mappa degli spazi) e companion per Galaxy Watch (vibrazione a tempo, stem dal polso). Su Mac e Windows le viste per telefono sono nascoste.
-
 ### Documentazione
 - Manuale aggiornato (video, griglia, skin, ultrawide), documento tecnico del video, registro delle decisioni e delle licenze, bozze di EULA e informativa sulla privacy, istruzioni per la prova su Windows.
 
