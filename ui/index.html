@@ -176,17 +176,25 @@
     <div class="ab-line"></div>
     <div class="ab-name">SpinLab DJ</div>
     <div class="ab-by">Developed by Vinz Trombetta</div>
+    <div class="ab-cols">
+    <div class="ab-col">
     <div class="ab-sec"><span>LICENZA</span></div>
     <div id="abLic" class="ab-note">—</div>
     <div class="ab-upd"><button id="abLicBtn" class="ab-small">REGISTRA</button><button id="abLicOff" class="ab-small" hidden>DISATTIVA SU QUESTO COMPUTER</button></div>
-    <div class="ab-line"></div>
+    <div class="ab-sec"><span>VERSIONE</span></div>
+    <div class="ab-ver">Versione <span id="aboutVer">0.1.0</span></div>
+    <div class="ab-upd"><button id="abUpd" class="ab-small">CONTROLLA AGGIORNAMENTI</button>
+      <div id="abUpdMsg" class="ab-note"></div>
+      <label class="ab-auto"><input type="checkbox" id="abAuto" checked> Controlla automaticamente all'avvio</label></div>
+    </div>
+    <div class="ab-col">
     <div class="ab-sec"><span>MOTORE AUDIO</span></div>
     <img class="ab-asio" src="assets/asio-logo-white.png" alt="ASIO Compatible">
     <div class="ab-note">ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</div>
-    <div class="ab-line"></div>
     <div class="ab-sec"><span>VIDEO E FORMATI</span></div>
     <div class="ab-note">Questo programma usa <b>FFmpeg</b> (<a href="https://ffmpeg.org" target="_blank" rel="noopener">ffmpeg.org</a>), con licenza GNU LGPL (2.1 o successiva; LGPL 3 nella versione per Windows), come programma separato che puoi sostituire. I testi delle licenze, la versione e i sorgenti sono nella cartella «licenses» dell'installazione (FFMPEG-LICENSE.txt, FFMPEG-BUILD.txt e la cartella ffmpeg). FFmpeg è un marchio dei suoi autori; SpinLab non è approvato dal progetto FFmpeg.</div>
-    <div class="ab-line"></div>
+    </div>
+    <div class="ab-col">
     <div class="ab-sec"><span>SEPARAZIONE STEM</span></div>
     <div class="ab-note">Modello HT-Demucs (Rouard, Massa, Défossez, «Hybrid Transformers for Music Source Separation», 2023), sviluppato da Meta e distribuito con licenza MIT.</div>
     <details class="ab-lic"><summary>Testo della licenza MIT</summary>
@@ -212,11 +220,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.</pre></details>
     <div class="ab-note">Elenco completo delle licenze di terze parti: cartella «licenses» del programma.</div>
-    <div class="ab-line"></div>
-    <div class="ab-ver">Versione <span id="aboutVer">0.1.0</span></div>
-    <div class="ab-upd"><button id="abUpd" class="ab-small">CONTROLLA AGGIORNAMENTI</button>
-      <div id="abUpdMsg" class="ab-note"></div>
-      <label class="ab-auto"><input type="checkbox" id="abAuto" checked> Controlla automaticamente all'avvio</label></div>
+    </div>
+    </div>
     <button id="aboutClose" class="ab-close">CHIUDI</button>
   </div>
 </dialog>
