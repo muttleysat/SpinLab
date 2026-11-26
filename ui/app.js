@@ -1027,7 +1027,7 @@ function skinImg(name) {
 function drawSkinPlatter(g, d, s, R, cx, cy, dpr, ang, loaded, amp, cueOn, scr) {
   const TAU = Math.PI * 2, playing = !!s?.playing, ind = SKIN.id === "industrial";
   const img = skinImg(ind ? "ind_jog" : "retro_jog");
-  const ir = R * (ind ? 0.95 : 0.97), inner = ir * (ind ? 0.8 : 0.79);   // raggio dell'immagine e del disco (dentro il bordo)
+  const ir = R * (ind ? 0.95 : 0.97), hubR = ir * (ind ? 0.27 : 0.2), inner = ir * (ind ? 0.8 : 0.86);   // immagine, mozzo che gira, piatto dentro il bordo
   const col = cueOn ? "#ffb300" : TH.bright, hi = cueOn ? "#ffe2a0" : TH.hi;
   // ombra sotto il piatto
   g.save(); g.shadowColor = "rgba(0,0,0,.7)"; g.shadowBlur = 18 * dpr; g.shadowOffsetY = 6 * dpr;
@@ -1045,17 +1045,25 @@ function drawSkinPlatter(g, d, s, R, cx, cy, dpr, ang, loaded, amp, cueOn, scr) 
     g.beginPath(); g.arc(cx, cy, R * 0.975, 0, TAU); g.stroke(); g.restore();
   }
   if (!img) { g.fillStyle = "#111"; g.beginPath(); g.arc(cx, cy, ir, 0, TAU); g.fill(); return; }
-  // bordo fermo (immagine intera), poi il disco ritagliato che gira
+  // piatto motorizzato (come un CDJ con piatto a motore): girano alla velocita' reale l'anello esterno con le feritoie e le viti, il mozzo
+  // e il segno di rotazione; il disco in metallo spazzolato al centro tiene i riflessi fermi, come sotto una luce vera
   g.drawImage(img, cx - ir, cy - ir, ir * 2, ir * 2);
-  g.save(); g.beginPath(); g.arc(cx, cy, inner, 0, TAU); g.clip();
-  g.translate(cx, cy); g.rotate(ang); g.drawImage(img, -ir, -ir, ir * 2, ir * 2); g.restore();
+  const spin = (clipFn) => { g.save(); g.beginPath(); clipFn(); g.clip(); g.translate(cx, cy); g.rotate(ang); g.drawImage(img, -ir, -ir, ir * 2, ir * 2); g.restore(); };
+  spin(() => { g.arc(cx, cy, ir, 0, TAU); g.arc(cx, cy, inner, 0, TAU, true); });
+  spin(() => g.arc(cx, cy, hubR, 0, TAU));
+  // riflesso fisso sull'anello: la luce non gira con il piatto
+  if (g.createConicGradient) {
+    const rf = g.createConicGradient(-0.9, cx, cy);
+    [[0, 0], [0.06, .16], [0.13, 0], [0.5, 0], [0.56, .12], [0.63, 0], [1, 0]].forEach(([p, a]) => rf.addColorStop(p, `rgba(255,255,255,${a})`));
+    g.save(); g.fillStyle = rf; g.beginPath(); g.arc(cx, cy, ir, 0, TAU); g.arc(cx, cy, inner, 0, TAU, true); g.fill(); g.restore();
+  }
   // segno di rotazione sul disco (come il punto bianco dei piatti veri)
   g.save(); g.translate(cx, cy); g.rotate(ang);
-  g.fillStyle = ind ? hi : "rgba(255,255,255,.75)"; g.globalAlpha = loaded ? 0.9 : 0.4;
-  g.fillRect(-1.2 * dpr, -inner * 0.97, 2.4 * dpr, inner * 0.09); g.restore();
+  g.fillStyle = ind ? hi : "rgba(25,25,25,.75)"; g.globalAlpha = loaded ? 0.9 : 0.4;
+  g.fillRect(-1.5 * dpr, -inner * 0.96, 3 * dpr, inner * 0.12); g.restore();
   if (!ind) {
     // RETRO: anello rosso attorno al cappuccio centrale, acceso in play e sotto CUE
-    const cr = ir * 0.285;
+    const cr = hubR * 1.02;
     g.save(); g.globalAlpha = !loaded ? 0.35 : playing || cueOn ? 1 : 0.6;
     g.shadowColor = col; g.shadowBlur = (playing || cueOn ? 14 : 4) * dpr; g.strokeStyle = col; g.lineWidth = 3 * dpr;
     g.beginPath(); g.arc(cx, cy, cr, 0, TAU); g.stroke(); g.restore();
