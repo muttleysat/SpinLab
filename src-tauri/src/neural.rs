@@ -1,3 +1,6 @@
+//! Derivato da openDJ (https://github.com/openwave-studio/opendj, crates/engine/src/beatthis.rs), Copyright (c) gli autori di openDJ,
+//! GPL-2.0-or-later; adattato per SpinLab (modifiche di Vincenzo Trombetta, 2026) e distribuito sotto GPL-3.0-or-later.
+//!
 //! Battiti e battute con la rete neurale Beat This! (Foscarin, Schluter, Widmer, ISMIR 2024; codice e pesi MIT) tramite il crate
 //! `beat-this` (MIT, runtime rten in puro Rust). E' l'ingresso della griglia (vedi gridfit.rs): il rilevatore DSP di analysis.rs
 //! resta il primo passaggio veloce, questo lo affina in sottofondo (3-6 s a brano) e sostituisce i battiti salvati.

@@ -158,17 +158,6 @@
 </section>
 </div>
 
-<div id="updBanner" hidden><span id="updBannerTxt"></span><button id="updBannerGo">Dettagli</button><button id="updBannerX" title="Più tardi">×</button></div>
-
-<dialog id="licDlg">
-  <h2>Registra SpinLab</h2>
-  <div class="hint" id="licWhy">Inserisci la chiave di licenza che hai ricevuto per email al momento dell'acquisto.</div>
-  <label>CHIAVE DI LICENZA<input id="licKey" placeholder="SPIN-XXXXX-XXXXX-XXXXX-XXXXX" autocomplete="off" spellcheck="false" maxlength="40"></label>
-  <div id="licMsg" class="hint"></div>
-  <div class="btns"><button id="licClose" hidden>Chiudi</button><button id="licGo" class="primary">REGISTRA</button></div>
-  <div class="hint">Serve una connessione a internet solo per la registrazione e, ogni tanto, per rinnovarla. La chiave funziona su un numero limitato di computer.</div>
-</dialog>
-
 <dialog id="aboutDlg">
   <div class="ab-arc l"></div><div class="ab-arc r"></div>
   <div class="ab-card">
@@ -179,21 +168,22 @@
     <div class="ab-by">Developed by Vinz Trombetta</div>
     <div class="ab-cols">
     <div class="ab-col">
-    <div class="ab-sec"><span>LICENZA</span></div>
-    <div id="abLic" class="ab-note">—</div>
-    <div class="ab-upd"><button id="abLicBtn" class="ab-small">REGISTRA</button><button id="abLicOff" class="ab-small" hidden>DISATTIVA SU QUESTO COMPUTER</button></div>
+    <div class="ab-sec"><span>SOFTWARE LIBERO</span></div>
+    <div class="ab-note">SpinLab DJ è software libero e gratuito, distribuito con licenza <b>GNU GPL 3.0</b> (o successiva): puoi usarlo, studiarlo, modificarlo e ridistribuirlo. Il codice sorgente è su <a href="https://github.com/muttleysat/SpinLab" data-ext>GitHub</a>.</div>
+    <div class="ab-sec"><span>SOSTIENI SPINLAB</span></div>
+    <div class="ab-note">Se SpinLab ti è utile puoi offrire una donazione libera: aiuta a farlo crescere.</div>
+    <a class="ab-paypal" href="https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ" data-ext title="Dona con PayPal (si apre nel browser)" aria-label="Dona con PayPal">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="#ffffff" d="M7.1 21.3H3.6a.5.5 0 0 1-.5-.6L5.7 3.4c.1-.5.5-.8 1-.8h6.5c3.3 0 5.5 1.7 4.9 5-.7 3.9-3.3 5.5-6.9 5.5H9.3c-.5 0-.9.3-1 .8z"/><path fill="#9fd7ff" d="M18.9 7.8c-.8 4.5-3.8 6.3-7.8 6.3h-1.1c-.4 0-.7.3-.8.7l-1 6.1c0 .3.2.5.5.5h3c.4 0 .7-.3.8-.7l.6-3.6c.1-.4.4-.7.8-.7h.6c3.3 0 5.8-1.3 6.5-5.2.3-1.6.1-2.8-.6-3.6z"/></svg>
+      <span>Dona con <b>Pay</b><i>Pal</i></span></a>
     <div class="ab-sec"><span>VERSIONE</span></div>
-    <div class="ab-ver">Versione <span id="aboutVer">0.1.0</span></div>
-    <div class="ab-upd"><button id="abUpd" class="ab-small">CONTROLLA AGGIORNAMENTI</button>
-      <div id="abUpdMsg" class="ab-note"></div>
-      <label class="ab-auto"><input type="checkbox" id="abAuto" checked> Controlla automaticamente all'avvio</label></div>
+    <div class="ab-ver">Versione <span id="aboutVer">0.2.0</span></div>
     </div>
     <div class="ab-col">
     <div class="ab-sec"><span>MOTORE AUDIO</span></div>
     <img class="ab-asio" src="assets/asio-logo-white.png" alt="ASIO Compatible">
     <div class="ab-note">ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.</div>
     <div class="ab-sec"><span>VIDEO E FORMATI</span></div>
-    <div class="ab-note">Questo programma usa <b>FFmpeg</b> (<a href="https://ffmpeg.org" target="_blank" rel="noopener">ffmpeg.org</a>), con licenza GNU LGPL (2.1 o successiva; LGPL 3 nella versione per Windows), come programma separato che puoi sostituire. I testi delle licenze, la versione e i sorgenti sono nella cartella «licenses» dell'installazione (FFMPEG-LICENSE.txt, FFMPEG-BUILD.txt e la cartella ffmpeg). FFmpeg è un marchio dei suoi autori; SpinLab non è approvato dal progetto FFmpeg.</div>
+    <div class="ab-note">Questo programma usa <b>FFmpeg</b> (<a href="https://ffmpeg.org" data-ext>ffmpeg.org</a>), con licenza GNU LGPL (2.1 o successiva; LGPL 3 nella versione per Windows), come programma separato che puoi sostituire. I testi delle licenze, la versione e i sorgenti sono nella cartella «licenses» dell'installazione (FFMPEG-LICENSE.txt, FFMPEG-BUILD.txt e la cartella ffmpeg). FFmpeg è un marchio dei suoi autori; SpinLab non è approvato dal progetto FFmpeg.</div>
     </div>
     <div class="ab-col">
     <div class="ab-sec"><span>SEPARAZIONE STEM</span></div>
@@ -220,6 +210,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.</pre></details>
+    <div class="ab-sec"><span>GRIGLIA DEI BATTITI</span></div>
+    <div class="ab-note">Adattamento della griglia e uso di Beat This! derivati da <a href="https://github.com/openwave-studio/opendj" data-ext>openDJ</a> (GPL-2.0 o successiva). Rete dei battiti Beat This! (JKU Linz, licenza MIT).</div>
     <div class="ab-note">Elenco completo delle licenze di terze parti: cartella «licenses» del programma.</div>
     </div>
     </div>

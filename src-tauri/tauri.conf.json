@@ -42,16 +42,5 @@
       "icons/128x128.png",
       "icons/icon.ico"
     ]
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERDN0Q2MTZFNzQ3N0RFNUMKUldSYzNuZDBibUY5M0RESFNydWJsOVRsRkprUzE0Z29tVXRVZWpqSWZFWThnOTJIMzlkR3FXMkkK",
-      "endpoints": [
-        "https://www.djtrombetta.it/server/updates/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
   }
 }

@@ -1,3 +1,6 @@
+//! Derivato da openDJ (https://github.com/openwave-studio/opendj, crates/engine/src/gridfit.rs), Copyright (c) gli autori di openDJ,
+//! GPL-2.0-or-later; adattato per SpinLab (modifiche di Vincenzo Trombetta, 2026) e distribuito sotto GPL-3.0-or-later.
+//!
 //! Adattamento della griglia ai battiti rilevati, con tre modalita' per brano:
 //! - Auto: un solo tempo finche' i battiti non si scostano di piu' di 30 ms per almeno 32 battiti; allora un nuovo tratto;
 //! - Fisso: un solo tempo e una sola fase per tutto il brano (retta robusta sui battiti, tempo arrotondato se possibile);
@@ -41,13 +44,6 @@ impl GridMode {
             1 => GridMode::Fixed,
             2 => GridMode::Flexible,
             _ => GridMode::Auto,
-        }
-    }
-    pub fn id(self) -> u8 {
-        match self {
-            GridMode::Auto => 0,
-            GridMode::Fixed => 1,
-            GridMode::Flexible => 2,
         }
     }
 }

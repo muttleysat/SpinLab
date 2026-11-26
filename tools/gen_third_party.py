@@ -68,6 +68,11 @@ Copyright (c) Microsoft Corporation. Esegue il modello di separazione. https://g
 ONNX Runtime (versione 1.31) e' collegato dentro il programma e include a sua volta altre librerie (protobuf, abseil, Eigen, ...):
 la licenza e gli avvisi di terze parti di Microsoft sono in `licenses/ONNXRUNTIME-LICENSE.txt` e `licenses/ONNXRUNTIME-ThirdPartyNotices.txt`.
 
+### openDJ - GPL-2.0-or-later
+L'adattamento della griglia dei battiti (`gridfit.rs`) e l'uso di Beat This! (`neural.rs`) derivano da openDJ
+(https://github.com/openwave-studio/opendj), Copyright (c) gli autori di openDJ, licenza GPL-2.0-or-later, usati qui sotto GPL-3.0-or-later
+come il resto di SpinLab (file `LICENSE` e `NOTICE`).
+
 ### Modelli
 - Separazione in stem: HT-Demucs (Meta), licenza MIT (vedi sotto, sezione Demucs).
 - Battiti: Beat This! (Institute of Computational Perception, JKU Linz), pesi e codice con licenza MIT; i modelli ONNX vengono da

@@ -4,6 +4,22 @@ Documento interno (non fa parte del manuale per gli utenti). Aggiornato il 29 ot
 
 L'elenco completo delle librerie, con i testi delle licenze, e' in `THIRD-PARTY-LICENSES.md` (si rigenera con `python tools/gen_third_party.py`).
 
+## Modello scelto (26 novembre 2026)
+
+**SpinLab e' software libero, licenza GPL-3.0-or-later, gratuito con donazioni libere** (decisione D-17). Motivo: l'adattamento della griglia
+(`gridfit.rs`) e l'uso di Beat This! (`neural.rs`) derivano da openDJ (GPL-2.0-or-later); con la GPL quelle parti si possono tenere, con
+attribuzione (`NOTICE`, intestazioni dei file, finestra Informazioni). Conseguenze:
+
+- tolti registrazione con chiave, server delle licenze e aggiornamenti automatici; le versioni si pubblicano come Release su GitHub;
+- il codice sorgente va pubblicato (repository pubblico) insieme a ogni installer distribuito;
+- condizioni d'uso e privacy riscritte per il software libero (`docs/legale/`);
+- **ASIO**: l'SDK Steinberg e' disponibile anche sotto GPLv3, compatibile con SpinLab; il marchio «ASIO Compatible» resta soggetto alle regole Steinberg;
+- FFmpeg e LAME (LGPL), librerie MIT/Apache/BSD/MPL: compatibili con la GPL-3.0;
+- restano aperti: brevetti dei codec (AAC, H.264, H.265) e licenza dei pesi di HT-Demucs.
+
+Le sezioni che seguono descrivono la verifica fatta quando era prevista la vendita a sorgente chiuso: restano valide per gli obblighi
+verso i componenti di terze parti.
+
 ## Riepilogo
 
 | Componente | Licenza | Uso commerciale | Stato |

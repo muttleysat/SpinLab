@@ -1,6 +1,5 @@
 {
   "bundle": {
-    "createUpdaterArtifacts": true,
     "resources": {
       "models/htdemucs.onnx": "models/htdemucs.onnx",
       "libs/libmp3lame.dll": "libmp3lame.dll",
@@ -12,7 +11,9 @@
       "models/beat-this/mel_spectrogram.onnx": "models/beat-this/mel_spectrogram.onnx",
       "models/beat-this/beat_this_small.onnx": "models/beat-this/beat_this_small.onnx",
       "libs/ONNXRUNTIME-LICENSE.txt": "licenses/ONNXRUNTIME-LICENSE.txt",
-      "libs/ONNXRUNTIME-ThirdPartyNotices.txt": "licenses/ONNXRUNTIME-ThirdPartyNotices.txt"
+      "libs/ONNXRUNTIME-ThirdPartyNotices.txt": "licenses/ONNXRUNTIME-ThirdPartyNotices.txt",
+      "../LICENSE": "licenses/LICENSE-SpinLab-GPL-3.0.txt",
+      "../NOTICE": "licenses/NOTICE-SpinLab.txt"
     },
     "externalBin": [
       "binaries/ffmpeg"

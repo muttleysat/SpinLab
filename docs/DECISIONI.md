@@ -36,7 +36,7 @@ Collegamenti: [PRD del video](PRD-video.md) (sezione «Gap Management») · [ASD
 | D-14 | Quando e come unire `video-mixing` e `pulse-engine-beatgrid` a `main` | B | Rilascio; possibilità di tornare indietro | Aperta |
 | D-15 | Streaming audio dalle piattaforme: avviare i contatti commerciali? | C | Nulla di tecnico | Aperta |
 | D-16 | Piccole scelte di rifinitura (file di cache, formato predefinito della registrazione) | C | Niente | Aperta |
-| D-17 | Licenze e permessi da ottenere, e modello di distribuzione (vendita o donationware) | A | Vendita; installer firmato | In corso: HEVC richiesta, ASIO in attesa |
+| D-17 | Licenze e modello di distribuzione | A | Distribuzione | **Decisa il 26/11/2026**: software libero GPL-3.0, gratuito, donazioni libere; aperti solo brevetti dei codec e pesi HT-Demucs |
 
 ---
 
@@ -174,11 +174,7 @@ Collegamenti: [PRD del video](PRD-video.md) (sezione «Gap Management») · [ASD
 
 ### D-17 — Licenze e permessi da ottenere, e modello di distribuzione
 
-- **Cosa decidere:** per ciascuna voce del [registro](LICENZE.md#registro-delle-licenze-e-dei-permessi-da-ottenere) chi la segue e entro quando; e il **modello di distribuzione** (vendita sullo store, vendita sul sito, donationware con licenza facoltativa, donationware puro), che cambia le voci 9–11 del registro e il sistema di licenze nel codice.
-- **Stato:** ASIO in attesa; HEVC richiesta; da fare H.264/AAC, accordo con Marco Dufour, marchio, firma del codice (Windows e Apple), parere dell'avvocato; stem da decidere.
-- **Opzioni sul modello:** (A) vendita con licenza (come ora); (B) donationware con licenza facoltativa per i sostenitori; (C) donationware puro (si toglie il blocco di licenza dal codice).
-- **Raccomandazione:** decidere il modello **prima** di spendere su firma, pagamenti e accordi commerciali; le voci 1–6 del registro servono comunque in tutti i casi.
-- **Impatto se si rimanda:** non si sa quali accordi chiudere e il codice della licenza resta com'è.
+**Decisa il 26 novembre 2026** (vedi «Decisioni già prese»): SpinLab è **software libero (GPL-3.0-or-later) e gratuito, con donazioni libere**. Restano aperti solo il parere sui brevetti dei codec (D-10) e la licenza dei pesi di HT-Demucs (`docs/LICENZE.md`).
 
 ---
 
@@ -198,6 +194,7 @@ Collegamenti: [PRD del video](PRD-video.md) (sezione «Gap Management») · [ASD
 
 | Data | Decisione | Motivo | Dove è applicata |
 |------|-----------|--------|------------------|
+| 2026-11-26 | **Software libero (GPL-3.0-or-later) e gratuito, con donazioni libere via PayPal**; tolti registrazione, server delle licenze e aggiornamenti automatici; versioni pubblicate come Release su GitHub | La griglia deriva da openDJ (GPL-2.0-or-later); scelta del responsabile del prodotto | `LICENSE`, `NOTICE`, finestra Informazioni, `docs/legale/` |
 | 2026-11 | Sviluppo del video su un branch separato (`video-mixing`) con `main` intatto | Poter sempre tornare indietro | Flusso di lavoro |
 | 2026-11 | **Solo 2 deck** per il video | Semplicità; il motore ne ha 4 ma il video no | PRD §2, FR-01 |
 | 2026-11 | **Modalità VIDEO automatica**, con pulsante per forzarla | Nessun costo senza video | FR-09 |

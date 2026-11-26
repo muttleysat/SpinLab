@@ -1,0 +1,15 @@
+SpinLab DJ
+Copyright (C) 2026 Vincenzo Trombetta
+
+SpinLab DJ is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed in the hope that it
+will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License (file LICENSE) for more details.
+
+Parts derived from openDJ (https://github.com/openwave-studio/opendj), Copyright (C) the openDJ authors, licensed under GPL-2.0-or-later
+and used here under GPL-3.0-or-later:
+  - src-tauri/src/gridfit.rs   (from crates/engine/src/gridfit.rs: beat grid fitting, Auto / Fixed / Flexible modes)
+  - src-tauri/src/neural.rs    (from crates/engine/src/beatthis.rs: Beat This! refinement of the beat grid)
+Both files were modified for SpinLab in 2026.
+
+Third-party components and their licenses are listed in THIRD-PARTY-LICENSES.md and, in the installed program, in the "licenses" folder.

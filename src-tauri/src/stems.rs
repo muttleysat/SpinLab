@@ -921,7 +921,8 @@ pub fn load(path: &Path) -> Result<Stems, String> {
     Ok(Stems { frames, data })
 }
 
-/// Maschera di bit (1 batteria, 2 basso, 4 altro, 8 voce) come volumi 0/1.
+/// Maschera di bit (1 batteria, 2 basso, 4 altro, 8 voce) come volumi 0/1 (serve alle prove).
+#[cfg(test)]
 pub fn mask_gains(mask: u8) -> [f32; 4] {
     [0, 1, 2, 3].map(|s| if mask & (1 << s) != 0 { 1.0 } else { 0.0 })
 }

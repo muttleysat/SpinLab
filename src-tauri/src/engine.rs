@@ -767,15 +767,6 @@ impl Deck {
             return false;
         }
         match cmd {
-            "shift" => self.grid_base.iter_mut().for_each(|t| *t += a / 1000.0),
-            // mezzo battito avanti (a > 0) o indietro: serve quando i marker cadono sul contrattempo invece che sulla grancassa
-            "half" => {
-                let n = self.grid_base.len();
-                let p = (self.grid_base[n - 1] - self.grid_base[0]) / (n - 1) as f64;
-                let d = if a >= 0.0 { 0.5 * p } else { -0.5 * p };
-                self.grid_base.iter_mut().for_each(|t| *t += d);
-                self.grid_pins.clear();
-            }
             "halve" => {
                 self.grid_base = self.grid_base.iter().step_by(2).copied().collect();
                 self.grid_down = (self.grid_down / 2) % 4;
@@ -794,15 +785,6 @@ impl Deck {
                 self.grid_bpm *= 2.0;
                 self.grid_pins.clear();
             }
-            // il battito piu' vicino al punto di ascolto diventa il primo della battuta
-            "downbeat_here" => {
-                let t = self.pos_sec();
-                let i = self.grid_base.partition_point(|&b| b <= t).saturating_sub(1);
-                let j = if i + 1 < self.grid_base.len() && (self.grid_base[i + 1] - t).abs() < (t - self.grid_base[i]).abs() { i + 1 } else { i };
-                self.grid_down = j % 4;
-            }
-            "bar_shift" => self.grid_down = (self.grid_down as i64 + a as i64).rem_euclid(4) as usize,
-            "fixed" => self.grid_mode = if a > 0.5 { 1 } else { 0 },
             "mode" => self.grid_mode = (a as i64).clamp(0, 2) as u8,
             "reset" => {
                 self.grid_base = self.grid_orig.0.clone();
@@ -2083,36 +2065,26 @@ mod tests {
         t.bpm = 120.0;
         t.downbeat = 1;
         d.load(Arc::new(t));
-        assert!(d.grid_cmd("shift", 10.0));
-        assert!((d.track.as_ref().unwrap().beats[0] - 0.114).abs() < 1e-9);
-        // mezzo battito (a 120 bpm: 0,25 s) avanti e poi indietro
-        assert!(d.grid_cmd("half", 1.0));
-        assert!((d.track.as_ref().unwrap().beats[0] - 0.364).abs() < 1e-3, "{}", d.track.as_ref().unwrap().beats[0]);
-        assert!(d.grid_cmd("half", -1.0));
-        assert!((d.track.as_ref().unwrap().beats[0] - 0.114).abs() < 1e-9);
         d.grid_cmd("double", 0.0);
         let t = d.track.as_ref().unwrap();
         assert_eq!(t.beats.len(), 99);
         assert!((t.bpm - 240.0).abs() < 1e-9);
         d.grid_cmd("halve", 0.0);
         assert_eq!(d.track.as_ref().unwrap().beats.len(), 50);
-        // griglia fissa: intervalli perfettamente uguali, bpm 120
-        d.grid_cmd("fixed", 1.0);
+        // griglia FISSA: intervalli perfettamente uguali, bpm 120
+        d.grid_cmd("mode", 1.0);
         let t = d.track.as_ref().unwrap();
         let iv: Vec<f64> = t.beats.windows(2).map(|w| w[1] - w[0]).collect();
         assert!(iv.iter().all(|v| (v - iv[0]).abs() < 1e-9), "intervalli non uniformi");
         assert!((t.bpm - 120.0).abs() < 0.01, "bpm {}", t.bpm);
-        // la battuta riparte dal battito piu' vicino al punto di ascolto (qui 5.0 s ~ battito 10)
-        d.set_pos_sec(5.1);
-        d.grid_cmd("downbeat_here", 0.0);
-        assert_eq!(d.track.as_ref().unwrap().downbeat, 10 % 4);
-        d.grid_cmd("fixed", 0.0);
+        d.grid_cmd("mode", 0.0);
         // ancora: il battito piu' vicino alla testina va esattamente sulla testina, i vincoli gia' dati restano
-        let before: Vec<f64> = d.track.as_ref().unwrap().beats.clone();
+        // l'ancora agisce sulla base della griglia (i battiti prima dell'adattamento di gridfit): si verifica li'
+        let before: Vec<f64> = d.grid_base.clone();
         let j = (0..before.len()).min_by(|&a, &b| (before[a] - 10.43).abs().partial_cmp(&(before[b] - 10.43).abs()).unwrap()).unwrap();
         d.set_pos_sec(10.43);
         assert!(d.grid_cmd("anchor_here", 0.0));
-        let b = &d.track.as_ref().unwrap().beats;
+        let b = &d.grid_base;
         assert!((b[j] - 10.43).abs() < 1e-9, "ancora {}", b[j]);
         assert!((b[0] - before[0]).abs() < 1e-9 && (b[j - 4] - before[j - 4]).abs() < 1e-9);
         assert!((b[j + 10] - before[j + 10] - (10.43 - before[j])).abs() < 1e-9);
@@ -2989,8 +2961,9 @@ mod tests {
         let mut d = Deck::new(sr, 0);
         // griglia a 120 bpm con piccole irregolarita' come in un brano suonato dal vivo
         let beats: Vec<f64> = (0..238).map(|k| k as f64 * 0.5 + 0.006 * (k as f64 * 1.7).sin()).collect();
-        let b2 = beats.clone();
         d.load(Arc::new(Track { name: "g".into(), path: String::new(), data: Arc::new(tone(sr, 120.0, 220.0)), sr, beats, bpm: 120.0, key: None, downbeat: 0 }));
+        // il deck adatta la griglia ai battiti rilevati (gridfit, modo AUTO): i loop vanno confrontati con la griglia adattata
+        let b2 = d.track.as_ref().unwrap().beats.clone();
         d.playing = false;
         d.quantize = true;
         for (n, len) in [(4usize, 4.0f64), (2, 2.0), (1, 1.0), (8, 8.0), (16, 16.0)] {

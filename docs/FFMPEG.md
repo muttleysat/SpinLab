@@ -35,12 +35,12 @@ Scelta della LGPL: obblighi leggeri (sotto) e nessun obbligo di pubblicare il co
 | Obbligo | Come lo soddisfiamo |
 |---------|---------------------|
 | Includere il testo della licenza | `licenses/FFMPEG-LICENSE.txt` (quella della build: LGPL 2.1 su macOS, LGPL 3 su Windows) e tutti i testi in `licenses/ffmpeg/`, copiati dai sorgenti ufficiali dallo script (non scritti a mano) |
-| Avviso che si usa FFmpeg | Scheda **Informazioni** del programma, `THIRD-PARTY-LICENSES.md`, EULA §6.3 |
+| Avviso che si usa FFmpeg | Scheda **Informazioni** del programma, `THIRD-PARTY-LICENSES.md`, condizioni d'uso §5 (`docs/legale/EULA.md`) |
 | Fornire i sorgenti della versione distribuita (o un'offerta scritta) | `licenses/FFMPEG-BUILD.txt` (versione, origine, impronte, configurazione); i sorgenti sono su ffmpeg.org/releases. **Indirizzo per richiedere i sorgenti su altro supporto: `[TO BE DEFINED]`** |
 | Permettere di sostituire la libreria | FFmpeg è un file separato accanto al programma: si può sostituire con una versione compatibile |
 | (LGPL 3) Includere anche il testo della GPL 3, a cui la LGPL 3 rimanda | `licenses/ffmpeg/COPYING.GPLv3`, preso dai sorgenti ufficiali |
-| Non vietare modifica e reverse engineering per la parte LGPL | EULA art. 4 (eccezione per i componenti con licenza libera) e art. 6.3 |
-| Non usare il nome come approvazione | La scheda Informazioni e l'EULA precisano che SpinLab non è approvato dal progetto FFmpeg |
+| Non vietare modifica e reverse engineering per la parte LGPL | SpinLab e' software libero (GPL-3.0): modifica e studio sono permessi per tutto il programma |
+| Non usare il nome come approvazione | La scheda Informazioni non presenta SpinLab come approvato dal progetto FFmpeg |
 
 ## Preparare e aggiornare FFmpeg per l'installer
 

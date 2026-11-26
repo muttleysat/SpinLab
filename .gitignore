@@ -15,17 +15,6 @@ asiosdk*
 src-tauri/models/
 .DS_Store
 
-# server licenze: configurazione con password e chiave privata
-server/inc/config.php
-*license-private*
-
-# aggiornamenti pronti da caricare sull'hosting (file grandi, si generano)
-server/updates/*.exe
-server/updates/*.msi
-server/updates/*.sig
-server/updates/*.tar.gz
-server/updates/*.dmg
-server/updates/latest.json
 
 # impostazioni locali dell'editor
 .vscode/

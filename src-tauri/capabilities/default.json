@@ -13,6 +13,6 @@
   "permissions": [
     "core:default",
     "dialog:default",
-    "updater:default"
+    "opener:default"
   ]
 }

@@ -28,6 +28,7 @@ impl Format {
             _ => Format::Wav16,
         }
     }
+    #[cfg(test)]
     pub fn ext(&self) -> &'static str {
         match self {
             Format::Mp3(_) => "mp3",

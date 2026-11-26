@@ -2,11 +2,15 @@
 
 <img src="ui/assets/asio-logo-bw.png" alt="ASIO Compatible - ASIO is a registered trademark of Steinberg Media Technologies GmbH" width="110" align="right">
 
-Programma per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, **uscita video** per schermi e proiettori (con transizioni, visualizzazioni e registrazione del set in MP4), registrazione del master, **skin** e colori a scelta e supporto per qualsiasi controller MIDI. Per Windows e macOS.
+**Software libero e gratuito** (licenza GNU GPL 3.0) per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, **uscita video** per schermi e proiettori (con transizioni, visualizzazioni e registrazione del set in MP4), registrazione del master, **skin** e colori a scelta e supporto per qualsiasi controller MIDI. Per Windows e macOS.
 
 **Versione attuale: 0.2.0** per Windows e macOS (Apple Silicon) — scarica dalle [Release](https://github.com/muttleysat/SpinLab/releases); le novità sono in [CHANGELOG.md](CHANGELOG.md).
 
-L'installer contiene già tutto (modello degli stem, modelli dei battiti, FFmpeg): dopo l'installazione non viene scaricato niente e il programma funziona senza internet.
+L'installer contiene già tutto (modello degli stem, modelli dei battiti, FFmpeg): dopo l'installazione non viene scaricato niente e il programma funziona senza internet. Non serve nessuna registrazione.
+
+## Sostieni SpinLab
+
+SpinLab è gratuito. Se ti è utile puoi offrire una **donazione libera** con [PayPal](https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ) (anche dal pulsante nella finestra Informazioni del programma).
 
 ## Cosa sa fare
 
@@ -80,7 +84,6 @@ L'installer contiene già tutto (modello degli stem, modelli dei battiti, FFmpeg
 
 ### Altro
 - Guida completa dentro il programma (pulsante **?**), anche senza internet.
-- Aggiornamenti automatici (Windows).
 
 ## Documentazione
 
@@ -118,3 +121,11 @@ cargo tauri build      # per creare l'installer
 Dettagli per chi sviluppa in `docs/SVILUPPO.md`.
 
 ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.
+
+## Licenza
+
+SpinLab DJ è software libero: puoi usarlo, studiarlo, modificarlo e ridistribuirlo secondo i termini della **GNU General Public License,
+versione 3 o successiva** (file [LICENSE](LICENSE)). È distribuito senza alcuna garanzia. Alcune parti della griglia dei battiti derivano da
+[openDJ](https://github.com/openwave-studio/opendj) (GPL-2.0 o successiva): vedi [NOTICE](NOTICE). Le licenze dei componenti di terze parti
+sono in [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
+

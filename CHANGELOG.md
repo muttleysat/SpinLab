@@ -4,6 +4,11 @@
 
 Rispetto alla 0.1.1 (31 ottobre 2026, la versione di prova dell'aggiornamento automatico). Prima versione anche per **macOS** (Apple Silicon).
 
+### Software libero e gratuito
+- SpinLab diventa **software libero** con licenza **GNU GPL 3.0 o successiva** e **gratuito**, con **donazioni libere** tramite PayPal (pulsante nella finestra Informazioni).
+- Tolti la registrazione con chiave di licenza, il server delle licenze e gli aggiornamenti automatici: le nuove versioni si scaricano dalle Release su GitHub.
+- Crediti a openDJ, da cui derivano l'adattamento della griglia e l'uso di Beat This!.
+
 ### Video
 - **Video sui due deck**, a tempo con la musica: si caricano, si fermano, si spostano e si scratchano come un brano; griglia, BPM, tonalità e stem funzionano sul loro audio.
 - **Uscita su finestra o su schermo esterno / proiettore**, con collegamento e scollegamento dello schermo a caldo.
@@ -45,7 +50,7 @@ Rispetto alla 0.1.1 (31 ottobre 2026, la versione di prova dell'aggiornamento au
 - Coda salvata fra una sessione e l'altra, riordino e aggiunta dei brani trascinandoli; il pulsante Avvia non perde più i clic.
 
 ### Documentazione
-- Manuale aggiornato (video, griglia, skin, ultrawide), documento tecnico del video, registro delle decisioni e delle licenze, bozze di EULA e informativa sulla privacy, istruzioni per la prova su Windows.
+- Manuale aggiornato (video, griglia, skin, ultrawide), documento tecnico del video, registro delle decisioni e delle licenze, condizioni d'uso e informativa sulla privacy per il software libero, istruzioni per la prova su Windows.
 
 ## 0.1.1 — 31 ottobre 2026
 

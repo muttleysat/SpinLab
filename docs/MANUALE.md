@@ -19,7 +19,7 @@ All'avvio compare la schermata di SpinLab con una barra di avanzamento: sparisce
 
 ## La schermata
 
-- **Barra in alto.** Navigazione (**LIBRARY**, **MIXER**, **RECORD**, **SETTINGS**), indicatore **REC** quando registri, carico del processore (**CPU**), orologio, comandi delle cuffie (pulsanti 1 e 2, **CUE MIX**, **PHONES**) e volume **MASTER**. A destra del volume ci sono la **i** (informazioni su SpinLab, versione e crediti) e il **?** (questa guida).
+- **Barra in alto.** Navigazione (**LIBRARY**, **MIXER**, **RECORD**, **SETTINGS**), indicatore **REC** quando registri, carico del processore (**CPU**), orologio, comandi delle cuffie (pulsanti 1 e 2, **CUE MIX**, **PHONES**) e volume **MASTER**. A destra del volume ci sono la **i** (informazioni su SpinLab: licenza, versione, crediti e il pulsante **Dona con PayPal**) e il **?** (questa guida).
 - **Centro.** I due deck con le waveform e, in mezzo, il mixer a due canali con il crossfader.
 - **In basso a sinistra.** Esplora cartelle e playlist.
 - **In basso al centro.** La libreria: ricerca, tabella dei brani, scheda **TAG & INFO**.
@@ -488,7 +488,14 @@ Leggi il messaggio sotto «Applica». Cause frequenti: un altro programma tiene 
 
 ---
 
-## Crediti
+## Licenza, donazioni e crediti
+
+SpinLab DJ è **software libero e gratuito**: puoi usarlo, studiarlo, modificarlo e ridistribuirlo secondo la licenza **GNU GPL 3.0 o successiva**. Non serve nessuna registrazione e il programma non si collega a internet. Il codice sorgente e le nuove versioni sono su GitHub (https://github.com/muttleysat/SpinLab).
+
+Se SpinLab ti è utile puoi sostenerlo con una **donazione libera**: pulsante **Dona con PayPal** nella finestra Informazioni (la **i** in alto a destra), che apre PayPal nel browser.
+
+L'adattamento della griglia dei battiti deriva da openDJ (GPL-2.0 o successiva). I componenti di terze parti (FFmpeg, ONNX Runtime, HT-Demucs, Beat This! e le librerie del motore) e le loro licenze sono elencati nella cartella «licenses» del programma.
+
 
 ASIO is a trademark of Steinberg Media Technologies GmbH, registered in Europe and other countries.
 

@@ -18,40 +18,24 @@ I dati dell'utente (impostazioni, libreria, mappatura MIDI, modello degli stem) 
 
 **«Accesso negato (os error 5)» compilando.** Il programma è ancora aperto e Windows non lo lascia sostituire. Chiudi SpinLab (e le copie rimaste nel Gestore attività).
 
-## Creare l'installer e pubblicare un aggiornamento
+## Creare gli installer e pubblicare una versione
 
-Prima volta sul PC: `python tools/fetch_model.py` (mette il modello degli stem in `src-tauri/models`, da dove l'installer lo include).
+SpinLab e' software libero (GPL-3.0-or-later) e gratuito: non ci sono registrazione, server delle licenze ne' aggiornamenti automatici. Ogni
+versione si pubblica come **Release su GitHub** con gli installer allegati; chi la vuole la scarica e la installa sopra la precedente.
+
+Prima volta sul computer: `python tools/fetch_model.py` (mette in `src-tauri/models` il modello degli stem e i due modelli dei battiti, da
+dove l'installer li include: il programma installato non scarica niente) e `python tools/fetch_ffmpeg.py` (FFmpeg LGPL, vedi `docs/FFMPEG.md`).
 La DLL dell'encoder MP3 e' gia' in `src-tauri/libs` (si ricostruisce con `tools/build_lame_dll.py`).
 
 Per ogni versione:
 
-1. Cambia il numero di versione in `src-tauri/tauri.conf.json` e in `src-tauri/Cargo.toml`.
+1. Cambia il numero di versione in `src-tauri/tauri.conf.json` e in `src-tauri/Cargo.toml`, e aggiungi le novita' in `CHANGELOG.md`.
 2. Se sono cambiate le dipendenze: `python tools/gen_third_party.py` (aggiorna `THIRD-PARTY-LICENSES.md`, che finisce nell'installer).
-3. Imposta la chiave di firma (vedi sotto) e crea l'installer: dalla cartella `src-tauri`
-   ```
-   set TAURI_SIGNING_PRIVATE_KEY=C:\percorso\della\chiave.key
-   cargo tauri build --config tauri.release.conf.json
-   ```
-   Risultato in `src-tauri/target/release/bundle/` (`nsis` e `msi`). Con `tauri.release.conf.json` l'installer include modello, DLL e licenze e crea i file firmati degli aggiornamenti.
-4. Crea il file che descrive la versione: `python tools/make_update_manifest.py 0.2.0 "Cosa c'e' di nuovo"`. Scrive `latest.json` e copia anche l'installer in `server/updates/` (ignorata da git).
-5. Carica via FTP il contenuto di `server/updates/` nella cartella `updates` dell'hosting (`https://www.djtrombetta.it/server/updates/`): **prima l'installer, poi `latest.json`**, cosi' nessun programma vede la nuova versione prima che il file sia scaricabile. Il programma controlla l'indirizzo scritto in `src-tauri/tauri.conf.json` (`plugins.updater.endpoints`). Con la versione 0.1.0 non esiste ancora nessun `latest.json`: il controllo risponde «gia' aggiornato» o un errore di rete finche' non pubblichi la prima release.
-
-### Chiave di firma degli aggiornamenti
-
-Gli aggiornamenti sono firmati: il programma accetta solo file firmati con la chiave giusta (la **pubblica** e' dentro il programma, in `plugins.updater.pubkey` di `tauri.conf.json`; la **privata** firma gli installer).
-
-- **Chiave di produzione:** `%USERPROFILE%\.tauri\spinlab.key` (+ `.pub`), creata con `cargo tauri signer generate -w %USERPROFILE%\.tauri\spinlab.key`, **protetta da password**. E' quella che sta nel programma. Copia di sicurezza della chiave e della password fuori dal PC: se le perdi, i programmi gia' installati non potranno piu' ricevere aggiornamenti (andrebbero reinstallati a mano). Non cambiarla dopo la prima distribuzione. Non va mai nel repository.
-- **Chiave di sviluppo** (`spinlab-dev-updater.key`, senza password): non e' piu' nel programma e non serve piu'; chiunque la possieda firma solo per le vecchie build di prova. Un'installazione fatta prima del 31/10/2026 porta ancora la vecchia pubblica e va reinstallata una volta.
-- **Per creare l'installer firmato** (la password si scrive nel terminale, non va salvata in file):
-
-```
-$env:TAURI_SIGNING_PRIVATE_KEY = "C:\Users\Vincenzo\.tauri\spinlab.key"
-$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = Read-Host "Password della chiave"
-cd src-tauri
-cargo tauri build --config tauri.release.conf.json
-```
-
-L'indirizzo degli aggiornamenti e' la cartella `updates` dell'hosting Aruba (`https://www.djtrombetta.it/server/updates/latest.json`), la stessa del server delle licenze: non dipende da GitHub. Installer da circa 140 MB per ogni cliente a ogni aggiornamento: controlla spazio e traffico del piano. Se pesa troppo, l'installer puo' stare altrove (basta cambiare l'`url` dentro `latest.json`) e `latest.json` resta sull'hosting.
+3. Crea gli installer:
+   - **Windows**, dalla cartella `src-tauri`: `cargo tauri build --config tauri.release.conf.json` → `target/release/bundle/nsis` (e `msi`).
+   - **macOS**: `zsh tools/build_mac.sh` → `src-tauri/target/release/bundle/dmg/SpinLab_<versione>_aarch64.dmg` (con lo SHA-256).
+   Con `tauri.release.conf.json` l'installer include modelli, FFmpeg, DLL e licenze.
+4. Su GitHub: **Releases → Draft a new release**, tag `v<versione>`, descrizione (modello in `docs/release/`), allega gli installer, **Publish**.
 
 ## Icone
 

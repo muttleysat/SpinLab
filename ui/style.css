@@ -450,13 +450,6 @@ dialog .hint a { color: var(--accent); }
 .ab-arc.l { left: -3%; background: conic-gradient(from 90deg, transparent 0 14%, var(--accent) 28% 44%, transparent 58%); filter: drop-shadow(0 0 6px var(--accent)); }
 .ab-arc.r { right: -3%; background: conic-gradient(from 270deg, transparent 0 14%, #ffa51f 28% 44%, transparent 58%); filter: drop-shadow(0 0 6px #ffa51f); }
 
-.ab-upd { margin-top: 14px; display: grid; gap: 6px; justify-items: center; }
-.ab-small { padding: 6px 16px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--accent) 70%, #000); background: transparent; color: color-mix(in srgb, var(--accent) 65%, #fff); letter-spacing: .14em; font-size: 11px; cursor: pointer; }
-.ab-small:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); } .ab-small:disabled { opacity: .5; cursor: default; }
-.ab-auto { display: flex; gap: 6px; align-items: center; margin: 2px 0 0; font-size: 10px; color: #7f93b3; letter-spacing: 0; }
-#updBanner { position: fixed; right: 18px; bottom: 18px; z-index: 900; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px;
-  background: #0d1828; border: 1px solid color-mix(in srgb, var(--accent) 70%, #000); box-shadow: 0 8px 30px #000a; font-size: 13px; }
-#updBanner[hidden] { display: none; } #updBanner button { padding: 4px 10px; font-size: 12px; }
 
 /* AUTOMIX */
 #pn-automix.on { gap: 8px; overflow-y: auto; }
@@ -479,9 +472,6 @@ dialog .hint a { color: var(--accent); }
 .amq i { font-style: normal; flex: none; cursor: pointer; color: var(--dim); font-size: 12px; padding: 4px 7px; border-radius: 4px; } .amq i:hover { color: #fff; background: #1a2a42; } .amq i[data-act=del]:hover { background: #4a1a20; }
 .amh u { cursor: pointer; color: var(--accent); margin-left: 6px; letter-spacing: 0; text-decoration: underline; }
 
-/* registrazione */
-#licDlg input { padding: 9px 10px; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; }
-#licMsg.err { color: #ff8a96; } #licMsg.ok { color: #7df0b6; }
 
 /* ---------------------------------------------------------------- Cockpit: telefono Android in orizzontale (docs/specifiche-android-cockpit.md) */
 .lib-handle, #radial { display: none; }
@@ -1399,3 +1389,12 @@ body.skin-retro :is(.deck, #mixer) .hcgrid button.set {
   box-shadow: inset 0 2px 4px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.6), 0 0 0 1px color-mix(in srgb, var(--sl-purple-bright) 35%, transparent); transform: translateY(1px); }
 body.skin-retro #rpanel :is(#tgt button.on, .presets button.on, .stcol .ms button.on), body.skin-retro #top .hpb button.on {
   color: color-mix(in srgb, var(--sl-purple-bright) 70%, #fff); text-shadow: 0 0 6px color-mix(in srgb, var(--sl-purple-bright) 60%, transparent); }
+
+/* Informazioni: pulsante delle donazioni (PayPal, si apre nel browser) */
+.ab-paypal { display: inline-flex; align-items: center; gap: 9px; margin: 10px auto 2px; padding: 9px 20px; border-radius: 22px; text-decoration: none;
+  background: linear-gradient(180deg, #0a79c9, #00457c); color: #fff; font-size: 14px; border: 1px solid #3aa0ec; box-shadow: 0 4px 12px rgba(0,80,160,.45); }
+.ab-paypal b { color: #fff; font-weight: 800; font-style: italic; } .ab-paypal i { color: #9fd7ff; font-weight: 800; }
+.ab-paypal:hover { filter: brightness(1.12); box-shadow: 0 0 16px rgba(58,160,236,.6); }
+/* Informazioni: link leggibili sul fondo scuro (nel colore chiaro del tema) */
+.ab-card a:not(.ab-paypal) { color: var(--sl-purple-highlight); text-decoration: underline; text-underline-offset: 2px; }
+.ab-card a:not(.ab-paypal):hover { color: #fff; }
