@@ -1589,7 +1589,23 @@ document.addEventListener("keydown", (e) => {
   removeFromPlaylist([...lib.sel]);
 });
 
+/* riquadro del brano selezionato (vista LIBRARY, sotto le sezioni del pannello di destra) */
+function showTrackInfo() {
+  const box = $("#libInfo"); if (!box) return;
+  const t = lib.sel.size === 1 ? trackById([...lib.sel][0]) : null;
+  if (!t) { box.innerHTML = `<div class="li-empty">${lib.sel.size > 1 ? `${lib.sel.size} brani selezionati` : "Seleziona un brano nella libreria"}</div>`; box.dataset.path = ""; return; }
+  const row = (k, v) => (v || v === 0 ? `<dt>${k}</dt><dd>${v}</dd>` : "");
+  const file = (t.path || "").split(/[\\/]/).pop(), ext = (file.match(/\.([^.]+)$/) || [])[1];
+  box.dataset.path = t.path;
+  box.innerHTML = `<div class="li-head"><span class="li-cov"></span><div class="li-tt"><b>${esc(t.title || file)}</b><span>${esc(t.artist || "")}</span></div></div>
+    <dl>${row("BPM", t.bpm ? (+t.bpm).toFixed(1) : "")}${row("Tonalità", t.key ? `<span style="color:${camelotColor(t.key)}">${esc(t.key)}</span>` : "")}${row("Durata", t.duration ? fmt(t.duration) : "")}
+    ${row("Album", esc(t.album || ""))}${row("Genere", esc(t.genre || ""))}${row("Tag", esc(t.tags || ""))}${row("Valutazione", t.rating ? stars(t.rating) : "")}
+    ${row("Analisi", t.analyzed ? "fatta" : "non ancora")}${row("Formato", ext ? esc(ext.toUpperCase()) : "")}${row("Commento", esc(t.comment || ""))}</dl>
+    <div class="li-path" title="${esc(t.path)}">${esc(t.path)}</div>`;
+  getArt(t.path, 160).then((a) => { if (a && box.dataset.path === t.path) { const c = $(".li-cov", box); if (c) c.style.backgroundImage = `url(${a})`; } });
+}
 function showInspector() {
+  showTrackInfo();
   const form = $("#insp"), t = lib.sel.size === 1 ? trackById([...lib.sel][0]) : null;
   form.hidden = !t; $("#insp-empty").hidden = !!t || false;
   $("#insp-empty").textContent = lib.sel.size > 1 ? `${lib.sel.size} brani selezionati` : "Seleziona un brano";
