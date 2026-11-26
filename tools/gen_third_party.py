@@ -65,6 +65,13 @@ SOFTWARE.
 
 ### ONNX Runtime - MIT
 Copyright (c) Microsoft Corporation. Esegue il modello di separazione. https://github.com/microsoft/onnxruntime
+ONNX Runtime (versione 1.31) e' collegato dentro il programma e include a sua volta altre librerie (protobuf, abseil, Eigen, ...):
+la licenza e gli avvisi di terze parti di Microsoft sono in `licenses/ONNXRUNTIME-LICENSE.txt` e `licenses/ONNXRUNTIME-ThirdPartyNotices.txt`.
+
+### Modelli
+- Separazione in stem: HT-Demucs (Meta), licenza MIT (vedi sotto, sezione Demucs).
+- Battiti: Beat This! (Institute of Computational Perception, JKU Linz), pesi e codice con licenza MIT; i modelli ONNX vengono da
+  beat-this-rs (https://github.com/danigb/beat-this-rs, MIT). I testi sono nella sezione della libreria `beat-this`.
 
 ### DirectML - Microsoft
 `DirectML.dll` (accelerazione su GPU) e' redistribuibile secondo i termini Microsoft: https://learn.microsoft.com/windows/ai/directml

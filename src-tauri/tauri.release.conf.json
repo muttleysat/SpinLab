@@ -10,7 +10,9 @@
       "binaries/licenses/FFMPEG-BUILD.txt": "licenses/FFMPEG-BUILD.txt",
       "binaries/licenses/ffmpeg": "licenses/ffmpeg",
       "models/beat-this/mel_spectrogram.onnx": "models/beat-this/mel_spectrogram.onnx",
-      "models/beat-this/beat_this_small.onnx": "models/beat-this/beat_this_small.onnx"
+      "models/beat-this/beat_this_small.onnx": "models/beat-this/beat_this_small.onnx",
+      "libs/ONNXRUNTIME-LICENSE.txt": "licenses/ONNXRUNTIME-LICENSE.txt",
+      "libs/ONNXRUNTIME-ThirdPartyNotices.txt": "licenses/ONNXRUNTIME-ThirdPartyNotices.txt"
     },
     "externalBin": [
       "binaries/ffmpeg"

@@ -8,17 +8,38 @@ L'elenco completo delle librerie, con i testi delle licenze, e' in `THIRD-PARTY-
 
 | Componente | Licenza | Uso commerciale | Stato |
 |---|---|---|---|
-| 408 librerie Rust (Tauri, cpal, rustfft, rusqlite, ort...) | MIT / Apache-2.0 / BSD / ISC / Zlib / Unlicense / CC0 / Unicode | si, con l'obbligo di riportare i testi | fatto: `THIRD-PARTY-LICENSES.md` nell'installer |
+| 468 librerie Rust (Tauri, cpal, rustfft, rusqlite, ort, rten, beat-this, signalsmith-stretch...) | MIT / Apache-2.0 / BSD / ISC / Zlib / Unlicense / CC0 / Unicode | si, con l'obbligo di riportare i testi | fatto: `THIRD-PARTY-LICENSES.md` nell'installer |
 | 21 librerie MPL-2.0 (Symphonia, cssparser, selectors...) | MPL-2.0 (copyleft **solo sui singoli file**) | si, se non si modificano; chi le modifica deve pubblicare le modifiche a quei file | ok: non modifichiamo nessuna di queste librerie |
 | LAME (encoder MP3) | **LGPL** | si, a condizione che l'utente possa sostituire la libreria | **corretto**: era legata dentro l'eseguibile, ora e' una DLL separata (`libmp3lame.dll`), caricata a richiesta |
 | FFmpeg | **LGPL** (2.1 o successiva per la build macOS; **LGPL 3** per la build Windows di BtbN, compilata con `--enable-version3`); solo build senza componenti GPL ne' non liberi | si, a condizione di testo della licenza, avviso, sorgenti e possibilita' di sostituirlo | **incluso nell'installer** come programma separato (sidecar); vedi `docs/FFMPEG.md` |
-| ONNX Runtime | MIT | si | ok |
+| ONNX Runtime (1.31, collegato dentro il programma) | MIT, piu' gli avvisi delle librerie che contiene (protobuf, abseil, Eigen...) | si | fatto (26/11/2026): `licenses/ONNXRUNTIME-LICENSE.txt` e `licenses/ONNXRUNTIME-ThirdPartyNotices.txt` nell'installer |
+| Beat This! (rete dei battiti: crate `beat-this` e pesi) | MIT (JKU Linz; port in Rust di danigb) | si | fatto: testi in `THIRD-PARTY-LICENSES.md`, modelli inclusi nell'installer (niente download) |
+| signalsmith-stretch (time-stretch e key lock) | MIT | si | ok |
 | DirectML.dll | Microsoft, ridistribuibile | si | ok (testo nei crediti) |
 | Microsoft WebView2 | Microsoft, ridistribuibile | si | ok (lo installa Tauri / Windows) |
 | ASIO (SDK + marchio) | Steinberg: accordo da firmare, oppure GPLv3 | si con l'accordo firmato | in corso (firma da fare) |
 | Font dell'interfaccia (Bahnschrift, Segoe UI) | Microsoft, font di sistema | si: non vengono distribuiti, li usa Windows | ok |
 | Marchio e icone SpinLab | nostri | si | fatto, vedi note sul nome sotto |
 | **Modello HT-Demucs (stem)** | **codice MIT, pesi non chiari** | **da verificare - rischio reale** | **da decidere, vedi sotto** |
+
+## Motore audio (verifica del 26 novembre 2026)
+
+Verifica fatta sulla versione 0.2.0 per capire se il motore audio e' coperto da licenza e vendibile.
+
+- **Codice di SpinLab** (`src-tauri/src`: mix, deck, sync, loop, effetti, analisi, griglia, registrazione, video): scritto per il progetto. Cercati
+  riferimenti a codice di altri programmi (Mixxx, Rubber Band, SoundTouch e simili, tutti GPL) o a parti «portate» o «copiate»: nessuno.
+- **PulseEngine** (`PulseEngine/DynamicPulseEngine.*`, da cui viene la logica della griglia in `analysis.rs`): algoritmo fornito dal responsabile
+  del prodotto. **Da confermare la provenienza**: se non e' opera propria (o generata per il progetto), va controllata la sua licenza.
+- **Librerie Rust**: 468 in tutto (`cargo metadata`). Licenze: MIT / Apache-2.0 / BSD / ISC / Zlib / Unicode / CC0 (vendibili riportando il testo),
+  MPL-2.0 per Symphonia (decodifica MP3, FLAC, AAC, OGG...) e cssparser/selectors (vendibili, non modificate), CDLA-Permissive-2.0 per i
+  certificati radice (webpki-roots). **Nessuna libreria GPL**; le due che offrono anche LGPL (`MIT OR Apache-2.0 OR LGPL-2.1-or-later`) si usano
+  con MIT/Apache.
+- **Componenti nativi**: ONNX Runtime (MIT, con i suoi avvisi), signalsmith-stretch (MIT), SQLite (pubblico dominio, dentro rusqlite),
+  LAME e FFmpeg (LGPL, file separati), SDK ASIO (Steinberg, solo Windows: serve l'accordo).
+- **Corretto il 26/11/2026**: `THIRD-PARTY-LICENSES.md` era fermo a prima dell'arrivo di Beat This! e rten (rigenerato); gli avvisi di ONNX Runtime
+  non erano inclusi (aggiunti all'installer).
+- **Brevetti** (separati dalle licenze): MP3 libero; per la decodifica **AAC** (Symphonia) e i codec video in un prodotto a pagamento serve il
+  parere del legale, come per H.264/H.265.
 
 ## Registro delle licenze e dei permessi da ottenere
 
