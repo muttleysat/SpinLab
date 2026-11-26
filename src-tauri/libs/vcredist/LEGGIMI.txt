@@ -1,0 +1,4 @@
+Librerie Visual C++ 2015-2022 (x64, 14.44) copiate da
+"Microsoft Visual Studio\2022\BuildTools\VC\Redist\MSVC\14.44.35112\x64\Microsoft.VC143.CRT".
+Sono "Redistributable Code" della licenza di Visual Studio e si installano accanto a spinlab.exe (deployment locale all'app),
+cosi' l'installer funziona anche su un Windows senza il pacchetto Visual C++ Redistributable. Le aggiunge tauri.windows.conf.json.

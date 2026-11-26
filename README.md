@@ -1,5 +1,7 @@
 # SpinLab DJ
 
+[![Dona con PayPal](https://img.shields.io/badge/Dona_con-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ)
+
 <img src="ui/assets/asio-logo-bw.png" alt="ASIO Compatible - ASIO is a registered trademark of Steinberg Media Technologies GmbH" width="110" align="right">
 
 **Software libero e gratuito** (licenza GNU GPL 3.0) per DJ con due deck, mixer, effetti, separazione in stem, batteria, campionatore, **uscita video** per schermi e proiettori (con transizioni, visualizzazioni e registrazione del set in MP4), registrazione del master, **skin** e colori a scelta e supporto per qualsiasi controller MIDI. Per Windows e macOS.
@@ -8,7 +10,22 @@
 
 L'installer contiene già tutto (modello degli stem, modelli dei battiti, FFmpeg): dopo l'installazione non viene scaricato niente e il programma funziona senza internet. Non serve nessuna registrazione.
 
+## Schermate
+
+<p align="center"><img src="docs/screenshots/mixer.png" alt="Mixer con due deck, waveform con la griglia, piatti, mixer, libreria e stem" width="100%"></p>
+
+| | |
+|---|---|
+| <img src="docs/screenshots/libreria.png" alt="Libreria"> | <img src="docs/screenshots/video.png" alt="Modalità video"> |
+| **Libreria**: cartelle, playlist, BPM e tonalità, dettagli del brano | **Modalità video**: video sui deck, transizioni e visualizzazioni |
+| <img src="docs/screenshots/skin-industrial.png" alt="Skin Industrial"> | <img src="docs/screenshots/skin-retro.png" alt="Skin Retro Hardware"> |
+| **Skin Industrial** | **Skin Retro Hardware** |
+| <img src="docs/screenshots/impostazioni.png" alt="Impostazioni audio"> | |
+| **Impostazioni**: ASIO, uscita e cuffie, buffer | |
+
 ## Sostieni SpinLab
+
+<a href="https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ"><img src="https://img.shields.io/badge/Dona_con-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Dona con PayPal" height="44"></a>
 
 SpinLab è gratuito. Se ti è utile puoi offrire una **donazione libera** con [PayPal](https://www.paypal.com/donate/?business=vincenzotrombetta%40hotmail.com&currency_code=EUR&item_name=SpinLab%20DJ) (anche dal pulsante nella finestra Informazioni del programma).
 

@@ -21,3 +21,6 @@ src-tauri/models/
 
 # FFmpeg incluso nell installer (grande): lo prepara tools/fetch_ffmpeg.py
 src-tauri/binaries/
+
+# screenshot originali senza sfocatura (cartelle, titoli, video): restano solo sul PC
+docs/screenshots/originali/

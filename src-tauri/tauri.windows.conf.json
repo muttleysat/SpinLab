@@ -1,0 +1,17 @@
+{
+  "bundle": {
+    "resources": {
+      "libs/vcredist/msvcp140.dll": "msvcp140.dll",
+      "libs/vcredist/msvcp140_1.dll": "msvcp140_1.dll",
+      "libs/vcredist/msvcp140_2.dll": "msvcp140_2.dll",
+      "libs/vcredist/msvcp140_atomic_wait.dll": "msvcp140_atomic_wait.dll",
+      "libs/vcredist/msvcp140_codecvt_ids.dll": "msvcp140_codecvt_ids.dll",
+      "libs/vcredist/vcruntime140.dll": "vcruntime140.dll",
+      "libs/vcredist/vcruntime140_1.dll": "vcruntime140_1.dll",
+      "libs/vcredist/concrt140.dll": "concrt140.dll"
+    },
+    "windows": {
+      "webviewInstallMode": { "type": "offlineInstaller" }
+    }
+  }
+}
