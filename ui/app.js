@@ -196,7 +196,34 @@ const PAL = [
   { c: "#b06cff", lo: "#6a2cff", mid: "#a76bff", hi: "#eee2ff" },
   { c: "#35e08a", lo: "#12a85a", mid: "#35e08a", hi: "#d6ffe9" },
 ];
-const HC = ["#ff3b4e", "#ffc21a", "#35e08a", "#18b6ff"];
+/* palette dei deck (Impostazioni → INTERFACCIA): colore di ogni deck, delle forme d'onda, del piatto e dei controlli; si ricorda */
+const PALETTES = {
+  viola: ["Viola neon", "#b45cff", "#b45cff"],
+  classica: ["Classica: blu e arancio", "#18b6ff", "#ff7a1a"],
+  ciano: ["Ciano e magenta", "#00e5ff", "#ff3d9a"],
+  acido: ["Verde acido e ambra", "#39ff88", "#ffb020"],
+  fuoco: ["Rosso e blu", "#ff3b4e", "#3d7bff"],
+  oro: ["Oro", "#ffc21a", "#ffc21a"],
+  custom: ["Personalizzata", "", ""],
+};
+const hexRgb = (h) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16));
+const mixHex = (a, b, t) => "#" + hexRgb(a).map((x, k) => Math.round(x + (hexRgb(b)[k] - x) * t).toString(16).padStart(2, "0")).join("");
+const palFrom = (c) => ({ c, lo: mixHex(c, "#000000", 0.35), mid: c, hi: mixHex(c, "#ffffff", 0.82) });
+function palGet() {
+  let k = "viola", c = ["#b45cff", "#ff7a1a"];
+  try { k = localStorage.getItem("spinlab.palette") || "viola"; c = JSON.parse(localStorage.getItem("spinlab.palette.custom") || "null") || c; } catch (e) {}
+  if (!PALETTES[k]) k = "viola";
+  return { k, c1: k === "custom" ? c[0] : PALETTES[k][1], c2: k === "custom" ? c[1] : PALETTES[k][2], custom: c };
+}
+function applyPalette() {
+  const p = palGet(), root = document.documentElement.style;
+  PAL[0] = palFrom(p.c1); PAL[1] = palFrom(p.c2);
+  root.setProperty("--d1", p.c1); root.setProperty("--d2", p.c2); root.setProperty("--accent", p.c1);
+  // al primo avvio deck e riferimenti non esistono ancora (sono dichiarati piu' sotto): si aggiornano solo ai cambi successivi
+  try { decks.forEach((d) => { d.zt = null; d.over = null; }); if (DK[0]) { buildTargets(); setTarget(target); } } catch (e) {}
+}
+applyPalette();
+const HC = ["#ff3b4e", "#ffc21a", "#35e08a", "#18b6ff", "#ff7a1a", "#b45cff", "#ff3d9a", "#18e0d0"];
 const REV_SEC = 1.8; // un giro del piatto (33 giri e 1/3 al minuto)
 const camelotColor = (k) => { const n = parseInt(k, 10); return n ? `hsl(${((n - 1) * 30 + 190) % 360} 75% 64%)` : "inherit"; };
 const mmss = (s) => { s = Math.max(0, Math.round(s || 0)); return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
@@ -229,7 +256,7 @@ function deckHTML(i) {
   <div class="dmain">
     <div class="lcol">
       <div class="card"><div class="ch"><button class="modebtn" data-r="mode" title="Cambia la funzione dei 4 pad: hot cue, beatjump, loop roll, freno/reverse">HOT CUE 1–4 ⌄</button></div>
-        <div class="hcgrid">${[0, 1, 2, 3].map((k) => `<button data-hot="${k}">${k + 1}</button>`).join("")}</div>
+        <div class="hcgrid">${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => `<button data-hot="${k}">${k + 1}</button>`).join("")}</div>
         <div class="prow"><button data-r="pdn" title="Valore precedente">‹</button><span class="pv" data-r="pval"></span><button data-r="pup" title="Valore successivo">›</button><button class="chip2" data-r="qbtn" title="QUANTIZE: cue, loop e roll partono sulla griglia dei battiti">Q</button><button class="chip2" data-r="slipbtn" title="SLIP: durante roll, freno e reverse il brano continua in silenzio e al rilascio ti ritrovi dove sarebbe arrivato">SLIP</button></div></div>
       <div class="card loopc"><div class="ch"><span>LOOP</span></div>
         <div class="lr"><button data-loop="halve" title="Dimezza il loop">&lsaquo;</button><button class="lsz" data-r="lsz" title="Attiva o disattiva il loop">4</button><button data-loop="double" title="Raddoppia il loop">&rsaquo;</button></div>
@@ -291,12 +318,12 @@ function initDecks() {
 /* i 4 pad di ogni deck: etichette e parametro della modalita' scelta */
 function renderPads(i) {
   const d = decks[i], D = DK[i], f = d.frac || ((x) => String(x));
-  const names = { hc0: "HOT CUE 1–4", hc1: "HOT CUE 5–8", jump: "BEAT JUMP", roll: "LOOP ROLL", brake: "FRENO / REV" };
+  const names = { hc0: "HOT CUE 1–8", hc1: "HOT CUE 1–8", jump: "BEAT JUMP", roll: "LOOP ROLL", brake: "FRENO / REV" };
   D.modebtn.textContent = names[d.mode] + " ⌄";
   const hc = d.mode === "hc0" || d.mode === "hc1";
-  const labels = d.mode === "jump" ? ["◀◀", "◀", "▶", "▶▶"].map((x, k) => x) : d.mode === "roll" ? [1, 2, 4, 8].map((m) => f(d.rollBase * m)) : d.mode === "brake" ? ["BRAKE", "SPIN", "REV", "SLIP"] : [1, 2, 3, 4].map((k) => String(k + (d.mode === "hc1" ? 4 : 0)));
+  const labels = d.mode === "jump" ? ["◀◀", "◀", "▶", "▶▶"].map((x, k) => x) : d.mode === "roll" ? [1, 2, 4, 8].map((m) => f(d.rollBase * m)) : d.mode === "brake" ? ["BRAKE", "SPIN", "REV", "SLIP"] : [1, 2, 3, 4, 5, 6, 7, 8].map(String);
   D.hot.forEach((b, k) => {
-    b.textContent = labels[k]; b.classList.toggle("sm", !hc && d.mode !== "roll" && d.mode !== "jump" || d.mode === "brake");
+    b.hidden = k >= labels.length; b.textContent = labels[k] ?? ""; b.classList.toggle("sm", !hc && d.mode !== "roll" && d.mode !== "jump" || d.mode === "brake");
     b.title = d.mode === "jump" ? `Salta di ${[-2, -1, 1, 2][k] * d.jumpSize} battiti` : d.mode === "roll" ? `Loop roll di ${labels[k]} battito: tienilo premuto` : d.mode === "brake" ? ["Freno: tieni premuto, il disco si ferma", "Spinback: il disco gira all'indietro e il brano riparte", "Reverse: tieni premuto per andare al contrario", "SLIP acceso/spento"][k] : "Clic: imposta o salta al hot cue · Maiusc+clic o tasto destro: cancella";
   });
   D.qbtn.textContent = hc ? "QUANT" : "Q";
@@ -365,7 +392,7 @@ function bindDeck(i) {
   D.modebtn.onclick = (e) => {
     e.stopPropagation();
     const set = (m) => () => { d.mode = m; closeRolls(i); renderPads(i); };
-    menu(e, [["Hot cue 1–4", set("hc0")], ["Hot cue 5–8", set("hc1")], "-", ["Beat jump", set("jump")], ["Loop roll", set("roll")], ["Freno · spinback · reverse", set("brake")]]);
+    menu(e, [["Hot cue 1–8", set("hc0")], "-", ["Beat jump", set("jump")], ["Loop roll", set("roll")], ["Freno · spinback · reverse", set("brake")]]);
   };
   const JUMPS = [0.25, 0.5, 1, 2, 4, 8, 16, 32], ROLLS = [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1], BRAKES = [0.3, 0.5, 1, 1.5, 2, 3, 4];
   const step = (arr, cur, dir) => arr[Math.min(arr.length - 1, Math.max(0, arr.findIndex((x) => Math.abs(x - cur) < 1e-9) + dir))];
@@ -680,7 +707,7 @@ function drawZoom(i, pos) {
   const s = d.snap;
   const mark = (t, color) => { const x = (t - t0) * pps; if (x >= 0 && x < W) { g.fillStyle = color; g.fillRect(x, 0, 2, H); g.beginPath(); g.moveTo(x - 6, 0); g.lineTo(x + 8, 0); g.lineTo(x + 1, 10); g.fill(); } };
   if (s) {
-    mark(s.cue, "#ffb020"); s.hot_cues.forEach((t, k) => t != null && mark(t, HC[k % 4]));
+    mark(s.cue, "#ffb020"); s.hot_cues.forEach((t, k) => t != null && mark(t, HC[k % 8]));
     if (s.loop_on || s.loop_out > s.loop_in) {
       const x0 = (s.loop_in - t0) * pps, x1 = (s.loop_out - t0) * pps;
       g.fillStyle = s.loop_on ? "rgba(53,224,138,.22)" : "rgba(255,255,255,.07)"; g.fillRect(x0, 0, x1 - x0, H);
@@ -721,7 +748,7 @@ function drawVert(i, pos) {
   const s = d.snap;
   const mark = (t, color) => { const y = yOf(t); if (y >= 0 && y < H) { g.fillStyle = color; g.fillRect(0, y - th, W, th * 2); g.beginPath(); g.moveTo(0, y - 7 * th); g.lineTo(0, y + 7 * th); g.lineTo(9 * th, y); g.fill(); } };
   if (s) {
-    mark(s.cue, "#ffb020"); s.hot_cues.forEach((t, k) => t != null && mark(t, HC[k % 4]));
+    mark(s.cue, "#ffb020"); s.hot_cues.forEach((t, k) => t != null && mark(t, HC[k % 8]));
     if (s.loop_on || s.loop_out > s.loop_in) {
       const y0 = yOf(s.loop_out), y1 = yOf(s.loop_in);
       g.fillStyle = s.loop_on ? "rgba(53,224,138,.22)" : "rgba(255,255,255,.07)"; g.fillRect(0, y0, W, y1 - y0);
@@ -750,7 +777,7 @@ function drawOver(i, pos) {
   if (!d.dur) return;
   const px = (pos / d.dur) * W;
   g.fillStyle = "rgba(0,0,0,.45)"; g.fillRect(0, 0, px, H);
-  d.snap?.hot_cues.forEach((t, k) => { if (t != null) { g.fillStyle = HC[k % 4]; g.fillRect((t / d.dur) * W, 0, 2, H); } });
+  d.snap?.hot_cues.forEach((t, k) => { if (t != null) { g.fillStyle = HC[k % 8]; g.fillRect((t / d.dur) * W, 0, 2, H); } });
   // finestra della forma d'onda ingrandita
   const wx = ((pos - d.zoom / 2) / d.dur) * W, ww = (d.zoom / d.dur) * W;
   g.strokeStyle = "rgba(255,255,255,.9)"; g.lineWidth = Math.max(1, W / 700); g.strokeRect(wx, 1, Math.max(4, ww), H - 2);
@@ -865,10 +892,15 @@ function drawPlatter(i, pos) {
   const ang = (pos / REV_SEC) * TAU, loaded = !!s?.loaded && d.dur > 0;
   const rim = R - 4 * dpr, rv = R - 14 * dpr;
   // anello al neon: tenue, con la parte gia' suonata piu' accesa
+  // anello luminoso sotto il piatto: sfumature della stessa tinta del deck (piu' chiara, piena, piu' scura) che girano con il disco
   g.save();
-  g.lineWidth = 5 * dpr; g.strokeStyle = pal.c; g.shadowColor = pal.c;
-  g.globalAlpha = 0.3; g.shadowBlur = 16 * dpr; g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
-  if (loaded) { g.globalAlpha = 1; g.shadowBlur = 24 * dpr; g.beginPath(); g.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, pos / d.dur)); g.stroke(); }
+  g.lineWidth = 7 * dpr; g.shadowColor = pal.c; g.shadowBlur = (loaded ? 26 : 12) * dpr; g.globalAlpha = loaded ? 1 : 0.45;
+  if (g.createConicGradient) {
+    const rg2 = g.createConicGradient(ang, cx, cy), lt = mixHex(pal.c, "#ffffff", 0.45), dk = mixHex(pal.c, "#000000", 0.45);
+    [[0, lt], [0.18, pal.c], [0.36, dk], [0.5, pal.c], [0.68, lt], [0.86, dk], [1, lt]].forEach(([q, col]) => rg2.addColorStop(q, col));
+    g.strokeStyle = rg2;
+  } else g.strokeStyle = pal.c;
+  g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
   g.restore();
   // bordo del piatto in alluminio con i puntini dello stroboscopio (girano col piatto)
   g.save(); g.translate(cx, cy);
@@ -2054,3 +2086,15 @@ poll(); requestAnimationFrame(frame);
 refreshLatency(); setTimeout(refreshLatency, 1500);
 inv("startup_files").then((fs) => fs.slice(0, 2).forEach((f, i) => loadTrack(i, f)));
 initTree();
+
+/* Impostazioni → INTERFACCIA: palette dei colori dei deck */
+(() => {
+  const sel = $("#palSel"), c1 = $("#palC1"), c2 = $("#palC2"), cust = $("#palCust");
+  if (!sel) return;
+  sel.innerHTML = Object.entries(PALETTES).map(([k, [n]]) => `<option value="${k}">${n}</option>`).join("");
+  const show = () => { const p = palGet(); sel.value = p.k; c1.value = p.custom[0]; c2.value = p.custom[1]; cust.hidden = p.k !== "custom"; };
+  const save = (k, c) => { try { localStorage.setItem("spinlab.palette", k); if (c) localStorage.setItem("spinlab.palette.custom", JSON.stringify(c)); } catch (e) {} applyPalette(); show(); };
+  sel.onchange = () => save(sel.value, sel.value === "custom" ? [c1.value, c2.value] : null);
+  c1.oninput = c2.oninput = () => save("custom", [c1.value, c2.value]);
+  show();
+})();

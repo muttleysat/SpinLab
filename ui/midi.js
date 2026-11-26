@@ -99,7 +99,7 @@ function buildActions() {
     for (let k = 0; k < 4; k++) act(id("pad" + (k + 1)), G, `Pad ${k + 1} (nella modalità scelta)`, "btn", (dn) => d().padAction(k, dn));
     act(id("padmode"), G, "Cambia modalità dei pad", "btn", (dn) => {
       if (!dn) return;
-      const modes = ["hc0", "hc1", "jump", "roll", "brake"], dd = d();
+      const modes = ["hc0", "jump", "roll", "brake"], dd = d();
       dd.mode = modes[(modes.indexOf(dd.mode) + 1) % modes.length]; closeRolls(i); renderPads(i);
     });
     act(id("fxon"), G, "Effetto acceso / spento", "btn", (dn) => {
