@@ -296,7 +296,7 @@ tr.pvon .pv { background: #35e08a; color: #001018; border-color: #35e08a; }
 .stcol .sic:hover { box-shadow: 0 0 10px color-mix(in srgb, var(--c) 60%, transparent); }
 .stcol.off .sic { background: #1a1f2c; color: #566079; border-color: #2a3248; }
 .stcol .sn { cursor: pointer; font-size: 10px; letter-spacing: 1px; color: var(--text); }
-.stcol .fader { flex: 1; min-height: 60px; }
+.stcol .knob { width: 52px; height: 52px; flex: none; margin: auto 0; }
 .stcol .ms { display: flex; gap: 4px; } .stcol .ms button { width: 26px; padding: 2px 0; font-size: 11px; border-radius: 5px; }
 .stcol .ms button.m.on { background: #ff3b4e; border-color: #ff3b4e; color: #fff; } .stcol .ms button.s.on { background: #ffc21a; border-color: #ffc21a; color: #1b1200; }
 .stcol.off { opacity: .55; }

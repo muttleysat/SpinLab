@@ -1274,8 +1274,8 @@ function sendStems(i) {
   }, 50);
 }
 function touchStems(i) { decks[i].stTouch = performance.now(); updateStemsUI(true); sendStems(i); }
-$("#stemCols").innerHTML = STEMS.map((s) => `<div class="stcol" data-k="${s.k}" style="--c:${s.c}"><div class="sic">${s.ic}</div><div class="sn">${s.n}</div><div class="fader v" data-f="${s.k}"></div><div class="ms"><button class="m" data-m="${s.k}" title="Muto">M</button><button class="s" data-s="${s.k}" title="Solo">S</button></div></div>`).join("");
-$$("#stemCols .fader").forEach((f) => makeFader(f, { value: 1, def: 1, onChange: (v) => { const d = decks[target], k = +f.dataset.f; d.stGains[k] = v; if (v > 0.001) d.stMem[k] = v; touchStems(target); } }));
+$("#stemCols").innerHTML = STEMS.map((s) => `<div class="stcol" data-k="${s.k}" style="--c:${s.c}"><div class="sic">${s.ic}</div><div class="sn">${s.n}</div><div class="knob" data-f="${s.k}" title="Volume dello stem · doppio clic: pieno"></div><div class="ms"><button class="m" data-m="${s.k}" title="Muto">M</button><button class="s" data-s="${s.k}" title="Solo">S</button></div></div>`).join("");
+$$("#stemCols .knob").forEach((f) => makeKnob(f, { value: 1, def: 1, onChange: (v) => { const d = decks[target], k = +f.dataset.f; d.stGains[k] = v; if (v > 0.001) d.stMem[k] = v; touchStems(target); } }));
 const toggleStem = (k) => { const d = decks[target]; if (d.stGains[k] > 0.001) { d.stMem[k] = d.stGains[k]; d.stGains[k] = 0; } else d.stGains[k] = d.stMem[k] || 1; touchStems(target); };
 $$("#stemCols [data-m]").forEach((b) => (b.onclick = () => toggleStem(+b.dataset.m)));
 // anche un clic sull'icona (o sul nome) dello stem lo esclude o lo riammette
@@ -1292,7 +1292,7 @@ function updateStemsUI(force) {
   const d = decks[target];
   $$("#stemCols .stcol").forEach((col) => {
     const k = +col.dataset.k, g = d.stGains[k];
-    $(".fader", col)._set(g);
+    $(".knob", col)._set(g);
     col.classList.toggle("off", g <= 0.001);
     $(".m", col).classList.toggle("on", g <= 0.001);
     $(".s", col).classList.toggle("on", g > 0.001 && d.stGains.every((x, j) => j === k || x <= 0.001));
