@@ -12,15 +12,15 @@ L'installer contiene già tutto (modello degli stem, modelli dei battiti, FFmpeg
 
 ## Schermate
 
-<p align="center"><img src="docs/screenshots/mixer.png" alt="Mixer con due deck, waveform con la griglia, piatti, mixer, libreria e stem" width="100%"></p>
+<p align="center"><img src="docs/screenshots/mixer.jpg" alt="Mixer con due deck, waveform con la griglia, piatti, mixer, libreria e stem" width="100%"></p>
 
 | | |
 |---|---|
-| <img src="docs/screenshots/libreria.png" alt="Libreria"> | <img src="docs/screenshots/video.png" alt="Modalità video"> |
+| <img src="docs/screenshots/libreria.jpg" alt="Libreria"> | <img src="docs/screenshots/video.jpg" alt="Modalità video"> |
 | **Libreria**: cartelle, playlist, BPM e tonalità, dettagli del brano | **Modalità video**: video sui deck, transizioni e visualizzazioni |
-| <img src="docs/screenshots/skin-industrial.png" alt="Skin Industrial"> | <img src="docs/screenshots/skin-retro.png" alt="Skin Retro Hardware"> |
+| <img src="docs/screenshots/skin-industrial.jpg" alt="Skin Industrial"> | <img src="docs/screenshots/skin-retro.jpg" alt="Skin Retro Hardware"> |
 | **Skin Industrial** | **Skin Retro Hardware** |
-| <img src="docs/screenshots/impostazioni.png" alt="Impostazioni audio"> | |
+| <img src="docs/screenshots/impostazioni.jpg" alt="Impostazioni audio"> | |
 | **Impostazioni**: ASIO, uscita e cuffie, buffer | |
 
 ## Sostieni SpinLab
