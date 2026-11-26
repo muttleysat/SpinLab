@@ -566,6 +566,31 @@ function openPop(i, kind, anchor) {
   pop.style.left = x + "px"; pop.style.top = y + "px";
   d.pop = pop;
 }
+/* ---- finestre di richiesta nello stile dell'interfaccia (al posto di prompt() e confirm() del browser, che mostrano l'indirizzo) */
+function slDialog({ title, text = "", value = null, placeholder = "", ok = "OK", cancel = "Annulla", danger = false }) {
+  return new Promise((resolve) => {
+    const dlg = document.createElement("dialog");
+    dlg.className = "sldlg";
+    const esc2 = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    dlg.innerHTML = `<h2>${esc2(title)}</h2>${text ? `<p>${esc2(text)}</p>` : ""}`
+      + (value !== null ? `<input type="text" spellcheck="false" placeholder="${esc2(placeholder)}" value="${esc2(value)}">` : "")
+      + `<div class="sldlg-btns"><button type="button" data-k="no">${esc2(cancel)}</button><button type="button" data-k="ok" class="${danger ? "danger" : "primary"}">${esc2(ok)}</button></div>`;
+    document.body.appendChild(dlg);
+    const inp = dlg.querySelector("input");
+    let done = false;
+    const close = (v) => { if (done) return; done = true; dlg.close(); dlg.remove(); resolve(v); };
+    dlg.querySelector('[data-k="ok"]').onclick = () => close(inp ? inp.value : true);
+    dlg.querySelector('[data-k="no"]').onclick = () => close(inp ? null : false);
+    dlg.addEventListener("cancel", (e) => { e.preventDefault(); close(inp ? null : false); });
+    dlg.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); close(inp ? inp.value : true); } e.stopPropagation(); });
+    dlg.showModal();
+    if (inp) { inp.focus(); inp.select(); } else dlg.querySelector('[data-k="ok"]').focus();
+  });
+}
+/** testo dall'utente (null se annulla) */
+const askText = (title, value = "", opts = {}) => slDialog({ title, value: value ?? "", ...opts });
+/** conferma (true / false) */
+const askConfirm = (title, text = "", opts = {}) => slDialog({ title, text, ...opts });
 function closePops() { $$(".keypop").forEach((p) => p.remove()); }
 document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".keypop")) closePops(); }, true);
 
@@ -1639,10 +1664,10 @@ $("#side").addEventListener("click", (e) => {
 $("#side").addEventListener("contextmenu", (e) => {
   const it = e.target.closest(".plitem"); if (!it) return;
   e.preventDefault(); const id = +it.dataset.pl;
-  menu(e, [["Analizza tutti i brani", () => inv("analyze_playlist", { id })], ["Crea stem di tutta la playlist", () => inv("stems_queue_playlist", { id })], ["Rinomina…", async () => { const n = prompt("Nuovo nome", lib.pls.find((p) => p.id === id).name); if (n) { await inv("playlist_rename", { id, name: n }); refreshPlaylists(); } }],
-    ["Elimina playlist", async () => { if (confirm("Eliminare la playlist? (i file restano sul disco)")) { await inv("playlist_delete", { id }); if (lib.playlist === id) { selectPlaylist(null); if (lib.folder) selectFolder(lib.folder); } else refreshPlaylists(); } }]]);
+  menu(e, [["Analizza tutti i brani", () => inv("analyze_playlist", { id })], ["Crea stem di tutta la playlist", () => inv("stems_queue_playlist", { id })], ["Rinomina…", async () => { const n = (await askText("Rinomina playlist", lib.pls.find((p) => p.id === id).name, { ok: "Rinomina" }))?.trim(); if (n) { await inv("playlist_rename", { id, name: n }); refreshPlaylists(); } }],
+    ["Elimina playlist", async () => { if (await askConfirm("Eliminare la playlist?", "I file restano sul disco.", { ok: "Elimina", danger: true })) { await inv("playlist_delete", { id }); if (lib.playlist === id) { selectPlaylist(null); if (lib.folder) selectFolder(lib.folder); } else refreshPlaylists(); } }]]);
 });
-$("#newPl").onclick = async () => { const n = prompt("Nome della playlist"); if (n?.trim()) { const id = await inv("playlist_create", { name: n.trim() }); await refreshPlaylists(); selectPlaylist(id); } };
+$("#newPl").onclick = async () => { const n = await askText("Nuova playlist", "", { placeholder: "Nome della playlist", ok: "Crea" }); if (n?.trim()) { const id = await inv("playlist_create", { name: n.trim() }); await refreshPlaylists(); selectPlaylist(id); } };
 
 /* avanzamento dell'analisi del singolo brano: barra trasparente sulla riga e percentuale nella colonna BPM */
 let anaRefresh = 0, libRefreshAt = 0;
@@ -1748,7 +1773,7 @@ $("#tracks tbody").addEventListener("contextmenu", async (e) => {
   const items = [...Array(activeDecks).keys()].map((d) => [`Carica sul deck ${d + 1}`, () => loadTrack(d, trackById(id).path)]);
   items.push("-");
   lib.pls.forEach((p) => items.push([`Aggiungi a «${p.name}»`, async () => { await inv("playlist_add", { id: p.id, tracks: ids }); refreshPlaylists(); }]));
-  items.push(["Nuova playlist con selezione…", async () => { const n = prompt("Nome della playlist"); if (n?.trim()) { const pid = await inv("playlist_create", { name: n.trim() }); await inv("playlist_add", { id: pid, tracks: ids }); refreshPlaylists(); } }]);
+  items.push(["Nuova playlist con selezione…", async () => { const n = await askText("Nuova playlist con la selezione", "", { placeholder: "Nome della playlist", ok: "Crea" }); if (n?.trim()) { const pid = await inv("playlist_create", { name: n.trim() }); await inv("playlist_add", { id: pid, tracks: ids }); refreshPlaylists(); } }]);
   items.push("-");
   items.push(["Analizza (bpm, chiave, beatgrid)", () => inv("analyze_tracks", { ids })]);
   items.push(["Crea stem (salvati nella cartella «stems»)", () => inv("stems_queue", { ids, front: false })]);
@@ -1927,7 +1952,7 @@ function buildPads() {
       e.preventDefault();
       const s = padState[k];
       menu(e, [["Carica un altro suono…", () => loadPad(k)], [s?.looped ? "Loop: spegni (suona una volta)" : "Loop: accendi (ripete)", () => inv("pad_cmd", { pad: k, cmd: "loop", a: s?.looped ? 0 : 1 })], ["Stop", () => inv("pad_cmd", { pad: k, cmd: "stop", a: 0 })], "-",
-        [`BPM del campione${s?.bpm ? ` (${s.bpm.toFixed(1)})` : ""}…`, () => { const v = prompt("BPM del campione (0 = nessuno: partirà sul battito ma senza adeguare il tempo)", s?.bpm ? s.bpm.toFixed(1) : "0"); if (v !== null) inv("pad_cmd", { pad: k, cmd: "bpm", a: parseFloat(v.replace(",", ".")) || 0 }); }],
+        [`BPM del campione${s?.bpm ? ` (${s.bpm.toFixed(1)})` : ""}…`, async () => { const v = await askText("BPM del campione", s?.bpm ? s.bpm.toFixed(1) : "0", { text: "0 = nessuno: partirà sul battito ma senza adeguare il tempo." }); if (v !== null) inv("pad_cmd", { pad: k, cmd: "bpm", a: parseFloat(v.replace(",", ".")) || 0 }); }],
         ["BPM ÷2", () => inv("pad_cmd", { pad: k, cmd: "bpm_half", a: 0 })], ["BPM ×2", () => inv("pad_cmd", { pad: k, cmd: "bpm_double", a: 0 })]]);
     });
   });
@@ -1971,7 +1996,7 @@ function buildDrums() {
     ["pointerup", "pointercancel"].forEach((ev) => p.addEventListener(ev, up));
     p.addEventListener("contextmenu", (e) => {
       e.preventDefault(); const s = drumState[k];
-      const ask = (txt, cur, cmd, scale = 1) => { const v = prompt(txt, cur); if (v !== null && v.trim() !== "") inv("drum_cmd", { pad: k, cmd, a: (parseFloat(v.replace(",", ".")) || 0) * scale }); };
+      const ask = async (txt, cur, cmd, scale = 1) => { const v = await askText(txt, cur); if (v !== null && v.trim() !== "") inv("drum_cmd", { pad: k, cmd, a: (parseFloat(v.replace(",", ".")) || 0) * scale }); };
       menu(e, [["Carica un campione…", () => loadDrum(k)], ["MIDI learn: poi colpisci un pad del controller", () => inv("drum_cmd", { pad: k, cmd: "learn", a: 1 })], "-",
         [s?.gate ? "Modo: suona per intero (spegni gate)" : "Modo: gate (suona finché tieni premuto)", () => inv("drum_cmd", { pad: k, cmd: "gate", a: s?.gate ? 0 : 1 })],
         [`Aftertouch: ${["spento", "volume", "intonazione", "volume + intonazione"][s?.at_mode ?? 1]} (clic per cambiare)`, () => inv("drum_cmd", { pad: k, cmd: "aftertouch", a: ((s?.at_mode ?? 1) + 1) % 4 })],

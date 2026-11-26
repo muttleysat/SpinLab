@@ -1398,3 +1398,34 @@ body.skin-retro #rpanel :is(#tgt button.on, .presets button.on, .stcol .ms butto
 /* Informazioni: link leggibili sul fondo scuro (nel colore chiaro del tema) */
 .ab-card a:not(.ab-paypal) { color: var(--sl-purple-highlight); text-decoration: underline; text-underline-offset: 2px; }
 .ab-card a:not(.ab-paypal):hover { color: #fff; }
+
+/* ============================================================ BARRA IN ALTO: colori fissi
+   La barra in alto (menu, CPU, orologio, VIDEO, cuffie e i menu a tendina della modalita' video) non segue la palette del tema ne' la skin:
+   con un colore del tema scuro o chiarissimo le scritte diventerebbero illeggibili. #top#top vince sulle regole delle skin. */
+#top#top { --text: #e8ebf1; --dim: #a9b0bd; --top-on: #ffffff; --top-line: #4b5468; --top-bg: #151a24; --top-hi: #c8d2e4; }
+#top#top #nav button { color: var(--dim); text-shadow: none; }
+#top#top #nav button:hover { color: var(--text); }
+#top#top #nav button.on { color: var(--top-on); border-bottom-color: var(--top-on); text-shadow: none; }
+#top#top #nav button.recording { color: #ff6b79; border-bottom-color: #ff3b4e; }
+#top#top .clock, #top#top .cpu em:not(.warm):not(.hot) { color: var(--text); }
+#top#top .cpu { color: var(--dim); }
+#top#top .vsel { background: var(--top-bg); color: var(--text); border: 1px solid var(--top-line); box-shadow: none; }
+#top#top .vsel:hover, #top#top .vsel:focus { border-color: var(--top-hi); box-shadow: none; outline: none; }
+#top#top .vsel option { background: var(--top-bg); color: var(--text); }
+#top#top .mbtn { color: var(--dim); }
+#top#top .mbtn.on { color: var(--top-on); border-color: var(--top-hi); background: #232b3a; box-shadow: none; }
+#top#top .hpb button { color: var(--text); }
+#top#top .hpb button.on { color: var(--top-on); background: #2b3446; border-color: var(--top-hi); box-shadow: none; text-shadow: none; }
+
+/* finestre di richiesta (slDialog in app.js): stile delle altre finestre, colori fissi e leggibili */
+dialog.sldlg { width: 380px; padding: 18px 20px 16px; background: #14161d; color: #e8ebf1; border: 1px solid #3d4456; border-radius: 12px; box-shadow: 0 24px 70px #000d; }
+dialog.sldlg::backdrop { background: #000a; }
+dialog.sldlg h2 { margin: 0 0 10px; font-size: 15px; font-weight: 500; letter-spacing: .6px; color: #f2f4f8; }
+dialog.sldlg p { margin: 0 0 12px; color: #a9b0bd; font-size: 12.5px; line-height: 1.45; }
+dialog.sldlg input { width: 100%; padding: 8px 10px; font-size: 14px; background: #0b0d12; color: #f2f4f8; border: 1px solid #4b5468; border-radius: 8px; }
+dialog.sldlg input:focus { outline: none; border-color: #c8d2e4; }
+.sldlg-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.sldlg-btns button { min-width: 86px; padding: 7px 14px; font-size: 12.5px; letter-spacing: .5px; color: #e8ebf1; background: #1f2430; border: 1px solid #4b5468; border-radius: 8px; box-shadow: none; }
+.sldlg-btns button:hover { border-color: #c8d2e4; }
+.sldlg-btns button.primary { color: #fff; background: #3a4560; border-color: #8fa0c4; }
+.sldlg-btns button.danger { color: #fff; background: #6a1f2a; border-color: #ff5a6e; }

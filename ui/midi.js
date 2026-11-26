@@ -582,7 +582,7 @@ function bindMidiPane() {
     renderMap();
   };
   $("#mmIgnList").addEventListener("click", (e) => { const c = e.target.closest(".mmign"); if (c && e.target.closest("button")) { MM.ign.delete(c.dataset.k); renderIgn(); saveMap(); } });
-  $("#mmClear").onclick = () => { if (confirm("Cancellare tutte le assegnazioni MIDI?")) { MM.bindings = []; reindex(); saveMap(); renderMap(); } };
+  $("#mmClear").onclick = async () => { if (await askConfirm("Cancellare tutte le assegnazioni MIDI?", "", { ok: "Cancella", danger: true })) { MM.bindings = []; reindex(); saveMap(); renderMap(); } };
   // monitor: ultimo messaggio ricevuto, solo con il pannello aperto
   setInterval(() => {
     const m = $("#mmMon"); if (!m || !$("#audioDlg").open || $("#sp-midi").hidden) return;
