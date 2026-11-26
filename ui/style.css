@@ -956,7 +956,7 @@ body.view-lib #libInfo { display: flex; flex-direction: column; gap: 8px; flex: 
   --sl-grad-raised: linear-gradient(180deg, #343a4a 0%, #1f2330 100%);
   /* 2.2 viola */
   --sl-purple-deep: #4a3a70; --sl-purple-primary: #7a52b8; --sl-purple-bright: #b780ff; --sl-purple-highlight: #e6d9ff;
-  --sl-grad-purple: linear-gradient(135deg, #4a3a70 0%, #7a52b8 45%, #b780ff 75%, #e6d9ff 100%);
+  --sl-grad-purple: linear-gradient(135deg, var(--sl-purple-deep) 0%, var(--sl-purple-primary) 45%, var(--sl-purple-bright) 75%, var(--sl-purple-highlight) 100%);
   /* 2.3 metallo */
   --sl-metal-dark: #454b56; --sl-metal-mid: #858d99; --sl-metal-light: #c9ced8; --sl-metal-highlight: #f1f3f6;
   --sl-grad-metal: linear-gradient(135deg, #454b56 0%, #858d99 20%, #f1f3f6 38%, #858d99 55%, #c9ced8 75%, #454b56 100%);
@@ -964,10 +964,10 @@ body.view-lib #libInfo { display: flex; flex-direction: column; gap: 8px; flex: 
   /* 2.4 funzionali */
   --sl-play: #00e676; --sl-cue: #ffb300; --sl-meter-green: #00ff60; --sl-meter-yellow: #ffff00; --sl-meter-red: #ff3b30;
   /* 3.1 luci */
-  --sl-glow-idle: 0 0 3px rgba(183,128,255,.12);
-  --sl-glow-hover: 0 0 5px rgba(183,128,255,.35), 0 0 12px rgba(122,82,184,.20);
-  --sl-glow-active: 0 0 7px rgba(183,128,255,.65), 0 0 18px rgba(122,82,184,.45), 0 0 30px rgba(122,82,184,.18);
-  --sl-glow-max: 0 0 9px rgba(230,217,255,.85), 0 0 22px rgba(183,128,255,.65), 0 0 42px rgba(122,82,184,.30);
+  --sl-glow-idle: 0 0 3px color-mix(in srgb, var(--sl-purple-bright) 12%, transparent);
+  --sl-glow-hover: 0 0 5px color-mix(in srgb, var(--sl-purple-bright) 35%, transparent), 0 0 12px color-mix(in srgb, var(--sl-purple-primary) 20%, transparent);
+  --sl-glow-active: 0 0 7px color-mix(in srgb, var(--sl-purple-bright) 65%, transparent), 0 0 18px color-mix(in srgb, var(--sl-purple-primary) 45%, transparent), 0 0 30px color-mix(in srgb, var(--sl-purple-primary) 18%, transparent);
+  --sl-glow-max: 0 0 9px color-mix(in srgb, var(--sl-purple-highlight) 85%, transparent), 0 0 22px color-mix(in srgb, var(--sl-purple-bright) 65%, transparent), 0 0 42px color-mix(in srgb, var(--sl-purple-primary) 30%, transparent);
   /* 18 bordi */
   --sl-border-panel: 1px solid rgba(201,206,216,.12); --sl-border-ctl: 1px solid rgba(201,206,216,.20);
   /* variabili gia' usate dall'interfaccia, ricondotte ai token */
@@ -988,19 +988,19 @@ html, body { background: var(--sl-grad-app); color: var(--text); font-family: In
 #nav button { color: #9299a6; transition: color var(--sl-t-hover); text-shadow: none; }
 #nav button:hover { color: var(--sl-purple-highlight); }
 #nav button.on { color: var(--sl-purple-bright); border-bottom: 2px solid var(--sl-purple-bright); text-shadow: none; }
-.brand img { filter: drop-shadow(0 0 6px rgba(183,128,255,.55)); }
+.brand img { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--sl-purple-bright) 55%, transparent)); }
 .cpu, .mst, .clock { padding: 4px 10px; border: var(--sl-border-panel); border-radius: 8px; background: var(--sl-bg-deep); }
 .hp { background: var(--sl-bg-deep); border: var(--sl-border-panel); }
 
 /* 3.2 stati dei controlli: normale, hover, attivo, disabilitato */
 button { background: var(--sl-grad-raised); border: var(--sl-border-ctl); border-radius: 6px; color: #e6e9ef; box-shadow: var(--sl-glow-idle);
   transition: border-color var(--sl-t-hover), box-shadow var(--sl-t-glow), background var(--sl-t-hover), color var(--sl-t-hover); }
-button:hover { border-color: rgba(183,128,255,.6); box-shadow: var(--sl-glow-hover); }
+button:hover { border-color: color-mix(in srgb, var(--sl-purple-bright) 60%, transparent); box-shadow: var(--sl-glow-hover); }
 button:disabled, button:disabled:hover { opacity: .4; color: #9299a6; border: var(--sl-border-ctl); background: var(--sl-bg-surface); box-shadow: none; }
 .rbtn2.on, .mbtn.on, #tgt button.on, .chip2.on, .seg button.on, .presets button.on, .pbtn.qb.on, .loopc .lsz.on {
-  color: #fff; background: linear-gradient(180deg, #9169c5 0%, #7a52b8 55%, #4a3a70 100%); border: 1px solid var(--sl-purple-bright);
+  color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-primary) 60%, var(--sl-purple-bright)) 0%, var(--sl-purple-primary) 55%, var(--sl-purple-deep) 100%); border: 1px solid var(--sl-purple-bright);
   box-shadow: var(--sl-glow-active); text-shadow: 0 1px 2px rgba(0,0,0,.45); }
-.hpb button.on { color: #fff; background: linear-gradient(180deg, #9169c5, #4a3a70); border-color: var(--sl-purple-bright); box-shadow: var(--sl-glow-active); }
+.hpb button.on { color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-primary) 60%, var(--sl-purple-bright)), var(--sl-purple-deep)); border-color: var(--sl-purple-bright); box-shadow: var(--sl-glow-active); }
 select { background: var(--sl-bg-surface); border: 1px solid rgba(201,206,216,.25); color: #fff; border-radius: 6px; transition: border-color var(--sl-t-hover), box-shadow var(--sl-t-glow); }
 select:hover { background: var(--sl-bg-hover); }
 select:focus, select:active { outline: none; border-color: var(--sl-purple-bright); box-shadow: var(--sl-glow-hover); }
@@ -1008,7 +1008,7 @@ select:focus, select:active { outline: none; border-color: var(--sl-purple-brigh
 
 /* 15 schede */
 .ptabs button { color: #9299a6; background: none; box-shadow: none; transition: color var(--sl-t-hover), background var(--sl-t-hover); }
-.ptabs button:hover { color: var(--sl-purple-highlight); background: rgba(122,82,184,.10); box-shadow: none; }
+.ptabs button:hover { color: var(--sl-purple-highlight); background: color-mix(in srgb, var(--sl-purple-primary) 10%, transparent); box-shadow: none; }
 .ptabs button.on { color: #fff; border-bottom: 2px solid var(--sl-purple-bright); box-shadow: 0 8px 14px -10px var(--sl-purple-bright); }
 
 /* 10 transport: PLAY verde e CUE ambra, fondo scuro */
@@ -1021,53 +1021,53 @@ select:focus, select:active { outline: none; border-color: var(--sl-purple-brigh
 .deck .rbtn.play.on { color: #d9ffe9; background: linear-gradient(180deg, #1f3a2f 0%, #11211a 100%); box-shadow: 0 0 10px rgba(0,230,118,.85), 0 0 26px rgba(0,230,118,.45), inset 0 0 10px rgba(0,230,118,.25); }
 /* SYNC / QUANT / KEY: graphite con contorno viola; GRID neutro argento */
 .rbtn2 { border-radius: 6px; font-weight: 500; font-size: 12px; background: var(--sl-grad-raised); }
-.rbtn2[data-r="sync"], .rbtn2[data-r="keybtn"] { border: 1px solid rgba(183,128,255,.55); }
+.rbtn2[data-r="sync"], .rbtn2[data-r="keybtn"] { border: 1px solid color-mix(in srgb, var(--sl-purple-bright) 55%, transparent); }
 .rbtn2[data-r="keybtn"] { color: var(--sl-purple-highlight); }
 .pbtn { color: #e6e9ef; border: var(--sl-border-ctl); background: var(--sl-grad-raised); }
 .pbtn.bl { color: #c9ced8; border-color: rgba(201,206,216,.35); }
 .pbtn.bl.on { color: #fff; border-color: var(--sl-purple-bright); box-shadow: var(--sl-glow-hover); }
-.pbtn.qb { border-color: rgba(183,128,255,.55); color: #e6e9ef; }
-.pbtn.br.on { color: #fff; background: linear-gradient(180deg, #9169c5, #4a3a70); border-color: var(--sl-purple-bright); box-shadow: var(--sl-glow-active); }
+.pbtn.qb { border-color: color-mix(in srgb, var(--sl-purple-bright) 55%, transparent); color: #e6e9ef; }
+.pbtn.br.on { color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-primary) 60%, var(--sl-purple-bright)), var(--sl-purple-deep)); border-color: var(--sl-purple-bright); box-shadow: var(--sl-glow-active); }
 
 /* 9 hot cue: 8 toni progressivi, fondo grafite, bordo e alone del proprio colore */
-.hcgrid button { --hc: #7a52b8; height: 30px; border-radius: 6px; font-weight: 600; color: #e6e9ef;
-  background: linear-gradient(180deg, #25202f 0%, #14121c 100%); border: 1px solid color-mix(in srgb, var(--hc) 45%, #2b3142); box-shadow: 0 2px 4px -2px color-mix(in srgb, var(--hc) 40%, transparent); }
-.hcgrid button:nth-child(1) { --hc: #4a3a70; } .hcgrid button:nth-child(2) { --hc: #59417f; } .hcgrid button:nth-child(3) { --hc: #684b91; } .hcgrid button:nth-child(4) { --hc: #7a52b8; }
-.hcgrid button:nth-child(5) { --hc: #9169c5; } .hcgrid button:nth-child(6) { --hc: #a47ad6; } .hcgrid button:nth-child(7) { --hc: #b780ff; } .hcgrid button:nth-child(8) { --hc: #d2b5f5; }
-.hcgrid button:hover { border-color: color-mix(in srgb, var(--hc) 80%, #fff); background: linear-gradient(180deg, #2e2740 0%, #19162a 100%); box-shadow: 0 4px 10px -4px var(--hc); }
+.hcgrid button { --hc: var(--sl-purple-primary); height: 30px; border-radius: 6px; font-weight: 600; color: #e6e9ef;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-deep) 18%, #1b1f2a) 0%, color-mix(in srgb, var(--sl-purple-deep) 12%, #0f1117) 100%); border: 1px solid color-mix(in srgb, var(--hc) 45%, #2b3142); box-shadow: 0 2px 4px -2px color-mix(in srgb, var(--hc) 40%, transparent); }
+.hcgrid button:nth-child(1) { --hc: var(--sl-purple-deep); } .hcgrid button:nth-child(2) { --hc: color-mix(in srgb, var(--sl-purple-deep) 67%, var(--sl-purple-primary)); } .hcgrid button:nth-child(3) { --hc: color-mix(in srgb, var(--sl-purple-deep) 34%, var(--sl-purple-primary)); } .hcgrid button:nth-child(4) { --hc: var(--sl-purple-primary); }
+.hcgrid button:nth-child(5) { --hc: color-mix(in srgb, var(--sl-purple-primary) 60%, var(--sl-purple-bright)); } .hcgrid button:nth-child(6) { --hc: color-mix(in srgb, var(--sl-purple-primary) 30%, var(--sl-purple-bright)); } .hcgrid button:nth-child(7) { --hc: var(--sl-purple-bright); } .hcgrid button:nth-child(8) { --hc: color-mix(in srgb, var(--sl-purple-bright) 50%, var(--sl-purple-highlight)); }
+.hcgrid button:hover { border-color: color-mix(in srgb, var(--hc) 80%, #fff); background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-deep) 30%, #1f2330) 0%, color-mix(in srgb, var(--sl-purple-deep) 25%, #11141b) 100%); box-shadow: 0 4px 10px -4px var(--hc); }
 .hcgrid button.set { color: #fff; border-color: color-mix(in srgb, var(--hc) 70%, #fff);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--hc) 75%, #25202f) 0%, color-mix(in srgb, var(--hc) 45%, #14121c) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--hc) 75%, color-mix(in srgb, var(--sl-purple-deep) 18%, #1b1f2a)) 0%, color-mix(in srgb, var(--hc) 45%, color-mix(in srgb, var(--sl-purple-deep) 12%, #0f1117)) 100%);
   box-shadow: 0 0 7px color-mix(in srgb, var(--hc) 65%, transparent), 0 6px 14px -6px var(--hc); text-shadow: 0 0 6px rgba(255,255,255,.35); }
 .hcgrid button.pulse { animation: sl-cue-pulse 180ms ease-out; }
 @keyframes sl-cue-pulse { 0% { box-shadow: var(--sl-glow-max); filter: brightness(1.45); } 100% { filter: brightness(1); } }
-.hcgrid button.act { color: #fff; border-color: var(--sl-purple-highlight); background: linear-gradient(180deg, #9169c5, #4a3a70); box-shadow: var(--sl-glow-active); }
+.hcgrid button.act { color: #fff; border-color: var(--sl-purple-highlight); background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-primary) 60%, var(--sl-purple-bright)), var(--sl-purple-deep)); box-shadow: var(--sl-glow-active); }
 
 /* 6 manopole: corpo satinato nero, ghiera metallica, indice bianco, arco del valore viola */
-.knob { background: conic-gradient(from 225deg, #7a52b8 0deg, #b780ff calc(var(--p) * 270deg), #2b3142 0 270deg, transparent 0);
-  filter: drop-shadow(0 0 2px rgba(183,128,255,.35)); transition: filter var(--sl-t-glow); }
+.knob { background: conic-gradient(from 225deg, var(--sl-purple-primary) 0deg, var(--sl-purple-bright) calc(var(--p) * 270deg), #2b3142 0 270deg, transparent 0);
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--sl-purple-bright) 35%, transparent)); transition: filter var(--sl-t-glow); }
 .knob::before { inset: 5px; border: 2px solid transparent;
   background: radial-gradient(circle at 35% 30%, #343a45 0%, #1f2330 45%, #090b12 100%) padding-box, linear-gradient(135deg, #c9ced8, #454b56, #858d99, #c9ced8) border-box;
   box-shadow: 0 0 0 1.5px var(--sl-bg-panel), 0 3px 6px rgba(0,0,0,.7); }
 .knob::after { top: 9px; height: 9px; width: 2.5px; margin-left: -1.25px; background: #fff; box-shadow: 0 0 3px rgba(255,255,255,.6); }
-.knob:hover { filter: drop-shadow(0 0 4px rgba(183,128,255,.6)) brightness(1.08); }
+.knob:hover { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--sl-purple-bright) 60%, transparent)) brightness(1.08); }
 .knob:hover::before { box-shadow: 0 0 0 1.5px var(--sl-bg-panel), 0 3px 6px rgba(0,0,0,.7); }
-.knob.drag { background: conic-gradient(from 225deg, #b780ff 0deg, #e6d9ff calc(var(--p) * 270deg), #2b3142 0 270deg, transparent 0); filter: drop-shadow(0 0 6px rgba(183,128,255,.8)); }
+.knob.drag { background: conic-gradient(from 225deg, var(--sl-purple-bright) 0deg, var(--sl-purple-highlight) calc(var(--p) * 270deg), #2b3142 0 270deg, transparent 0); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--sl-purple-bright) 80%, transparent)); }
 .knobwrap.sm .knob::before { inset: 3px; border-width: 1.5px; box-shadow: 0 0 0 1px var(--sl-bg-panel), 0 2px 4px rgba(0,0,0,.7); }
 .knobwrap.sm .knob::after { top: 5px; height: 6px; width: 2px; margin-left: -1px; }
 
 /* 7 stem: manopola piu' grande con ghiera a segmenti progressivi */
 .stcol .sic { color: #e6e9ef; background: var(--sl-bg-surface); border: var(--sl-border-ctl); }
-.stcol .sic:hover { border-color: rgba(183,128,255,.6); box-shadow: var(--sl-glow-hover); }
+.stcol .sic:hover { border-color: color-mix(in srgb, var(--sl-purple-bright) 60%, transparent); box-shadow: var(--sl-glow-hover); }
 .stcol .knob { width: 58px; height: 58px; flex: none; margin: auto 0;
   background: repeating-conic-gradient(from 225deg, transparent 0 8deg, var(--sl-bg-panel) 8deg 11deg),
-    conic-gradient(from 225deg, #7a52b8 0deg, #e6d9ff calc(var(--p) * 270deg), #262a38 0 270deg, transparent 0); }
-.stcol .knob.drag { filter: drop-shadow(0 0 6px rgba(183,128,255,.8)); }
+    conic-gradient(from 225deg, var(--sl-purple-primary) 0deg, var(--sl-purple-highlight) calc(var(--p) * 270deg), #262a38 0 270deg, transparent 0); }
+.stcol .knob.drag { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--sl-purple-bright) 80%, transparent)); }
 .stcol .knob::before { inset: 8px; background: radial-gradient(circle at 50% 50%, #9aa1ad 0%, #5d6470 22%, #2a2f3a 46%, #0d0f15 72%) padding-box, linear-gradient(135deg, #c9ced8, #454b56, #858d99, #c9ced8) border-box; }
 .stcol .knob::after { top: 11px; height: 11px; }
 .stcol.off .knob { filter: saturate(.25) brightness(.7); }
 .stcol .ms button { width: 30px; height: 26px; border-radius: 6px; font-weight: 600; color: #fff; background: var(--sl-grad-raised); border: 1px solid rgba(201,206,216,.35); }
-.stcol .ms button.m.on { color: #fff; background: linear-gradient(180deg, #59417f, #2c2244); border-color: #9169c5; box-shadow: var(--sl-glow-hover); }
-.stcol .ms button.s.on { color: #fff; background: linear-gradient(180deg, #9169c5, #7a52b8); border-color: var(--sl-purple-highlight); box-shadow: var(--sl-glow-active); }
+.stcol .ms button.m.on { color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-deep) 67%, var(--sl-purple-primary)), color-mix(in srgb, var(--sl-purple-deep) 55%, #0b0d12)); border-color: color-mix(in srgb, var(--sl-purple-primary) 60%, var(--sl-purple-bright)); box-shadow: var(--sl-glow-hover); }
+.stcol .ms button.s.on { color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-primary) 60%, var(--sl-purple-bright)), var(--sl-purple-primary)); border-color: var(--sl-purple-highlight); box-shadow: var(--sl-glow-active); }
 .stcol.off { opacity: 1; }
 
 /* 8 fader stile Pioneer: cappuccio in alluminio con scanalature e striscia lavanda centrale */
@@ -1078,21 +1078,21 @@ select:focus, select:active { outline: none; border-color: var(--sl-purple-brigh
   background: linear-gradient(180deg, rgba(0,0,0,.45) 0 1px, rgba(255,255,255,.6) 1px 2px, transparent 2px calc(100% - 2px), rgba(0,0,0,.45) calc(100% - 2px) calc(100% - 1px), rgba(255,255,255,.6) calc(100% - 1px)); }
 .fader.h .fcap::before { display: block; top: 3px; bottom: 3px; left: 5px; right: 5px; opacity: 1; border-radius: 0;
   background: linear-gradient(90deg, rgba(0,0,0,.45) 0 1px, rgba(255,255,255,.6) 1px 2px, transparent 2px calc(100% - 2px), rgba(0,0,0,.45) calc(100% - 2px) calc(100% - 1px), rgba(255,255,255,.6) calc(100% - 1px)); }
-.fader .fcap::after { background: #e6d9ff; box-shadow: 0 0 6px #b780ff, 0 0 12px rgba(183,128,255,.6); border-radius: 2px; }
-.fader .ffill { background: var(--sl-purple-primary); box-shadow: 0 0 6px rgba(183,128,255,.5); }
+.fader .fcap::after { background: var(--sl-purple-highlight); box-shadow: 0 0 6px var(--sl-purple-bright), 0 0 12px color-mix(in srgb, var(--sl-purple-bright) 60%, transparent); border-radius: 2px; }
+.fader .ffill { background: var(--sl-purple-primary); box-shadow: 0 0 6px color-mix(in srgb, var(--sl-purple-bright) 50%, transparent); }
 
 /* 11 mixer: meter a LED verde, giallo, rosso con piccoli stacchi */
 .meter.vert { background: linear-gradient(0deg, var(--sl-meter-green) 0 60%, var(--sl-meter-yellow) 60% 82%, var(--sl-meter-red) 82%); border: 1px solid #07080b; border-radius: 2px; }
 .meter.vert::after { background: #090b0f; }
 .meter.vert::before { background: repeating-linear-gradient(0deg, transparent 0 3px, #090b0f 3px 4.5px); }
 .meter.horiz i::after { background: linear-gradient(90deg, var(--sl-meter-green) 60%, var(--sl-meter-yellow) 82%, var(--sl-meter-red)); }
-.xfade .xa, .xfade .xb { color: var(--sl-purple-highlight); text-shadow: 0 0 6px rgba(183,128,255,.6); }
+.xfade .xa, .xfade .xb { color: var(--sl-purple-highlight); text-shadow: 0 0 6px color-mix(in srgb, var(--sl-purple-bright) 60%, transparent); }
 
 /* 12 FX: interruttore spento grigio, acceso viola */
 .pwr { background: var(--sl-bg-surface); border: var(--sl-border-ctl); box-shadow: none; }
 .pwr i { background: #858d99; }
-.pwr.on { background: linear-gradient(180deg, #7a52b8, #4a3a70); border-color: var(--sl-purple-bright); box-shadow: var(--sl-glow-hover); }
-.pwr.on i { background: #fff; box-shadow: 0 0 6px #e6d9ff; }
+.pwr.on { background: linear-gradient(180deg, var(--sl-purple-primary), var(--sl-purple-deep)); border-color: var(--sl-purple-bright); box-shadow: var(--sl-glow-hover); }
+.pwr.on i { background: #fff; box-shadow: 0 0 6px var(--sl-purple-highlight); }
 
 /* 16 loop */
 .loopc .lr button, .loopc .io button { background: var(--sl-grad-raised); border: 1px solid rgba(201,206,216,.30); color: #fff; }
@@ -1109,7 +1109,7 @@ td:nth-child(3) { color: #e6e9ef; }
 td:nth-child(5) { color: var(--sl-purple-highlight); font-weight: 500; }
 td.kc { color: var(--sl-purple-bright); font-weight: 500; }
 tbody tr:hover { background: rgba(52,58,74,.35); }
-tbody tr.sel { background: linear-gradient(90deg, rgba(122,82,184,.28), rgba(74,58,112,.12)); box-shadow: inset 0 0 0 1px rgba(183,128,255,.55); }
+tbody tr.sel { background: linear-gradient(90deg, color-mix(in srgb, var(--sl-purple-primary) 28%, transparent), color-mix(in srgb, var(--sl-purple-deep) 12%, transparent)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sl-purple-bright) 55%, transparent); }
 tbody tr.sel td { color: #fff; }
 .cover { background-color: var(--sl-bg-surface); border: var(--sl-border-ctl); }
 .ld button, .ld button[data-d] { color: #e6e9ef; border: var(--sl-border-ctl); background: var(--sl-grad-raised); box-shadow: none; }
@@ -1136,7 +1136,7 @@ tbody tr.sel td { color: #fff; }
     linear-gradient(135deg, #c9ced8, #454b56, #858d99, #c9ced8) border-box; }
 .strip .kcol .knobwrap:not(.sm) .knob { width: 54px; height: 54px; }
 .stcol .knob { background: repeating-conic-gradient(from 225deg, transparent 0 13deg, var(--sl-bg-panel) 13deg 18deg),
-    conic-gradient(from 225deg, #7a52b8 0deg, #e6d9ff calc(var(--p) * 270deg), #262a38 0 270deg, transparent 0); }
+    conic-gradient(from 225deg, var(--sl-purple-primary) 0deg, var(--sl-purple-highlight) calc(var(--p) * 270deg), #262a38 0 270deg, transparent 0); }
 .stcol .knob::before { background:
     radial-gradient(circle, transparent 0 55%, rgba(0,0,0,.45) 75%, rgba(0,0,0,.8) 100%) padding-box,
     conic-gradient(from 20deg, #6b717e, #d5d9e1 10%, #5b616d 24%, #b7bcc6 38%, #555b66 50%, #d5d9e1 62%, #5b616d 75%, #b7bcc6 88%, #6b717e) padding-box,
@@ -1182,23 +1182,23 @@ tbody tr.sel td { color: #fff; }
 /* stato attivo dei pulsanti: niente riempimento viola pieno, ma fondo grafite con una sfumatura viola che sale dal basso e una luce sotto */
 .rbtn2.on, .mbtn.on, #tgt button.on, .chip2.on, .prow .chip2.on, .seg button.on, .presets button.on, .pbtn.qb.on, .loopc .lsz.on, .hpb button.on, .pbtn.br.on, .pbtn.bl.on,
 .stcol .ms button.m.on, .stcol .ms button.s.on {
-  color: #fff; border: 1px solid rgba(183,128,255,.75);
-  background: linear-gradient(180deg, #232836 0%, #1f2030 45%, rgba(122,82,184,.55) 85%, rgba(183,128,255,.75) 100%);
-  box-shadow: 0 6px 14px -6px rgba(183,128,255,.85), 0 2px 10px -4px rgba(122,82,184,.6), inset 0 -2px 6px -2px rgba(230,217,255,.45);
-  text-shadow: 0 0 6px rgba(230,217,255,.45); }
-.stcol .ms button.m.on { background: linear-gradient(180deg, #232836 0%, #1f2030 50%, rgba(74,58,112,.7) 100%); box-shadow: 0 5px 10px -6px rgba(122,82,184,.7); }
+  color: #fff; border: 1px solid color-mix(in srgb, var(--sl-purple-bright) 75%, transparent);
+  background: linear-gradient(180deg, #232836 0%, #1f2030 45%, color-mix(in srgb, var(--sl-purple-primary) 55%, transparent) 85%, color-mix(in srgb, var(--sl-purple-bright) 75%, transparent) 100%);
+  box-shadow: 0 6px 14px -6px color-mix(in srgb, var(--sl-purple-bright) 85%, transparent), 0 2px 10px -4px color-mix(in srgb, var(--sl-purple-primary) 60%, transparent), inset 0 -2px 6px -2px color-mix(in srgb, var(--sl-purple-highlight) 45%, transparent);
+  text-shadow: 0 0 6px color-mix(in srgb, var(--sl-purple-highlight) 45%, transparent); }
+.stcol .ms button.m.on { background: linear-gradient(180deg, #232836 0%, #1f2030 50%, color-mix(in srgb, var(--sl-purple-deep) 70%, transparent) 100%); box-shadow: 0 5px 10px -6px color-mix(in srgb, var(--sl-purple-primary) 70%, transparent); }
 
 /* hot cue: colore visibile anche da vuoti (bordo e luce sotto del proprio tono), pieni con la sfumatura che sale dal basso e alone */
 .hcgrid button { color: color-mix(in srgb, var(--hc) 45%, #e6e9ef); border: 1px solid color-mix(in srgb, var(--hc) 85%, #fff 0%);
-  background: linear-gradient(180deg, #25202f 0%, #17141f 60%, color-mix(in srgb, var(--hc) 30%, #14121c) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-deep) 18%, #1b1f2a) 0%, color-mix(in srgb, var(--sl-purple-deep) 14%, #11141b) 60%, color-mix(in srgb, var(--hc) 30%, color-mix(in srgb, var(--sl-purple-deep) 12%, #0f1117)) 100%);
   box-shadow: 0 4px 9px -5px var(--hc), inset 0 -1px 4px -1px color-mix(in srgb, var(--hc) 60%, transparent); }
-.hcgrid button:hover { border-color: color-mix(in srgb, var(--hc) 70%, #fff); background: linear-gradient(180deg, #2b2538 0%, #1c1828 50%, color-mix(in srgb, var(--hc) 45%, #14121c) 100%); box-shadow: 0 6px 12px -5px var(--hc); }
+.hcgrid button:hover { border-color: color-mix(in srgb, var(--hc) 70%, #fff); background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-deep) 28%, #1f2330) 0%, color-mix(in srgb, var(--sl-purple-deep) 22%, #141821) 50%, color-mix(in srgb, var(--hc) 45%, color-mix(in srgb, var(--sl-purple-deep) 12%, #0f1117)) 100%); box-shadow: 0 6px 12px -5px var(--hc); }
 .hcgrid button.set { color: #fff; border-color: color-mix(in srgb, var(--hc) 60%, #fff);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--hc) 35%, #25202f) 0%, color-mix(in srgb, var(--hc) 70%, #25202f) 55%, color-mix(in srgb, var(--hc) 90%, #fff) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--hc) 35%, color-mix(in srgb, var(--sl-purple-deep) 18%, #1b1f2a)) 0%, color-mix(in srgb, var(--hc) 70%, color-mix(in srgb, var(--sl-purple-deep) 18%, #1b1f2a)) 55%, color-mix(in srgb, var(--hc) 90%, #fff) 100%);
   box-shadow: 0 0 8px color-mix(in srgb, var(--hc) 75%, transparent), 0 8px 16px -6px var(--hc), inset 0 1px 0 rgba(255,255,255,.25); text-shadow: 0 0 6px rgba(255,255,255,.5); }
 /* hot cue vuoti tutti uguali e neutri: il colore compare solo quando il cue e' memorizzato */
 .hcgrid button:not(.set):not(.act) { color: #8a8aa3; border: 1px solid #2b3142; background: linear-gradient(180deg, #232836 0%, #161a23 100%); box-shadow: 0 2px 4px rgba(0,0,0,.4); }
-.hcgrid button:not(.set):not(.act):hover { color: #e6e9ef; border-color: rgba(183,128,255,.6); box-shadow: var(--sl-glow-hover); }
+.hcgrid button:not(.set):not(.act):hover { color: #e6e9ef; border-color: color-mix(in srgb, var(--sl-purple-bright) 60%, transparent); box-shadow: var(--sl-glow-hover); }
 
 /* conto alla rovescia: lampeggia in rosso negli ultimi 20 secondi del brano */
 .clock2 b.ending { color: var(--sl-meter-red); text-shadow: 0 0 10px rgba(255,59,48,.7); animation: sl-ending 1s steps(1, end) infinite; }
@@ -1211,18 +1211,191 @@ tbody tr.sel td { color: #fff; }
 #splash { background: radial-gradient(ellipse at 50% 40%, #1a1e2a 0%, #0f1218 62%, #0b0d12 100%); color: #e6e9ef; }
 .sp-vinyl { background: conic-gradient(from 20deg, rgba(255,255,255,0) 0 6%, rgba(235,235,250,.14) 11%, rgba(255,255,255,0) 18% 50%, rgba(235,235,250,.1) 61%, rgba(255,255,255,0) 69% 100%),
     repeating-radial-gradient(circle, #15171c 0 1.5px, #07080b 1.5px 3.5px);
-  box-shadow: 0 0 0 2px #07080b, 0 0 40px 4px rgba(122,82,184,.2), inset 0 0 60px rgba(0,0,0,.8); }
-.sp-label { background: radial-gradient(circle, #15171d 0 60%, #0b0c10 100%); box-shadow: 0 0 0 3px #858d99, 0 0 0 5px #0b0c10, 0 0 28px rgba(183,128,255,.35); }
-.sp-ring { filter: drop-shadow(0 0 10px rgba(183,128,255,.8));
-  background: conic-gradient(from 195deg, #e6d9ff 0, #b780ff 14%, #7a52b8 28%, #4a3a70 40%, #7a52b8 52%, #b780ff 66%, #e6d9ff 76%, #7a52b8 88%, #e6d9ff 100%); animation: sp-spin 6s linear infinite; }
+  box-shadow: 0 0 0 2px #07080b, 0 0 40px 4px color-mix(in srgb, var(--sl-purple-primary) 20%, transparent), inset 0 0 60px rgba(0,0,0,.8); }
+.sp-label { background: radial-gradient(circle, #15171d 0 60%, #0b0c10 100%); box-shadow: 0 0 0 3px #858d99, 0 0 0 5px #0b0c10, 0 0 28px color-mix(in srgb, var(--sl-purple-bright) 35%, transparent); }
+.sp-ring { filter: drop-shadow(0 0 10px color-mix(in srgb, var(--sl-purple-bright) 80%, transparent));
+  background: conic-gradient(from 195deg, var(--sl-purple-highlight) 0, var(--sl-purple-bright) 14%, var(--sl-purple-primary) 28%, var(--sl-purple-deep) 40%, var(--sl-purple-primary) 52%, var(--sl-purple-bright) 66%, var(--sl-purple-highlight) 76%, var(--sl-purple-primary) 88%, var(--sl-purple-highlight) 100%); animation: sp-spin 6s linear infinite; }
 .sp-ticks { opacity: .9; background: conic-gradient(from -30deg, #c9ced8, #858d99 15%, #454b56 30%, #f1f3f6 45%, #858d99 60%, #454b56 78%, #c9ced8); }
-.sp-wave.l i, .sp-wave.r i { background: linear-gradient(#e6d9ff, #b780ff 55%, #7a52b8); box-shadow: 0 0 6px rgba(183,128,255,.55); }
+.sp-wave.l i, .sp-wave.r i { background: linear-gradient(var(--sl-purple-highlight), var(--sl-purple-bright) 55%, var(--sl-purple-primary)); box-shadow: 0 0 6px color-mix(in srgb, var(--sl-purple-bright) 55%, transparent); }
 .sp-word { font-family: Inter, Roboto, -apple-system, "Segoe UI", system-ui, sans-serif; font-weight: 300; }
-.sp-word span { color: #f1f3f6; text-shadow: 0 0 22px rgba(230,217,255,.2); } .sp-word b { font-weight: 500; color: #b780ff; text-shadow: 0 0 22px rgba(183,128,255,.55); }
+.sp-word span { color: #f1f3f6; text-shadow: 0 0 22px color-mix(in srgb, var(--sl-purple-highlight) 20%, transparent); } .sp-word b { font-weight: 500; color: var(--sl-purple-bright); text-shadow: 0 0 22px color-mix(in srgb, var(--sl-purple-bright) 55%, transparent); }
 .sp-status { color: #9299a6; }
 .sp-bar { background: #141821; border: 1px solid #2b3142; }
-.sp-bar i { background: linear-gradient(90deg, #4a3a70, #7a52b8 45%, #b780ff 80%, #e6d9ff); box-shadow: 0 0 12px rgba(183,128,255,.7); }
+.sp-bar i { background: linear-gradient(90deg, var(--sl-purple-deep), var(--sl-purple-primary) 45%, var(--sl-purple-bright) 80%, var(--sl-purple-highlight)); box-shadow: 0 0 12px color-mix(in srgb, var(--sl-purple-bright) 70%, transparent); }
 @media (prefers-reduced-motion: reduce) { .sp-ring { animation: none; } }
-.ab-arc.l { background: conic-gradient(from 90deg, transparent 0 14%, #b780ff 28% 44%, transparent 58%); filter: drop-shadow(0 0 6px #b780ff); }
-.ab-arc.r { background: conic-gradient(from 270deg, transparent 0 14%, #7a52b8 28% 44%, transparent 58%); filter: drop-shadow(0 0 6px #7a52b8); }
-.ab-card { border-color: rgba(183,128,255,.45); background: linear-gradient(180deg, #1b202b, #11151d); box-shadow: 0 0 40px rgba(122,82,184,.18), inset 0 0 0 1px rgba(255,255,255,.03); }
+.ab-arc.l { background: conic-gradient(from 90deg, transparent 0 14%, var(--sl-purple-bright) 28% 44%, transparent 58%); filter: drop-shadow(0 0 6px var(--sl-purple-bright)); }
+.ab-arc.r { background: conic-gradient(from 270deg, transparent 0 14%, var(--sl-purple-primary) 28% 44%, transparent 58%); filter: drop-shadow(0 0 6px var(--sl-purple-primary)); }
+.ab-card { border-color: color-mix(in srgb, var(--sl-purple-bright) 45%, transparent); background: linear-gradient(180deg, #1b202b, #11151d); box-shadow: 0 0 40px color-mix(in srgb, var(--sl-purple-primary) 18%, transparent), inset 0 0 0 1px rgba(255,255,255,.03); }
+
+/* Impostazioni → INTERFACCIA: selettore del colore (quadrato saturazione/luminosita' + barra della tinta) e anteprima reale */
+.thpick { display: grid; grid-template-columns: minmax(0, 1fr) 230px; grid-template-rows: 150px 18px; gap: 10px 16px; margin: 6px 0 12px; max-width: 640px; }
+.thsv { --h: 270; --sx: .5; --sy: 0; position: relative; border-radius: 8px; cursor: crosshair; touch-action: none; border: var(--sl-border-ctl);
+  background: linear-gradient(0deg, #000, transparent), linear-gradient(90deg, #fff, hsl(var(--h) 100% 50%)); }
+.thsv i { position: absolute; left: calc(var(--sx) * 100%); top: calc(var(--sy) * 100%); width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #000, 0 2px 6px #000a; pointer-events: none; }
+.thhue { --x: .75; grid-column: 1; position: relative; border-radius: 9px; cursor: ew-resize; touch-action: none; border: var(--sl-border-ctl);
+  background: linear-gradient(90deg, #f00, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00); }
+.thhue i { position: absolute; left: calc(var(--x) * 100%); top: -3px; bottom: -3px; width: 8px; margin-left: -4px; border-radius: 4px; background: #fff; box-shadow: 0 0 0 1px #000, 0 2px 6px #000a; pointer-events: none; }
+.thinfo { grid-column: 2; grid-row: 1 / 3; display: grid; align-content: start; gap: 10px; }
+.thnow { height: 64px; border-radius: 8px; border: var(--sl-border-ctl); box-shadow: 0 0 18px color-mix(in srgb, var(--sl-purple-bright) 50%, transparent); }
+#thHex { font: 600 14px/1 ui-monospace, Menlo, Consolas, monospace; text-transform: uppercase; padding: 8px 10px; }
+.thshot { position: relative; width: 100%; max-width: 900px; border-radius: 10px; overflow: hidden; border: var(--sl-border-panel); box-shadow: 0 10px 30px rgba(0,0,0,.5); background: var(--sl-bg-deep); }
+.thcopy * { animation: none !important; transition: none !important; }
+.thshot { max-width: 760px; }
+.threset { padding: 9px 10px; font-weight: 600; letter-spacing: .3px; border-color: color-mix(in srgb, var(--sl-purple-bright) 55%, #2b3142); }
+/* EQ e filtro del mixer piu grandi */
+.strip .kcol .knobwrap:not(.sm) .knob { width: 62px; height: 62px; } .strip .kcol .knobwrap:not(.sm) .knob::before { inset: 6px; } .strip .kcol .knobwrap:not(.sm) .knob::after { top: 10px; height: 11px; }
+
+/* monitor ultrawide (solo da 2,4:1 in su): a sinistra deck e mixer con le stesse proporzioni di un monitor 16:10 e sotto, affiancati,
+   stem (sempre visibili), il pannello scelto fra SAMPLER / DRUMS / AUTOMIX e gli FX; a destra cartelle, playlist ed elenco dei brani a tutta
+   altezza. Sotto 2,4:1 queste regole non valgono. */
+body.ultrawide #app { grid-template-columns: minmax(0, calc(100vh / var(--k, 1) * 1.6)) 230px minmax(0, 1fr); grid-template-rows: 44px minmax(500px, 57fr) minmax(0, 43fr); }
+body.ultrawide #top { grid-column: 1 / -1; }
+body.ultrawide #stage { grid-column: 1; grid-row: 2; }
+body.ultrawide #lower { display: contents; }
+body.ultrawide #rpanel { grid-column: 1; grid-row: 3; margin: 6px; display: grid; column-gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 360px; grid-template-rows: auto minmax(0, 1fr); }
+body.ultrawide #rpanel > .tgtrow, body.ultrawide #rpanel.full > .tgtrow { display: flex; grid-column: 1; grid-row: 1; padding: 10px 10px 4px; border-bottom: 1px solid var(--line); }
+body.ultrawide #pn-stems { display: flex !important; grid-column: 1; grid-row: 2; }
+body.ultrawide .ptabs button[data-pn="stems"] { display: none; }
+body.ultrawide #rpanel > .ptabs { grid-column: 2; grid-row: 1; }
+body.ultrawide #rpanel > .pn:not(#pn-stems) { grid-column: 2; grid-row: 2; } body.ultrawide #rpanel > .pn:not(#pn-stems):not(.on) { display: none; }
+body.ultrawide #rpanel > .fxbox, body.ultrawide #rpanel.full > .fxbox { display: block; grid-column: 3; grid-row: 1 / 3; margin: 10px; align-self: stretch; }
+body.ultrawide #rpanel > #libInfo { display: none; }
+body.ultrawide #side { grid-column: 2; grid-row: 2 / 4; margin: 6px 0; }
+body.ultrawide #browser { grid-column: 3; grid-row: 2 / 4; margin: 6px; }
+body.ultrawide #pn-stems { flex-direction: column; } body.ultrawide #pn-stems .stemrow { flex: 0 0 auto; }
+body.ultrawide #pads { flex: none; grid-template-rows: repeat(2, 64px); } body.ultrawide #drumPads { flex: none; grid-auto-rows: 52px; } body.ultrawide .amqueue { max-height: 200px; overflow-y: auto; }
+
+/* ================================================================================================================
+   SKIN — scelta in Impostazioni → INTERFACCIA. Ogni skin ridefinisce i token dei fondi e i materiali; il colore d'accento arriva
+   dal tema (che parte dal colore della skin). DARK CLUB e' l'aspetto di base: non ha regole qui.
+   ================================================================================================================ */
+.skinsel { display: grid; grid-template-columns: repeat(3, minmax(0, 220px)); gap: 10px; margin: 6px 0 14px; }
+.skincard { display: grid; gap: 4px; text-align: left; padding: 10px 12px; border-radius: 10px; }
+.skincard b { font-size: 13px; } .skincard small { color: var(--dim); font-size: 10.5px; line-height: 1.3; }
+.skincard span { display: flex; gap: 3px; margin-top: 4px; } .skincard span i { flex: 1; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.skincard.on { border-color: var(--sl-purple-bright); box-shadow: var(--sl-glow-active); }
+
+/* ---------------------------------------------------------------- INDUSTRIAL: metallo scuro, lamiera forata, luci ambra */
+body.skin-industrial {
+  --sl-bg-deep: #0b0d10; --sl-bg-panel: #1b1f24; --sl-bg-surface: #2a3037; --sl-bg-raised: #444b53;
+  --sl-grad-app: linear-gradient(180deg, #13161a 0%, #0b0d10 100%);
+  --sl-grad-panel: linear-gradient(180deg, #1f2329 0%, #15181c 100%);
+  --sl-grad-raised: linear-gradient(180deg, #3a4048 0%, #23282e 100%);
+  --sl-border-panel: 1px solid #2f353c; --sl-border-ctl: 1px solid #3c434b;
+  --line: #2a3037; --line2: #3c434b; --text: #e8e6e1; --dim: #9aa0a8; --card: #171a1f;
+}
+body.skin-industrial :is(#side, #browser, #rpanel, #mixer, .deck) {
+  background: radial-gradient(circle, rgba(0,0,0,.35) 0 1.1px, transparent 1.6px) 0 0 / 6px 6px, linear-gradient(180deg, rgba(255,255,255,.03), transparent 40%), var(--sl-grad-panel);
+  border: 1px solid #2f353c; box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 4px 14px rgba(0,0,0,.5); }
+body.skin-industrial .card, body.skin-industrial .stcol, body.skin-industrial .fxbox { background: linear-gradient(180deg, #1c2026, #14171b); border: 1px solid #333a42; }
+body.skin-industrial #top { background: linear-gradient(180deg, #1a1d22, #0e1013); border-bottom: 1px solid #2f353c; }
+body.skin-industrial button { background: linear-gradient(180deg, #353b43, #22272d); border: 1px solid #454c55; box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 2px 3px rgba(0,0,0,.5); color: #e8e6e1; border-radius: 4px; }
+body.skin-industrial button:hover { border-color: var(--sl-purple-bright); box-shadow: 0 0 8px color-mix(in srgb, var(--sl-purple-bright) 40%, transparent); }
+body.skin-industrial :is(.rbtn2.on, .mbtn.on, #tgt button.on, .chip2.on, .prow .chip2.on, .presets button.on, .pbtn.qb.on, .loopc .lsz.on, .hpb button.on, .pbtn.br.on, .stcol .ms button.on) {
+  color: #1a1206; background: linear-gradient(180deg, var(--sl-purple-highlight), var(--sl-purple-bright) 55%, var(--sl-purple-primary)); border-color: var(--sl-purple-highlight);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--sl-purple-bright) 60%, transparent), inset 0 1px 0 rgba(255,255,255,.5); text-shadow: none; }
+body.skin-industrial .hcgrid button:not(.set):not(.act) { background: linear-gradient(180deg, #2c3137, #1b1f24); border: 1px solid #454c55; color: #d9d6cf; border-radius: 4px; }
+body.skin-industrial .hcgrid button.set { color: #1a1206; border-color: var(--sl-purple-highlight); background: linear-gradient(180deg, var(--sl-purple-highlight), var(--sl-purple-bright) 60%, var(--sl-purple-primary)); box-shadow: 0 0 10px color-mix(in srgb, var(--sl-purple-bright) 60%, transparent); text-shadow: none; }
+body.skin-industrial .deck .rbtn.cue, body.skin-industrial .deck .rbtn.cue:hover { border-radius: 6px; color: var(--sl-cue);
+  background: linear-gradient(180deg, #2a2216, #17130c) padding-box, linear-gradient(180deg, #5a5f66, #2a2e33) border-box; }
+body.skin-industrial .deck .rbtn.play { border-radius: 6px; background: linear-gradient(180deg, #1d2a22, #0f1712) padding-box, linear-gradient(180deg, #5a5f66, #2a2e33) border-box; }
+body.skin-industrial .knob::before { background: radial-gradient(circle at 40% 30%, #8a8f96 0%, #44494f 30%, #1c1f23 65%, #0d0f11 100%) padding-box,
+  repeating-conic-gradient(#5b6168 0 4deg, #2a2e33 4deg 8deg) border-box; border-width: 3px; }
+body.skin-industrial .knob { background: conic-gradient(from 225deg, var(--sl-purple-primary) 0deg, var(--sl-purple-bright) calc(var(--p) * 270deg), #2a2e33 0 270deg, transparent 0); filter: drop-shadow(0 0 3px color-mix(in srgb, var(--sl-purple-bright) 45%, transparent)); }
+body.skin-industrial .fader .fcap::after { background: var(--sl-purple-bright); box-shadow: 0 0 8px var(--sl-purple-bright); }
+body.skin-industrial .wv > canvas { background: #0a0b0d; border-color: #2f353c; }
+body.skin-industrial tbody tr.sel { background: linear-gradient(90deg, color-mix(in srgb, var(--sl-purple-bright) 25%, transparent), transparent); box-shadow: inset 0 0 0 1px var(--sl-purple-bright); }
+body.skin-industrial .art { background: linear-gradient(180deg, var(--sl-purple-bright), var(--sl-purple-primary)); color: #1a1206; border-color: var(--sl-purple-highlight); }
+body.skin-industrial #nav button.on { color: var(--sl-purple-bright); border-bottom-color: var(--sl-purple-bright); }
+
+/* ---------------------------------------------------------------- RETRO HARDWARE: pannelli in alluminio spazzolato chiari, tasti crema, accenti rossi */
+body.skin-retro {
+  --sl-bg-deep: #1a1a1a; --sl-bg-panel: #242424; --sl-bg-surface: #3a3a3a; --sl-bg-raised: #4a4a4a;
+  --sl-grad-app: linear-gradient(180deg, #202020 0%, #141414 100%);
+  --sl-grad-panel: linear-gradient(180deg, #262626 0%, #1a1a1a 100%);
+  --sl-grad-raised: linear-gradient(180deg, #3c3c3c 0%, #262626 100%);
+  --sl-border-panel: 1px solid #3a3a3a; --sl-border-ctl: 1px solid #555;
+  --line: #333; --line2: #4a4a4a; --text: #ece9e2; --dim: #a19d93; --card: #222;
+  --rt-alu: repeating-linear-gradient(90deg, rgba(255,255,255,.10) 0 1px, rgba(0,0,0,.04) 1px 2px, rgba(255,255,255,.05) 2px 3px), linear-gradient(180deg, #d6d4cc 0%, #c2c0b7 50%, #adaba2 100%);
+  --rt-ink: #1f1f1f; --rt-ink2: #4d4a43; --rt-cream: linear-gradient(180deg, #f6f1e6 0%, #e4dccb 70%, #cfc6b2 100%);
+}
+body.skin-retro :is(#side, #browser, #rpanel) { background: var(--sl-grad-panel); border: 1px solid #3a3a3a; }
+body.skin-retro :is(.deck, #mixer) { --text: var(--rt-ink); --dim: var(--rt-ink2); color: var(--rt-ink); background: var(--rt-alu); border: 1px solid #8f8d86;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.7), inset 0 -1px 0 rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.6); }
+body.skin-retro :is(.deck, #mixer) .card { background: linear-gradient(180deg, #cbc9c0, #b8b6ad); border: 1px solid #8f8d86; box-shadow: inset 0 1px 2px rgba(0,0,0,.18); }
+body.skin-retro :is(.deck, #mixer) :is(.card .ch, .clock2 span, .kv small, .knobwrap, .pval, .xfade .xa, .xfade .xb, .tgtrow) { color: var(--rt-ink2); text-shadow: none; }
+body.skin-retro .deck :is(.title, .clock2 b, .kv b) { color: var(--rt-ink); }
+body.skin-retro .deck .artist { color: var(--rt-ink2); }
+body.skin-retro .xfade .xa, body.skin-retro .xfade .xb { color: var(--sl-purple-bright); }
+body.skin-retro :is(.deck, #mixer) button, body.skin-retro .hcgrid button:not(.set):not(.act) {
+  color: var(--rt-ink); background: var(--rt-cream); border: 1px solid #8f897c; border-radius: 5px; box-shadow: 0 2px 0 #7d776b, 0 3px 5px rgba(0,0,0,.35), inset 0 1px 0 #fff; text-shadow: none; }
+body.skin-retro :is(.deck, #mixer) button:hover { border-color: var(--sl-purple-bright); }
+body.skin-retro :is(.rbtn2.on, .mbtn.on, #tgt button.on, .chip2.on, .prow .chip2.on, .presets button.on, .pbtn.qb.on, .loopc .lsz.on, .hpb button.on, .pbtn.br.on, .pbtn.bl.on, .stcol .ms button.on),
+body.skin-retro .hcgrid button.set {
+  color: #fff; background: linear-gradient(180deg, color-mix(in srgb, var(--sl-purple-bright) 80%, #fff), var(--sl-purple-bright) 50%, var(--sl-purple-primary)); border: 1px solid var(--sl-purple-primary);
+  box-shadow: 0 2px 0 var(--sl-purple-deep), 0 0 10px color-mix(in srgb, var(--sl-purple-bright) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.4); text-shadow: 0 1px 1px rgba(0,0,0,.4); }
+body.skin-retro .pbtn { border-radius: 50%; }
+body.skin-retro .deck .rbtn.cue, body.skin-retro .deck .rbtn.cue:hover { border-radius: 6px; border: 1px solid #8f897c; color: var(--rt-ink); background: var(--rt-cream); box-shadow: 0 3px 0 #7d776b, 0 4px 8px rgba(0,0,0,.4), inset 0 1px 0 #fff; }
+body.skin-retro .deck .rbtn.cue.on, body.skin-retro .deck .rbtn.cue:active { background: linear-gradient(180deg, #ffd98a, #f0b84a); }
+body.skin-retro .deck .rbtn.play, body.skin-retro .deck .rbtn.play:hover { border-radius: 6px; border: 1px solid #2a2a2a; background: linear-gradient(180deg, #3a3a3a, #1a1a1a); box-shadow: 0 3px 0 #000, 0 4px 8px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.15); }
+body.skin-retro .knob { background: conic-gradient(from 225deg, var(--sl-purple-bright) calc(var(--p) * 270deg), #57544d 0 270deg, transparent 0); filter: none; }
+body.skin-retro .knob::before { border-width: 2px; background: radial-gradient(circle at 40% 30%, #ffffff 0%, #efe9dc 35%, #c9c1ae 70%, #9c947f 100%) padding-box, linear-gradient(135deg, #1f1f1f, #555) border-box;
+  box-shadow: 0 0 0 1.5px #8f8d86, 0 3px 6px rgba(0,0,0,.45); }
+body.skin-retro .knob::after { background: #1f1f1f; box-shadow: none; }
+body.skin-retro #rpanel .knob::before { box-shadow: 0 0 0 1.5px var(--sl-bg-panel), 0 3px 6px rgba(0,0,0,.45); }
+body.skin-retro .fader .ftrack { background: #1c1c1c; box-shadow: inset 0 1px 3px #000, 0 1px 0 rgba(255,255,255,.5); }
+body.skin-retro .fader .fcap::after { background: var(--sl-purple-bright); box-shadow: 0 0 4px var(--sl-purple-bright); }
+body.skin-retro .wv > canvas { background: #121212; border: 1px solid #6b6962; }
+body.skin-retro .art { background: linear-gradient(180deg, var(--sl-purple-bright), var(--sl-purple-primary)); color: #fff; border-color: #6b0f0f; }
+body.skin-retro #top { background: linear-gradient(180deg, #262626, #151515); }
+body.skin-retro #nav button.on { color: var(--sl-purple-bright); border-bottom-color: var(--sl-purple-bright); }
+body.skin-retro .ptabs button.on { color: #fff; background: var(--sl-purple-bright); border-bottom-color: var(--sl-purple-bright); box-shadow: none; }
+body.skin-retro tbody tr.sel { background: linear-gradient(90deg, color-mix(in srgb, var(--sl-purple-bright) 35%, transparent), transparent); box-shadow: inset 0 0 0 1px var(--sl-purple-bright); }
+body.skin-retro .stcol .knob { background: conic-gradient(from 225deg, var(--sl-purple-bright) calc(var(--p) * 270deg), #57544d 0 270deg, transparent 0); }
+body.skin-retro :is(.deck, #mixer) select { background: var(--rt-cream); color: var(--rt-ink); border-color: #8f897c; }
+body.skin-retro .meter.vert { border-color: #555; }
+/* cartella e playlist selezionate nel colore del tema (in tutte le skin) */
+.tn.on, .plitem.on { background: linear-gradient(90deg, var(--sl-purple-primary), color-mix(in srgb, var(--sl-purple-deep) 70%, transparent)); color: #fff; }
+body.skin-industrial .tn.on, body.skin-industrial .plitem.on { background: linear-gradient(90deg, var(--sl-purple-bright), var(--sl-purple-primary)); color: #1a1206; }
+body.skin-retro .deck .rbtn.play, body.skin-retro .deck .rbtn.play:hover { color: var(--sl-play); }
+body.skin-retro .deck .rbtn.play.on { color: #7dffb5; box-shadow: 0 3px 0 #000, 0 0 14px rgba(0,230,118,.5), inset 0 1px 0 rgba(255,255,255,.15); }
+body.skin-retro #mixer .mfx { color: #ece9e2; }
+body.skin-retro button { color: #ece9e2; }
+
+/* skin con le immagini dei materiali (assets/skins): texture dei pannelli, corpo delle manopole */
+body.skin-industrial :is(.deck, #side, #browser, #rpanel) {
+  background: linear-gradient(180deg, rgba(14,16,19,.72), rgba(10,12,14,.82)), url(assets/skins/perforated_metal.png) 0 0 / 150px 150px; }
+body.skin-industrial #mixer { background: linear-gradient(180deg, rgba(14,16,19,.7), rgba(10,12,14,.8)), url(assets/skins/diamond_plate.png) 0 0 / 180px 180px; }
+body.skin-industrial #top { background: linear-gradient(180deg, rgba(26,29,34,.86), rgba(14,16,19,.92)), url(assets/skins/brushed_aluminum.png) 0 0 / 300px 300px; }
+body.skin-industrial .knob::before { inset: 4px; border: 0; background: url(assets/skins/ind_knob.png) center / cover no-repeat; box-shadow: 0 0 0 1.5px var(--sl-bg-deep), 0 3px 7px rgba(0,0,0,.8); }
+body.skin-industrial .knob::after { background: var(--sl-purple-hi, #ffc140); background: var(--sl-purple-highlight); box-shadow: 0 0 5px var(--sl-purple-bright); }
+body.skin-industrial .stcol .knob::before { inset: 7px; }
+body.skin-retro :is(.deck, #mixer) {
+  background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(0,0,0,.08)), url(assets/skins/brushed_aluminum.png) 0 0 / 260px 260px; }
+body.skin-retro :is(#side, #browser, #rpanel) { background: linear-gradient(180deg, rgba(20,20,20,.55), rgba(12,12,12,.7)), url(assets/skins/black_leather.png) 0 0 / 220px 220px; }
+body.skin-retro .knob::before { inset: 4px; border: 0; background: url(assets/skins/retro_knob.png) center / cover no-repeat; box-shadow: 0 0 0 1.5px #6d6b64, 0 3px 6px rgba(0,0,0,.5); }
+body.skin-retro #rpanel .knob::before { box-shadow: 0 0 0 1.5px #111, 0 3px 6px rgba(0,0,0,.5); }
+body.skin-retro .knob::after { background: #1a1a1a; box-shadow: 0 0 1px #fff; }
+body.skin-retro .stcol .knob::before { inset: 7px; }
+
+/* RETRO: un tasto attivo resta crema (o scuro nei pannelli scuri), appare premuto e la scritta si illumina nel colore del tema */
+body.skin-retro :is(.rbtn2.on, .mbtn.on, #tgt button.on, .chip2.on, .prow .chip2.on, .presets button.on, .pbtn.qb.on, .loopc .lsz.on, .hpb button.on, .pbtn.br.on, .pbtn.bl.on, .stcol .ms button.on),
+body.skin-retro .hcgrid button.set {
+  color: color-mix(in srgb, var(--sl-purple-bright) 75%, #fff); border: 1px solid #8f897c;
+  background: linear-gradient(180deg, #d9d1bf 0%, #ebe4d4 100%);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.6);
+  text-shadow: 0 0 4px var(--sl-purple-bright), 0 0 10px color-mix(in srgb, var(--sl-purple-bright) 70%, transparent), 0 0 1px #fff; transform: translateY(1px); }
+body.skin-retro #rpanel :is(#tgt button.on, .presets button.on, .stcol .ms button.on), body.skin-retro #top .hpb button.on {
+  background: linear-gradient(180deg, #1c1c1c, #2a2a2a); border-color: #555; box-shadow: inset 0 2px 4px rgba(0,0,0,.6); }
+body.skin-retro .ptabs button.on { color: color-mix(in srgb, var(--sl-purple-bright) 75%, #fff); background: none; border-bottom: 2px solid var(--sl-purple-bright); text-shadow: 0 0 6px var(--sl-purple-bright), 0 0 12px color-mix(in srgb, var(--sl-purple-bright) 60%, transparent); }
+/* RETRO, correzioni: scritta attiva nitida (rosso pieno, alone appena accennato) e hot cue memorizzati che si accendono davvero
+   (la regola dei tasti crema dentro deck e mixer era piu' forte di quella degli hot cue) */
+body.skin-retro :is(.rbtn2.on, .mbtn.on, #tgt button.on, .chip2.on, .prow .chip2.on, .presets button.on, .pbtn.qb.on, .loopc .lsz.on, .hpb button.on, .pbtn.br.on, .pbtn.bl.on, .stcol .ms button.on),
+body.skin-retro :is(.deck, #mixer) .hcgrid button.set {
+  color: color-mix(in srgb, var(--sl-purple-bright) 85%, #000); font-weight: 700;
+  text-shadow: 0 0 1px rgba(255,255,255,.9), 0 0 5px color-mix(in srgb, var(--sl-purple-bright) 45%, transparent);
+  border: 1px solid #8f897c; background: linear-gradient(180deg, #d9d1bf 0%, #ebe4d4 100%);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.35), 0 1px 0 rgba(255,255,255,.6), 0 0 0 1px color-mix(in srgb, var(--sl-purple-bright) 35%, transparent); transform: translateY(1px); }
+body.skin-retro #rpanel :is(#tgt button.on, .presets button.on, .stcol .ms button.on), body.skin-retro #top .hpb button.on {
+  color: color-mix(in srgb, var(--sl-purple-bright) 70%, #fff); text-shadow: 0 0 6px color-mix(in srgb, var(--sl-purple-bright) 60%, transparent); }

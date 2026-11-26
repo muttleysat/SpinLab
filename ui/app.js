@@ -122,6 +122,13 @@ function fitUI() {
   setVWave(lay === "desktop" && vwOn);
   document.body.classList.toggle("vw-ok", lay === "desktop");
   uiK = ck || mob ? 1 : Math.min(MAX_K, innerHeight / BASE_H, innerWidth / BASE_W);
+  // monitor ultrawide (32:9, 21:9 molto largo): deck e mixer a sinistra nelle proporzioni di sempre, libreria e pannelli a destra a tutta
+  // altezza. Sui monitor tradizionali (fino a 2,4:1) non cambia nulla.
+  const uw = lay === "desktop" && innerWidth / Math.max(1, innerHeight) >= 2.4;
+  document.body.classList.toggle("ultrawide", uw);
+  document.body.classList.toggle("view-lib", !uw && !!window.__wantLib);
+  // in ultrawide gli stem sono sempre visibili accanto agli altri pannelli: se la scheda aperta era STEMS si mostra il SAMPLER
+  if (uw && document.querySelector(".ptabs button.on")?.dataset.pn === "stems") { try { setPanel("sampler"); } catch (e) {} }
   document.documentElement.style.setProperty("--k", uiK.toFixed(4));
   const lbl = $("#uiBtnLbl"); if (lbl) lbl.textContent = UI_NAMES[lay];
   const ltr = $("#uiBtnLtr"); if (ltr) ltr.textContent = UI_LETTERS[lay];
@@ -196,34 +203,55 @@ const PAL = [
   { c: "#b06cff", lo: "#6a2cff", mid: "#a76bff", hi: "#eee2ff" },
   { c: "#35e08a", lo: "#12a85a", mid: "#35e08a", hi: "#d6ffe9" },
 ];
-/* palette dei deck (Impostazioni → INTERFACCIA): colore di ogni deck, delle forme d'onda, del piatto e dei controlli; si ricorda */
-const PALETTES = {
-  viola: ["Viola neon (guida di stile)", "#b780ff", "#b780ff"],
-  classica: ["Classica: blu e arancio", "#18b6ff", "#ff7a1a"],
-  ciano: ["Ciano e magenta", "#00e5ff", "#ff3d9a"],
-  acido: ["Verde acido e ambra", "#39ff88", "#ffb020"],
-  fuoco: ["Rosso e blu", "#ff3b4e", "#3d7bff"],
-  oro: ["Oro", "#ffc21a", "#ffc21a"],
-  custom: ["Personalizzata", "", ""],
+/* tema dei colori dell'interfaccia (Impostazioni → INTERFACCIA): un colore base da cui escono i quattro toni della guida
+   (profondo, primario, acceso, chiaro). Vale per tutto: pannelli attivi, manopole, piatti, forme d'onda, hot cue. Si ricorda. */
+const THEME_DEFAULT = "#b780ff";
+/* skin dell'interfaccia (Impostazioni → INTERFACCIA): cambiano materiali, colori dei pannelli e disegno dei piatti; il colore del tema
+   parte da quello della skin e si puo' poi cambiare con il selettore */
+const SKINS = {
+  club: { name: "Dark Club", desc: "Grafite, alluminio e luci viola", base: "#b780ff", tones: { deep: "#4a3a70", primary: "#7a52b8", bright: "#b780ff", hi: "#e6d9ff" }, sw: ["#0b0d12", "#1f2330", "#7a52b8", "#b780ff", "#e6d9ff"] },
+  industrial: { name: "Industrial", desc: "Metallo scuro, griglie forate, luci ambra", base: "#ff8c00", tones: { deep: "#5a3200", primary: "#c46a00", bright: "#ff8c00", hi: "#ffc140" }, sw: ["#0b0d10", "#1b1f24", "#2a3037", "#444b53", "#ff8c00", "#ffc140"] },
+  retro: { name: "Retro Hardware", desc: "Alluminio spazzolato, tasti crema, accenti rossi", base: "#c82828", tones: { deep: "#4a0e0e", primary: "#9c1d1d", bright: "#d33131", hi: "#ede6d7" }, sw: ["#1a1a1a", "#3a3a3a", "#c4c4b9", "#ede6d7", "#c82828", "#ffb300"] },
 };
+let SKIN = { id: "club", ...SKINS.club };
+try { const k = localStorage.getItem("spinlab.skin"); if (SKINS[k]) SKIN = { id: k, ...SKINS[k] }; } catch (e) {}
+document.body.classList.add("skin-" + SKIN.id);
 const hexRgb = (h) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16));
 const mixHex = (a, b, t) => "#" + hexRgb(a).map((x, k) => Math.round(x + (hexRgb(b)[k] - x) * t).toString(16).padStart(2, "0")).join("");
-const palFrom = (c) => (c.toLowerCase() === "#b780ff" ? { c, lo: "#7a52b8", mid: "#b780ff", hi: "#e6d9ff" } : { c, lo: mixHex(c, "#000000", 0.35), mid: c, hi: mixHex(c, "#ffffff", 0.82) });
-function palGet() {
-  let k = "viola", c = ["#b780ff", "#ff7a1a"];
-  try { k = localStorage.getItem("spinlab.palette") || "viola"; c = JSON.parse(localStorage.getItem("spinlab.palette.custom") || "null") || c; } catch (e) {}
-  if (!PALETTES[k]) k = "viola";
-  return { k, c1: k === "custom" ? c[0] : PALETTES[k][1], c2: k === "custom" ? c[1] : PALETTES[k][2], custom: c };
+// i quattro toni: per il viola quelli esatti della guida, per gli altri calcolati allo stesso modo dal colore base
+function themeTones(b) {
+  b = b.toLowerCase();
+  if (b === SKIN.base) return { ...SKIN.tones };
+  return { deep: mixHex(b, "#141821", 0.6), primary: mixHex(b, "#000000", 0.3), bright: b, hi: mixHex(b, "#ffffff", 0.72) };
 }
-function applyPalette() {
-  const p = palGet(), root = document.documentElement.style;
-  PAL[0] = palFrom(p.c1); PAL[1] = palFrom(p.c2);
-  root.setProperty("--d1", p.c1); root.setProperty("--d2", p.c2); root.setProperty("--accent", p.c1);
+const TH = { deep: "", primary: "", bright: "", hi: "", rgb: "", rgbHi: "", rgbPri: "" };
+const HC = Array(8).fill("#b780ff");          // toni degli 8 hot cue (dal profondo al chiaro)
+function themeGet() {
+  let c = SKIN.base;
+  try { const k = localStorage.getItem("spinlab.theme"), v = localStorage.getItem("spinlab.theme.custom"); if (k === "custom" && /^#[0-9a-f]{6}$/i.test(v || "")) c = v.toLowerCase(); } catch (e) {}
+  return { base: c };
+}
+function applyTheme() {
+  const t = themeTones(themeGet().base), root = document.documentElement.style;
+  Object.assign(TH, t, { rgb: hexRgb(t.bright).join(","), rgbHi: hexRgb(t.hi).join(","), rgbPri: hexRgb(t.primary).join(",") });
+  [["--sl-purple-deep", t.deep], ["--sl-purple-primary", t.primary], ["--sl-purple-bright", t.bright], ["--sl-purple-highlight", t.hi],
+   ["--accent", t.bright], ["--d1", t.bright], ["--d2", t.bright]].forEach(([k, v]) => root.setProperty(k, v));
+  PAL[0] = PAL[1] = SKIN.id === "retro" ? { c: t.bright, lo: "#8a8273", mid: "#d8d0bd", hi: "#ffffff" } : { c: t.bright, lo: t.primary, mid: t.bright, hi: t.hi };
+  [t.deep, mixHex(t.deep, t.primary, 0.33), mixHex(t.deep, t.primary, 0.66), t.primary, mixHex(t.primary, t.bright, 0.4), mixHex(t.primary, t.bright, 0.7), t.bright, mixHex(t.bright, t.hi, 0.5)].forEach((c, k) => (HC[k] = c));
   // al primo avvio deck e riferimenti non esistono ancora (sono dichiarati piu' sotto): si aggiornano solo ai cambi successivi
   try { decks.forEach((d) => { d.zt = null; d.over = null; }); if (DK[0]) { buildTargets(); setTarget(target); } } catch (e) {}
 }
-applyPalette();
-const HC = ["#4a3a70", "#59417f", "#684b91", "#7a52b8", "#9169c5", "#a47ad6", "#b780ff", "#d2b5f5"];
+applyTheme();
+function applySkin(id) {
+  if (!SKINS[id]) id = "club";
+  document.body.classList.remove("skin-" + SKIN.id);
+  SKIN = { id, ...SKINS[id] };
+  document.body.classList.add("skin-" + id);
+  try { localStorage.setItem("spinlab.skin", id); localStorage.removeItem("spinlab.theme"); localStorage.removeItem("spinlab.theme.custom"); } catch (e) {}
+  try { decks.forEach((d) => { d.tex = null; d.retro = null; }); } catch (e) {}
+  applyTheme();
+  window.dispatchEvent(new Event("spinlab-skin"));
+}
 const REV_SEC = 1.8; // un giro del piatto (33 giri e 1/3 al minuto)
 const camelotColor = (k) => { const n = parseInt(k, 10); return n ? `hsl(${((n - 1) * 30 + 190) % 360} 75% 64%)` : "inherit"; };
 const mmss = (s) => { s = Math.max(0, Math.round(s || 0)); return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
@@ -688,8 +716,8 @@ function drawZoom(i, pos) {
   g.font = `${Math.round(H * 0.16)}px sans-serif`;
   for (let b = lo; b < d.beats.length && d.beats[b] <= t0 + win; b++) {
     const x = Math.round((d.beats[b] - t0) * pps), bar = (((b - d.downbeat) % 4) + 4) % 4 === 0;
-    if (bar) { g.fillStyle = "rgba(230,217,255,.8)"; g.fillRect(x, 0, 2, H); }
-    else { g.fillStyle = "rgba(183,128,255,.2)"; g.fillRect(x, 0, 1, H); g.fillStyle = "rgba(183,128,255,.6)"; g.fillRect(x, H * 0.76, 1, H * 0.24); }
+    if (bar) { g.fillStyle = `rgba(${TH.rgbHi},.8)`; g.fillRect(x, 0, 2, H); }
+    else { g.fillStyle = `rgba(${TH.rgb},.2)`; g.fillRect(x, 0, 1, H); g.fillStyle = `rgba(${TH.rgb},.6)`; g.fillRect(x, H * 0.76, 1, H * 0.24); }
     if (bar && win < 20) { g.fillStyle = "#fff"; g.fillText(String(Math.floor((b - d.downbeat) / 4) + 1), x + 4, H * 0.17); }
   }
   // etichette BPM dove il tempo cambia (un brano a tempo fisso non ne ha)
@@ -709,8 +737,8 @@ function drawZoom(i, pos) {
     mark(s.cue, "#ffb020"); s.hot_cues.forEach((t, k) => t != null && mark(t, HC[k % 8]));
     if (s.loop_on || s.loop_out > s.loop_in) {
       const x0 = (s.loop_in - t0) * pps, x1 = (s.loop_out - t0) * pps;
-      g.fillStyle = s.loop_on ? "rgba(183,128,255,.22)" : "rgba(255,255,255,.07)"; g.fillRect(x0, 0, x1 - x0, H);
-      g.fillStyle = s.loop_on ? "#b780ff" : "#858d99"; g.fillRect(x0, 0, 2, H); g.fillRect(x1 - 2, 0, 2, H);
+      g.fillStyle = s.loop_on ? `rgba(${TH.rgb},.22)` : "rgba(255,255,255,.07)"; g.fillRect(x0, 0, x1 - x0, H);
+      g.fillStyle = s.loop_on ? TH.bright : "#858d99"; g.fillRect(x0, 0, 2, H); g.fillRect(x1 - 2, 0, 2, H);
     }
   }
   g.fillStyle = "#fff"; g.shadowColor = "#fff"; g.shadowBlur = 8; g.fillRect(Math.round(W / 2) - 1, 0, 2, H); g.shadowBlur = 0;
@@ -779,7 +807,7 @@ function drawOver(i, pos) {
   d.snap?.hot_cues.forEach((t, k) => { if (t != null) { g.fillStyle = HC[k % 8]; g.fillRect((t / d.dur) * W, 0, 2, H); } });
   // finestra della forma d'onda ingrandita
   const wx = ((pos - d.zoom / 2) / d.dur) * W, ww = (d.zoom / d.dur) * W;
-  g.fillStyle = "rgba(122,82,184,.28)"; g.fillRect(wx, 0, Math.max(4, ww), H); g.strokeStyle = "rgba(230,217,255,.85)"; g.lineWidth = Math.max(1, W / 700); g.strokeRect(wx, 1, Math.max(4, ww), H - 2);
+  g.fillStyle = `rgba(${TH.rgbPri},.28)`; g.fillRect(wx, 0, Math.max(4, ww), H); g.strokeStyle = `rgba(${TH.rgbHi},.85)`; g.lineWidth = Math.max(1, W / 700); g.strokeRect(wx, 1, Math.max(4, ww), H - 2);
   g.fillStyle = "#fff"; g.fillRect(px - 1, 0, 2, H);
 }
 
@@ -888,7 +916,8 @@ function drawPlatter(i, pos) {
   d.glV = (d.glV || 0) * 0.8 + Math.min(4, vel / (TAU / REV_SEC)) * 0.2;
   const scr = d.scrub != null || !!s?.held, cueOn = !!d.cueDown && !!s?.playing;
   const amp = !loaded ? 0.4 : scr ? Math.min(1.3, 0.75 + d.glV * 0.3) : s?.playing ? 1 : 0.65;
-  const C = cueOn ? { deep: "#5a3a00", main: "#ffb300", hi: "#ffe6a8" } : { deep: "#4a3a70", main: "#b780ff", hi: "#efe6ff" };
+  if (SKIN.id !== "club") { drawSkinPlatter(g, d, s, R, cx, cy, dpr, ang, loaded, amp, cueOn, scr); return; }
+  const C = cueOn ? { deep: "#5a3a00", main: "#ffb300", hi: "#ffe6a8" } : { deep: TH.deep, main: TH.bright, hi: mixHex(TH.hi, "#ffffff", 0.3) };
 
   // ---- alone esterno: luce morbida + filo luminoso; due archi piu' chiari che girano con il disco
   g.save();
@@ -922,7 +951,7 @@ function drawPlatter(i, pos) {
     const ox = -Math.cos(a) * hr * 0.25, oy = -Math.sin(a) * hr * 0.25;     // il fondo luminoso e' spostato verso il centro: parete esterna in ombra
     g.fillStyle = "#040406"; g.beginPath(); g.ellipse(hx, hy, hr * 0.82, hr * 1.25, a, 0, TAU); g.fill();
     const hg = g.createRadialGradient(hx + ox, hy + oy, 0, hx + ox, hy + oy, hr * 0.9);
-    hg.addColorStop(0, `rgba(${cueOn ? "255,200,90" : "214,180,255"},${(0.35 + Math.min(0.6, amp * 0.55)).toFixed(2)})`); hg.addColorStop(0.55, `rgba(${cueOn ? "180,110,0" : "110,70,170"},${(0.25 + amp * 0.3).toFixed(2)})`); hg.addColorStop(1, "rgba(4,4,6,0)");
+    hg.addColorStop(0, `rgba(${cueOn ? "255,200,90" : hexRgb(mixHex(TH.bright, TH.hi, 0.4)).join(",")},${(0.35 + Math.min(0.6, amp * 0.55)).toFixed(2)})`); hg.addColorStop(0.55, `rgba(${cueOn ? "180,110,0" : TH.rgbPri},${(0.25 + amp * 0.3).toFixed(2)})`); hg.addColorStop(1, "rgba(4,4,6,0)");
     g.fillStyle = hg; g.beginPath(); g.ellipse(hx, hy, hr * 0.82, hr * 1.25, a, 0, TAU); g.fill();
     // labbro del foro: ombra sul lato in alto a sinistra, luce sul lato opposto (luce fissa dall'alto a sinistra)
     const la = Math.atan2(-1, -1) - ang - a;
@@ -987,6 +1016,51 @@ function drawPlatter(i, pos) {
   const rx = px + Math.cos(thRest) * L, ry = py + Math.sin(thRest) * L;
   g.fillStyle = "#1f2330"; g.beginPath(); g.roundRect(rx - 9 * dpr, ry - 4 * dpr, 20 * dpr, 12 * dpr, 4 * dpr); g.fill();
   drawTonearm(g, dpr, ar, cx, cy, tx, ty);
+}
+
+/* piatti delle skin INDUSTRIAL e RETRO HARDWARE: immagine del piatto (assets/skins), bordo fermo e disco che gira, luci disegnate qui */
+const SKIN_IMG = {};
+function skinImg(name) {
+  if (!SKIN_IMG[name]) { const im = new Image(); im.src = `assets/skins/${name}.png`; SKIN_IMG[name] = im; }
+  return SKIN_IMG[name].complete && SKIN_IMG[name].naturalWidth ? SKIN_IMG[name] : null;
+}
+function drawSkinPlatter(g, d, s, R, cx, cy, dpr, ang, loaded, amp, cueOn, scr) {
+  const TAU = Math.PI * 2, playing = !!s?.playing, ind = SKIN.id === "industrial";
+  const img = skinImg(ind ? "ind_jog" : "retro_jog");
+  const ir = R * (ind ? 0.95 : 0.97), inner = ir * (ind ? 0.8 : 0.79);   // raggio dell'immagine e del disco (dentro il bordo)
+  const col = cueOn ? "#ffb300" : TH.bright, hi = cueOn ? "#ffe2a0" : TH.hi;
+  // ombra sotto il piatto
+  g.save(); g.shadowColor = "rgba(0,0,0,.7)"; g.shadowBlur = 18 * dpr; g.shadowOffsetY = 6 * dpr;
+  g.fillStyle = "#000"; g.beginPath(); g.arc(cx, cy, ir * 0.99, 0, TAU); g.fill(); g.restore();
+  if (ind) {
+    // anello luminoso ambra attorno al bordo: in play un tratto piu' acceso corre con il disco, in pausa e' fermo a meta', senza brano tenue
+    g.save(); g.globalAlpha = !loaded ? 0.35 : Math.min(1, amp);
+    g.shadowColor = col; g.shadowBlur = 26 * dpr * Math.min(1.2, amp); g.lineWidth = 5 * dpr;
+    if (g.createConicGradient) {
+      const cg = g.createConicGradient(ang - Math.PI / 2, cx, cy);
+      const lo = mixHex(col, "#000000", 0.55);
+      (playing || scr ? [[0, hi], [0.08, col], [0.35, lo], [0.65, lo], [0.9, col], [1, hi]] : [[0, col], [1, col]]).forEach(([p, c]) => cg.addColorStop(p, c));
+      g.strokeStyle = cg;
+    } else g.strokeStyle = col;
+    g.beginPath(); g.arc(cx, cy, R * 0.975, 0, TAU); g.stroke(); g.restore();
+  }
+  if (!img) { g.fillStyle = "#111"; g.beginPath(); g.arc(cx, cy, ir, 0, TAU); g.fill(); return; }
+  // bordo fermo (immagine intera), poi il disco ritagliato che gira
+  g.drawImage(img, cx - ir, cy - ir, ir * 2, ir * 2);
+  g.save(); g.beginPath(); g.arc(cx, cy, inner, 0, TAU); g.clip();
+  g.translate(cx, cy); g.rotate(ang); g.drawImage(img, -ir, -ir, ir * 2, ir * 2); g.restore();
+  // segno di rotazione sul disco (come il punto bianco dei piatti veri)
+  g.save(); g.translate(cx, cy); g.rotate(ang);
+  g.fillStyle = ind ? hi : "rgba(255,255,255,.75)"; g.globalAlpha = loaded ? 0.9 : 0.4;
+  g.fillRect(-1.2 * dpr, -inner * 0.97, 2.4 * dpr, inner * 0.09); g.restore();
+  if (!ind) {
+    // RETRO: anello rosso attorno al cappuccio centrale, acceso in play e sotto CUE
+    const cr = ir * 0.285;
+    g.save(); g.globalAlpha = !loaded ? 0.35 : playing || cueOn ? 1 : 0.6;
+    g.shadowColor = col; g.shadowBlur = (playing || cueOn ? 14 : 4) * dpr; g.strokeStyle = col; g.lineWidth = 3 * dpr;
+    g.beginPath(); g.arc(cx, cy, cr, 0, TAU); g.stroke(); g.restore();
+    if (scr) { g.save(); g.strokeStyle = hi; g.globalAlpha = Math.min(0.8, 0.3 + d.glV * 0.3); g.lineWidth = 2 * dpr; g.beginPath(); g.arc(cx, cy, ir - 1.5 * dpr, 0, TAU); g.stroke(); g.restore(); }
+  }
 }
 
 /* bordo in alluminio spazzolato (fisso): anello con riflessi angolari, bisello interno ed esterno */
@@ -1198,7 +1272,9 @@ $("#clock").textContent = (() => { const t = new Date(); return `${String(t.getH
 $$("#nav button").forEach((b) => (b.onclick = () => {
   const n = b.dataset.nav;
   if (n === "lib" || n === "mixer") {
-    document.body.classList.toggle("view-lib", n === "lib");
+    window.__wantLib = n === "lib";
+    // con il layout ultrawide la libreria e' sempre aperta accanto ai deck: la vista LIBRARY non serve
+    document.body.classList.toggle("view-lib", n === "lib" && !document.body.classList.contains("ultrawide"));
     $$("#nav button").forEach((x) => x.classList.toggle("on", x === b || (x.dataset.nav !== "lib" && x.dataset.nav !== "mixer" && false)));
     requestAnimationFrame(resizeCanvases);
   } else if (n === "rec") { if (recOn || (window.VideoRec && VideoRec.active())) stopRecording(); else openRecDialog(); }
@@ -1960,7 +2036,7 @@ function setSettingsTab(t) {
   if (t === "ui") $("#uiMode").value = uiChoice();
 }
 $("#uiMode").onchange = () => setUiMode($("#uiMode").value);
-if (!UI_ANDROID) $("#uiBtn").hidden = $('.stabs [data-sp="ui"]').hidden = true; // le viste per telefono esistono solo su Android
+if (!UI_ANDROID) $("#uiBtn").hidden = $("#uiModeBox").hidden = true; // le viste per telefono esistono solo su Android (la scheda resta per il tema dei colori)
 // pulsante MODO nella barra: cambio dell'interfaccia senza passare dalle impostazioni (come nei prototipi di Claude Design).
 // Sul telefono elenca solo i modelli dell'orientamento attuale; l'altro gruppo si raggiunge ruotando il telefono
 const UI_CHOICES = [["auto", "Automatica", "verticale A, orizzontale B"], ["stack", "A · Stack verticale", "una mano"], ["proto", "B · Cockpit orizzontale", "due pollici"],
@@ -2150,14 +2226,59 @@ refreshLatency(); setTimeout(refreshLatency, 1500);
 inv("startup_files").then((fs) => fs.slice(0, 2).forEach((f, i) => loadTrack(i, f)));
 initTree();
 
-/* Impostazioni → INTERFACCIA: palette dei colori dei deck */
+/* Impostazioni → INTERFACCIA: colore del tema scelto con tinta (barra) e saturazione/luminosita' (quadrato), come in Photoshop;
+   sotto, l'anteprima e' una copia rimpicciolita della vera interfaccia (stesso DOM, stessi colori, forme d'onda e piatti copiati dal vivo) */
 (() => {
-  const sel = $("#palSel"), c1 = $("#palC1"), c2 = $("#palC2"), cust = $("#palCust");
-  if (!sel) return;
-  sel.innerHTML = Object.entries(PALETTES).map(([k, [n]]) => `<option value="${k}">${n}</option>`).join("");
-  const show = () => { const p = palGet(); sel.value = p.k; c1.value = p.custom[0]; c2.value = p.custom[1]; cust.hidden = p.k !== "custom"; };
-  const save = (k, c) => { try { localStorage.setItem("spinlab.palette", k); if (c) localStorage.setItem("spinlab.palette.custom", JSON.stringify(c)); } catch (e) {} applyPalette(); show(); };
-  sel.onchange = () => save(sel.value, sel.value === "custom" ? [c1.value, c2.value] : null);
-  c1.oninput = c2.oninput = () => save("custom", [c1.value, c2.value]);
-  show();
+  const sv = $("#thSV"), hue = $("#thHue"), hex = $("#thHex"), now = $("#thNow"), shot = $("#thShot");
+  if (!sv) return;
+  const hsv2hex = (h, s2, v) => { const f = (n) => { const k = (n + h / 60) % 6; return v - v * s2 * Math.max(0, Math.min(k, 4 - k, 1)); }; return "#" + [f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, "0")).join(""); };
+  const hex2hsv = (c) => { const [r, g, b2] = hexRgb(c).map((x) => x / 255), mx = Math.max(r, g, b2), mn = Math.min(r, g, b2), d = mx - mn;
+    let h = 0; if (d) h = mx === r ? ((g - b2) / d) % 6 : mx === g ? (b2 - r) / d + 2 : (r - g) / d + 4; return [(h * 60 + 360) % 360, mx ? d / mx : 0, mx]; };
+  let [H, S, V] = hex2hsv(themeGet().base), raf = 0;
+  const paint = () => {
+    sv.style.setProperty("--h", H); hue.style.setProperty("--x", H / 360);
+    sv.style.setProperty("--sx", S); sv.style.setProperty("--sy", 1 - V);
+    const c = hsv2hex(H, S, V); now.style.background = c; if (document.activeElement !== hex) hex.value = c;
+  };
+  const commit = () => { raf = 0; const c = hsv2hex(H, S, V); try { localStorage.setItem("spinlab.theme", "custom"); localStorage.setItem("spinlab.theme.custom", c); } catch (e) {} applyTheme(); };
+  const set = () => { paint(); if (!raf) raf = requestAnimationFrame(commit); };
+  const drag = (el, fn) => {
+    const go = (e) => { const r = el.getBoundingClientRect(); fn(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))); set(); };
+    el.addEventListener("pointerdown", (e) => { el.setPointerCapture(e.pointerId); go(e); el.onpointermove = go; });
+    el.addEventListener("pointerup", () => (el.onpointermove = null));
+  };
+  drag(hue, (x) => { H = x * 359.9; });
+  drag(sv, (x, y) => { S = x; V = 1 - y; });
+  hex.addEventListener("change", () => { const v = hex.value.trim(); if (/^#?[0-9a-f]{6}$/i.test(v)) { [H, S, V] = hex2hsv(v[0] === "#" ? v : "#" + v); set(); } else paint(); });
+  $("#thReset").onclick = () => { try { localStorage.removeItem("spinlab.theme"); localStorage.removeItem("spinlab.theme.custom"); } catch (e) {} [H, S, V] = hex2hsv(SKIN.base); paint(); applyTheme(); };
+  window.addEventListener("spinlab-skin", () => { [H, S, V] = hex2hsv(themeGet().base); paint(); });
+  const sk = $("#skinSel");
+  if (sk) {
+    sk.innerHTML = Object.entries(SKINS).map(([k, v]) => `<button class="skincard" data-skin="${k}"><b>${v.name}</b><small>${v.desc}</small><span>${v.sw.map((c) => `<i style="background:${c}"></i>`).join("")}</span></button>`).join("");
+    const mark = () => $$(".skincard", sk).forEach((b) => b.classList.toggle("on", b.dataset.skin === SKIN.id));
+    $$(".skincard", sk).forEach((b) => (b.onclick = () => { applySkin(b.dataset.skin); mark(); }));
+    mark();
+  }
+  paint();
+
+  // anteprima: copia della vera interfaccia, aggiornata mentre la scheda e' aperta (le copie non hanno comandi e non caricano video)
+  let copy = null, copyAt = 0;
+  const appEl = document.getElementById("app");
+  const tick = () => {
+    const vis = $("#audioDlg").open && !$("#sp-ui").hidden;
+    if (!vis) { if (copy) { copy.remove(); copy = null; } return; }
+    const W = appEl.offsetWidth, Hh = appEl.offsetHeight, k = shot.clientWidth / Math.max(1, W);
+    shot.style.height = Math.round(Hh * k) + "px";
+    if (!copy || performance.now() - copyAt > 2000) {
+      const c = appEl.cloneNode(true);
+      c.querySelectorAll("video").forEach((v) => { v.removeAttribute("src"); v.remove(); });
+      c.classList.add("thcopy"); c.inert = true;
+      Object.assign(c.style, { position: "absolute", left: "0", top: "0", width: W + "px", height: Hh + "px", transform: `scale(${k})`, transformOrigin: "0 0", pointerEvents: "none" });
+      if (copy) copy.replaceWith(c); else shot.appendChild(c);
+      copy = c; copyAt = performance.now();
+    }
+    const src = appEl.querySelectorAll("canvas"), dst = copy.querySelectorAll("canvas");
+    src.forEach((cv, i) => { const d = dst[i]; if (!d || !cv.width || !cv.height) return; if (d.width !== cv.width || d.height !== cv.height) { d.width = cv.width; d.height = cv.height; } try { d.getContext("2d").drawImage(cv, 0, 0); } catch (e) {} });
+  };
+  setInterval(tick, 200);
 })();

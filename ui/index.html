@@ -278,6 +278,7 @@ SOFTWARE.</pre></details>
   </div>
   <div class="spane" id="sp-video" hidden><div id="vpMount"></div></div>
   <div class="spane" id="sp-ui" hidden>
+    <div id="uiModeBox">
     <label>Interfaccia<select id="uiMode">
       <option value="auto">Automatica: sui telefoni A in verticale e B compatto in orizzontale, desktop altrove</option>
       <option value="stack">A · Stack verticale: due deck impilati, crossfader sotto il pollice (una mano)</option>
@@ -288,9 +289,17 @@ SOFTWARE.</pre></details>
       <option value="desktop">Desktop: due deck, mixer, libreria e pannelli insieme</option>
     </select></label>
     <p class="hint">Il cambio è immediato e resta per le volte successive; lo stesso menu si apre dal pulsante MODO nella barra. A, C e D sono pensati per il telefono in verticale, B in orizzontale.</p>
-    <label>Colori dei deck<select id="palSel"></select></label>
-    <div class="palrow" id="palCust"><label>Deck 1<input type="color" id="palC1"></label><label>Deck 2<input type="color" id="palC2"></label></div>
-    <p class="hint">Il colore del deck vale per il piatto e l'anello luminoso, le forme d'onda, gli hot cue e i controlli. Con «Personalizzata» scegli tu il colore di ciascun deck.</p>
+    </div>
+    <label>Skin</label>
+    <div id="skinSel" class="skinsel"></div>
+    <label>Colore del tema</label>
+    <div class="thpick">
+      <div class="thsv" id="thSV" title="Saturazione (da sinistra a destra) e luminosità (dal basso in alto)"><i></i></div>
+      <div class="thhue" id="thHue" title="Tinta: trascina lungo la barra"><i></i></div>
+      <div class="thinfo"><span class="thnow" id="thNow"></span><input id="thHex" maxlength="7" spellcheck="false" title="Colore in esadecimale (#RRGGBB)"><button id="thReset" class="threset" title="Torna al colore della skin scelta">&#8634; Ripristina colore predefinito</button></div>
+    </div>
+    <div class="thshot" id="thShot" aria-hidden="true"></div>
+    <p class="hint">Scegli la tinta sulla barra e la sfumatura nel quadrato (come in Photoshop): il programma cambia subito, e qui sopra lo vedi com'è adesso. Da un solo colore escono i quattro toni usati ovunque (profondo, primario, acceso, chiaro). PLAY verde, CUE ambra e i meter verde-giallo-rosso restano fissi perché hanno un significato.</p>
   </div>
   <div class="spane" id="sp-midi" hidden>
     <p class="hint" style="margin-top:0"><a href="#" data-help="controller-midi">Guida al controller MIDI</a> (SHIFT, livelli dei pad, encoder, jog). Collega il controller, premi «Learn» accanto a una funzione e muovi o premi il controllo da assegnare. Funziona con qualsiasi controller MIDI. I tasti con SHIFT si assegnano con la casella SHIFT dopo aver assegnato il tasto SHIFT stesso.</p>
