@@ -486,12 +486,8 @@ function openPop(i, kind, anchor) {
   pop.className = "keypop"; pop.dataset.kind = kind;
   if (kind === "grid") {
     pop.innerHTML = `<small>GRIGLIA (salvata per questo brano)</small>
-      <div class="row"><button data-grid="shift" data-a="-5" title="Sposta la griglia indietro di 5 ms (Maiusc = 1 ms)">&#9664;</button><button data-grid="shift" data-a="5" title="Sposta la griglia avanti di 5 ms (Maiusc = 1 ms)">&#9654;</button>
-      <button data-grid="half" data-a="1" title="Sposta la griglia di mezzo battito avanti: se i marker cadono sul contrattempo invece che sulla grancassa">&frac12;&#9654;</button>
-      <button data-grid="halve" title="Dimezza il BPM (un marker ogni due)">&frac12;</button><button data-grid="double" title="Raddoppia il BPM (aggiunge i marker intermedi)">&times;2</button>
-      <button data-grid="downbeat_here" title="Il battito sotto la testina diventa il &laquo;1&raquo; della battuta">1&#9656;</button>
+      <div class="row"><button data-grid="halve" title="Dimezza il BPM (un marker ogni due)">&frac12;</button><button data-grid="double" title="Raddoppia il BPM (aggiunge i marker intermedi)">&times;2</button>
       <button data-grid="anchor_here" title="Porta il marker più vicino esattamente sulla testina">&#9875;</button>
-      <button data-grid="bar_shift" data-a="1" title="Sposta il &laquo;1&raquo; di un battito">+1</button>
       <button data-grid="reset" title="Ripristina la griglia calcolata automaticamente">&#8634;</button></div>
       <div class="row"><button data-gmode="0" title="AUTO: un solo tempo finché i battiti non si scostano di oltre 30 ms per almeno 32 battiti, poi un nuovo tratto">AUTO</button><button data-gmode="1" title="FISSA: un solo tempo e una sola fase per tutto il brano (brani a tempo costante)">FISSA</button><button data-gmode="2" title="FLESSIBILE: segue un batterista vero battuta per battuta">FLESS.</button></div>
       <div class="row">
