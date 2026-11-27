@@ -50,6 +50,7 @@ La grafica si adatta alla finestra: se la riduci molto, si rimpicciolisce in blo
 - **Playlist.** **+** accanto a PLAYLIST ne crea una. Trascina i brani su una playlist per aggiungerli. Tasto destro su una playlist: rinomina, elimina, **Crea stem di tutta la playlist**. Aggiungere un brano a una playlist ne avvia l'analisi completa.
 - **TAG & INFO.** Il pulsante con la «i» accanto alla ricerca apre il pannello per titolo, artista, album, genere, tag, valutazione a stelle e commento.
 - **Doppio clic su un brano** lo carica sul primo deck libero.
+- **Larghezza delle colonne.** Trascina il bordo sinistro dell'elenco dei brani per allargare o stringere la colonna di cartelle e playlist, e quello destro per il pannello di destra (AUTOMIX, SAMPLER, DRUMS, STEMS). L'elenco prende lo spazio che resta, senza scendere sotto una larghezza minima. Le misure si ricordano; un doppio clic sul bordo torna a quelle iniziali.
 - **Vista LIBRARY.** Con **LIBRARY** nella barra in alto la libreria prende più spazio. Nel pannello di destra le sezioni (stem, sampler, drum, automix) restano della loro misura e sotto compare il **riquadro del brano selezionato**: copertina, titolo, artista, BPM, tonalità, durata, album, genere, tag, valutazione, se è analizzato, formato, commento e percorso del file. Con più brani selezionati ne indica il numero.
 - **Tasto destro su un brano.** Carica sul deck 1 o 2, aggiungi a una playlist (esistente o nuova con la selezione), analizza (BPM, tonalità, griglia), crea o elimina gli stem preparati, rimuovi dalla playlist (se ne hai una aperta).
 
@@ -182,14 +183,32 @@ AUTOMIX suona da solo i brani della libreria, uno dopo l'altro, con transizioni 
 
 16 pad con campioni singoli, da suonare con il mouse, con la tastiera (Z X C V · A S D F · Q W E R · 1 2 3 4) o con un controller. La batteria parte vuota a ogni avvio; si ricordano solo le note MIDI dei pad.
 
-- **Carica un campione:** clic su un pad vuoto, oppure trascina un file sul pad. Massimo 30 secondi.
-- **Tasto destro su un pad:** MIDI learn, modo **gate** (suona finché tieni premuto), **aftertouch**, intonazione (±12 semitoni), **gruppo choke** (per esempio hi-hat chiuso e aperto che si zittiscono a vicenda), volume, nota MIDI, svuota.
+- **Carica un campione:** clic su un pad vuoto, oppure trascina un file sul pad. Massimo 30 secondi. Puoi trascinare **più campioni insieme** (per esempio tutto un kit selezionato in Finder): il primo va sul pad dove li lasci, gli altri nei pad vuoti che seguono. Un file lasciato fra i pad va nel primo pad vuoto; quello che lasci nel pannello non finisce mai nella playlist.
+- **Il suono del pad.** Sotto i pad c'è la striscia del **pad scelto** (l'ultimo che hai cliccato o suonato dalla tastiera, con il bordo acceso). Le manopole sono descritte nella tabella qui sotto.
+- **Tasto destro su un pad:** **◀ Reverse** (suona il campione al contrario; il pad mostra ◀ davanti al nome), MIDI learn, modo **gate** (suona finché tieni premuto), **aftertouch**, **gruppo choke** (per esempio hi-hat chiuso e aperto che si zittiscono a vicenda), nota MIDI, svuota.
 - **Aftertouch.** Premendo il pad dopo il colpo, il suono cresce. La destinazione è per pad: spento, volume (fino a +60%), intonazione (fino a +7 semitoni) o entrambi. Funziona con l'aftertouch per singolo pad e con quello di canale. Una barra colorata sul pad mostra la pressione.
 - **Note MIDI di default:** i 16 pad rispondono alle note 36–51.
 
+| Manopola | Valori | Cosa fa |
+|---|---|---|
+| **ATT** (attacco) | da 1 ms a 2 s | quanto ci mette il suono a salire |
+| **DEC** (decadimento) | da nessuno a 4 s | quanto ci mette a scendere fino al sostegno |
+| **SUS** (sostegno) | 0–100% | il volume dopo il decadimento |
+| **REL** (rilascio) | da 4 ms a 4 s | quanto ci mette a spegnersi quando lasci il pad; si sente in modo **gate** (in modo normale il colpo suona fino alla fine del campione) |
+| **VOL** | 0–150% | volume del pad |
+| **TUNE** | ±12 semitoni | intonazione, a mezzi semitoni |
+
+Ogni manopola mostra il suo valore sotto; un doppio clic la riporta al valore iniziale. Con i valori iniziali il colpo suona com'è.
+
 ### Campionatore (SAMPLER)
 
-8 pad per suoni più lunghi. Trascina un file (o un brano della libreria) su un pad. Clic: parte, altro clic: si ferma. Tasto destro: loop, BPM, sostituisci. Tasti **1–8** della tastiera. Con **SYNC** i campioni partono sul battito del deck che suona e seguono tempo e fase.
+Pad per suoni più lunghi e loop. **Ogni deck ha il suo banco di 8 pad**: il selettore **DECK 1 / 2** in alto nel pannello sceglie quale banco vedi e carichi. I pad già partiti continuano a suonare anche se passi all'altro banco; un punto acceso sul tasto 1 o 2 indica il banco che sta suonando.
+
+- **Carica:** trascina un file (o un brano della libreria) su un pad, oppure clic su un pad vuoto. Più file trascinati insieme riempiono i pad vuoti che seguono.
+- **Suona:** clic per farlo partire, un altro clic per fermarlo. Tasti **1–8** della tastiera (banco mostrato).
+- **Tasto destro:** loop acceso o spento, stop, BPM del campione (scritto a mano, ÷2, ×2), sostituisci.
+- **SYNC.** I pad di un banco seguono il **loro deck**: partono sul battito successivo, si allungano o si accorciano sul suo tempo (senza cambiare tonalità) e restano agganciati alla **battuta**: se lanci un loop sul 3 del brano, entra al suo 3, così cassa e rullante cadono al posto giusto. Seguono anche una griglia **flessibile** e si riallineano subito dopo un salto del brano (hot cue, beat jump). Se il deck del banco è fermo seguono il deck che suona. Lo stesso loop caricato nel banco del deck 1 e in quello del deck 2 resta a tempo con due brani a BPM diversi.
+- **BPM del campione.** Si legge dal nome del file quando c'è (per esempio `electro-drums_132bpm.wav`), altrimenti si calcola; un campione che dura un numero intero di battiti è un loop e parte dal suo inizio. Il loop segue la griglia del deck: se la griglia del brano non cade sui colpi, sistemala prima (vedi [Griglia e tonalità](#griglia-e-tonalità)).
 
 ---
 

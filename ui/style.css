@@ -231,7 +231,7 @@ body.view-lib #mixer, body.view-lib .dmain, body.view-lib canvas.over { display:
 body.view-lib .deck { grid-template-rows: 54px minmax(0, 1fr); } body.view-lib #stage { grid-template-columns: 1fr 1fr; } body.view-lib .side { flex-direction: row; }
 
 /* ---------------------------------------------------------------- libreria */
-#lower { display: grid; grid-template-columns: 220px minmax(0, 1fr) 372px; gap: 6px; padding: 6px; min-height: 0; }
+#lower { display: grid; grid-template-columns: var(--colL, 220px) minmax(0, 1fr) var(--colR, 372px); gap: 6px; padding: 6px; min-height: 0; }
 #side, #browser, #rpanel { background: linear-gradient(180deg, #0f0f14, #0a0a0e); border: 1px solid var(--line); border-radius: 12px; min-height: 0; }
 #side { display: flex; flex-direction: column; overflow: hidden; padding: 6px 8px; }
 #tree { flex: 1 1 58%; min-height: 80px; overflow: auto; }
@@ -1238,7 +1238,7 @@ tbody tr.sel td { color: #fff; }
 /* monitor ultrawide (solo da 2,4:1 in su): a sinistra deck e mixer con le stesse proporzioni di un monitor 16:10 e sotto, affiancati,
    stem (sempre visibili), il pannello scelto fra SAMPLER / DRUMS / AUTOMIX e gli FX; a destra cartelle, playlist ed elenco dei brani a tutta
    altezza. Sotto 2,4:1 queste regole non valgono. */
-body.ultrawide #app { grid-template-columns: minmax(0, calc(100vh / var(--k, 1) * 1.6)) 230px minmax(0, 1fr); grid-template-rows: 44px minmax(500px, 57fr) minmax(0, 43fr); }
+body.ultrawide #app { grid-template-columns: minmax(0, calc(100vh / var(--k, 1) * 1.6)) var(--colL, 230px) minmax(0, 1fr); grid-template-rows: 44px minmax(500px, 57fr) minmax(0, 43fr); }
 body.ultrawide #top { grid-column: 1 / -1; }
 body.ultrawide #stage { grid-column: 1; grid-row: 2; }
 body.ultrawide #lower { display: contents; }
@@ -1437,3 +1437,28 @@ dialog.sldlg input:focus { outline: none; border-color: #c8d2e4; }
 .pad.loaded { padding: 17px 6px 5px; }
 .pad .nm { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; line-height: 1.15; }
 .pad .lp, .pad .pb { line-height: 1.2; z-index: 1; }
+
+/* batteria: striscia del pad scelto sotto i pad (ADSR, volume, intonazione); pad scelto con il bordo acceso, pad al contrario con ◀ */
+.drumedit { margin-top: 8px; padding: 6px 8px 4px; border-radius: 10px; border: 1px solid var(--line2); background: rgba(0, 0, 0, .25); flex: none; }
+.drumedit.off .de-knobs { opacity: .35; pointer-events: none; }
+.drumedit .de-head { display: flex; align-items: baseline; gap: 10px; font-size: 10px; letter-spacing: .5px; color: var(--dim); margin-bottom: 4px; min-width: 0; }
+.drumedit .de-head b { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.drumedit .de-head span { margin-left: auto; white-space: nowrap; color: var(--sl-purple-highlight, var(--accent)); }
+.drumedit .de-knobs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.drumedit .knobwrap { gap: 2px; font-size: 8px; }
+.drumedit .knob { width: 30px; height: 30px; }
+.drumedit .knob::before { inset: 4px; }
+.drumedit .knob::after { top: 5px; height: 7px; transform-origin: 50% 10px; width: 2px; margin-left: -1px; }
+.drumedit .knobwrap small { font-size: 8px; color: var(--text); letter-spacing: 0; white-space: nowrap; min-height: 10px; }
+.dpad.sel { outline: 2px solid color-mix(in srgb, var(--c) 80%, #fff); outline-offset: 1px; }
+.dpad.rev .dl::before { content: "◀ "; color: var(--c); }
+/* i pad della batteria si stringono quanto serve per lasciare posto alla striscia del pad scelto */
+#drumPads { grid-auto-rows: minmax(0, 1fr); }
+#drumPads .dpad { min-height: 0; }
+body.view-lib #drumPads, body.ultrawide #drumPads { grid-auto-rows: 44px; }
+
+/* libreria: maniglie sui bordi dell'elenco dei brani per allargarlo o stringerlo (le colonne accanto si adattano) */
+.colsplit { position: absolute; z-index: 20; width: 10px; cursor: col-resize; touch-action: none; }
+.colsplit::after { content: ""; position: absolute; left: 4px; top: 10%; bottom: 10%; width: 2px; border-radius: 2px; background: var(--sl-purple-bright, var(--accent)); opacity: 0; transition: opacity .15s; }
+.colsplit:hover::after, .colsplit.on::after { opacity: .7; }
+.colsplit[hidden] { display: none; }

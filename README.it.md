@@ -68,8 +68,8 @@ SpinLab è gratuito. Se ti è utile puoi offrire una **donazione libera** con [P
 - Transizioni da 4 a 32 battute, stile **scambio dei bassi**, dissolvenza o taglio rapido; coda modificabile e salvata fra le sessioni.
 
 ### Batteria e campionatore
-- **DRUMS**: 16 pad con campioni, dalla tastiera, dal mouse o dai pad MIDI; gate, aftertouch, intonazione, gruppi choke.
-- **SAMPLER**: 8 pad per suoni lunghi e loop, con **SYNC** sul tempo del deck che suona.
+- **DRUMS**: 16 pad con campioni, dalla tastiera, dal mouse o dai pad MIDI; inviluppo **ADSR**, **reverse**, gate, aftertouch, intonazione, gruppi choke; un intero kit si carica trascinandolo.
+- **SAMPLER**: un banco di 8 pad per ogni deck, per suoni lunghi e loop; con **SYNC** ogni banco segue tempo e battuta del suo deck, anche con due brani a BPM diversi.
 
 ### Video
 - **Video sui due deck**, a tempo con la musica: si caricano, si fermano, si spostano e si scratchano come un brano.
@@ -88,6 +88,7 @@ SpinLab è gratuito. Se ti è utile puoi offrire una **donazione libera** con [P
 - Esplora cartelle, playlist, ricerca per titolo, artista, tag, tonalità e BPM.
 - Tag, valutazione a stelle e commenti; **anteprima in cuffia** dei brani con scrub.
 - Riquadro con le informazioni del brano selezionato.
+- Larghezza delle colonne regolabile trascinando i bordi dell'elenco dei brani.
 
 ### Controller MIDI
 - Funziona con **qualsiasi controller MIDI**: assegnazione con **Learn**, più assegnazioni per comando, **SHIFT**, livelli dei pad, jog con calibrazione, encoder, effetti e **LED**.

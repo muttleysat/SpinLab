@@ -1926,10 +1926,23 @@ T.event.listen("tauri://drag-drop", async (e) => {
   // la posizione arriva in pixel fisici su Windows (si divide per la densita' dello schermo) e gia' in pixel logici su macOS
   const k = /Mac/i.test(navigator.platform || navigator.userAgent) ? 1 : dpr;
   const el = document.elementFromPoint(position.x / k, position.y / k);
-  const dpEl = el?.closest(".dpad");
-  if (dpEl && paths.length) { loadDrum(+dpEl.dataset.k, paths[0]); return; }
-  const padEl = el?.closest(".pad");
-  if (padEl && paths.length) { loadPad(+padEl.dataset.p, paths[0]); return; }
+  // batteria e campionatore: il primo file va sul pad su cui cade, gli altri (o tutti, se cadono fra i pad) nei pad vuoti che
+  // seguono, nell'ordine in cui si vedono. Un rilascio nel pannello non finisce mai nella playlist.
+  const fill = async (els, at, loaded, load) => {
+    const start = Math.max(0, els.indexOf(at));
+    const slots = [...els.slice(start), ...els.slice(0, start)].filter((p, n) => (n === 0 && at) || !loaded(p));
+    if (!slots.length) { toast("Nessun pad libero: trascina il campione su un pad per sostituirlo."); return; }
+    for (let n = 0; n < Math.min(paths.length, slots.length); n++) await load(slots[n], paths[n]);
+    if (paths.length > slots.length) toast(`Caricati ${slots.length} campioni su ${paths.length}: non ci sono altri pad liberi.`);
+  };
+  if (paths.length && el?.closest("#pn-drums")) {
+    await fill($$(".dpad"), el.closest(".dpad"), (p) => drumState[+p.dataset.k]?.loaded, (p, f) => loadDrum(+p.dataset.k, f));
+    return;
+  }
+  if (paths.length && el?.closest("#pn-sampler")) {
+    await fill($$(".pad"), el.closest(".pad"), (p) => padState[padIdx(+p.dataset.p)]?.loaded, (p, f) => loadPad(+p.dataset.p, f));
+    return;
+  }
   const deck = el?.closest(".deck");
   if (deck && paths.length) { loadTrack(+deck.dataset.i, paths[0]); return; }
   // sulle playlist: aggiunge file e cartelle (sottocartelle comprese); altrimenti alla playlist aperta
@@ -1999,6 +2012,7 @@ function buildDrums() {
     const k = +p.dataset.k; let down = false;
     p.addEventListener("pointerdown", (e) => {
       if (e.button !== 0) return;
+      selectDrum(k);
       if (!p.classList.contains("loaded")) return loadDrum(k);
       down = true; p.setPointerCapture(e.pointerId); p.classList.add("hit");
       inv("drum_cmd", { pad: k, cmd: "trigger", a: e.shiftKey ? 0.5 : 0.95 });
@@ -2006,19 +2020,57 @@ function buildDrums() {
     const up = () => { if (!down) return; down = false; p.classList.remove("hit"); inv("drum_cmd", { pad: k, cmd: "release", a: 0 }); };
     ["pointerup", "pointercancel"].forEach((ev) => p.addEventListener(ev, up));
     p.addEventListener("contextmenu", (e) => {
-      e.preventDefault(); const s = drumState[k];
+      e.preventDefault(); const s = drumState[k]; selectDrum(k);
       const ask = async (txt, cur, cmd, scale = 1) => { const v = await askText(txt, cur); if (v !== null && v.trim() !== "") inv("drum_cmd", { pad: k, cmd, a: (parseFloat(v.replace(",", ".")) || 0) * scale }); };
-      menu(e, [["Carica un campione…", () => loadDrum(k)], ["MIDI learn: poi colpisci un pad del controller", () => inv("drum_cmd", { pad: k, cmd: "learn", a: 1 })], "-",
+      menu(e, [["Carica un campione…", () => loadDrum(k)], [s?.reverse ? "◀ Reverse: torna al verso normale" : "◀ Reverse: suona al contrario", () => inv("drum_cmd", { pad: k, cmd: "reverse", a: s?.reverse ? 0 : 1 })],
+        ["MIDI learn: poi colpisci un pad del controller", () => inv("drum_cmd", { pad: k, cmd: "learn", a: 1 })], "-",
         [s?.gate ? "Modo: suona per intero (spegni gate)" : "Modo: gate (suona finché tieni premuto)", () => inv("drum_cmd", { pad: k, cmd: "gate", a: s?.gate ? 0 : 1 })],
         [`Aftertouch: ${["spento", "volume", "intonazione", "volume + intonazione"][s?.at_mode ?? 1]} (clic per cambiare)`, () => inv("drum_cmd", { pad: k, cmd: "aftertouch", a: ((s?.at_mode ?? 1) + 1) % 4 })],
-        [`Intonazione (${(s?.tune ?? 0).toFixed(1)} semitoni)…`, () => ask("Intonazione in semitoni (da -12 a +12)", String(s?.tune ?? 0), "tune")],
         [`Gruppo choke (${s?.group || "nessuno"})…`, () => ask("Gruppo choke 1-8: i pad dello stesso gruppo si zittiscono a vicenda (hi-hat chiuso/aperto). 0 = nessuno", String(s?.group ?? 0), "group")],
-        [`Volume (${Math.round((s?.gain ?? 1) * 100)}%)…`, () => ask("Volume del pad in % (0-150)", String(Math.round((s?.gain ?? 1) * 100)), "gain", 0.01)],
         [`Nota MIDI (${s?.note === 255 ? "nessuna" : s?.note})…`, () => ask("Numero della nota MIDI (0-127)", String(s?.note ?? 36), "note")], "-",
         ["Svuota il pad", () => inv("drum_cmd", { pad: k, cmd: "clear", a: 0 })]]);
     });
   });
   $("#drumVol").oninput = (e) => inv("mixer_cmd", { cmd: "drum_vol", a: +e.target.value });
+  // striscia del pad scelto: la manopola va da 0 a 1 e si converte nel valore del suono (i tempi su scala logaritmica)
+  $$("#drumEdit [data-de]").forEach((el) => {
+    const id = el.dataset.de, m = DE[id];
+    makeKnob(el, { value: m.to(m.def), def: m.to(m.def), onChange: (v) => {
+      const x = m.from(v);
+      setText($(`#drumEdit [data-dv="${id}"]`), m.show(x));
+      inv("drum_cmd", { pad: drumSel, cmd: id, a: x });
+    } });
+  });
+  selectDrum(0);
+}
+/* manopole della striscia: valore iniziale, conversione da e verso la posizione 0..1 della manopola, testo mostrato */
+const msTxt = (x) => (x < 1 ? Math.round(x * 1000) + " ms" : x.toFixed(2).replace(".", ",") + " s");
+const logK = (lo, hi) => ({ from: (v) => lo * Math.pow(hi / lo, v), to: (x) => Math.log(Math.max(x, lo) / lo) / Math.log(hi / lo) });
+const DE = {
+  attack: { def: 0.001, ...logK(0.001, 2), show: msTxt },
+  // in fondo a sinistra nessun decadimento, poi da 10 ms a 4 s
+  decay: { def: 0, from: (v) => (v < 0.02 ? 0 : 0.01 * Math.pow(400, (v - 0.02) / 0.98)), to: (x) => (x <= 0 ? 0 : 0.02 + 0.98 * Math.log(Math.max(x, 0.01) / 0.01) / Math.log(400)), show: (x) => (x <= 0 ? "—" : msTxt(x)) },
+  sustain: { def: 1, from: (v) => v, to: (x) => x, show: (x) => Math.round(x * 100) + "%" },
+  release: { def: 0.004, ...logK(0.004, 4), show: msTxt },
+  gain: { def: 1, from: (v) => v * 1.5, to: (x) => x / 1.5, show: (x) => Math.round(x * 100) + "%" },
+  tune: { def: 0, from: (v) => Math.round((v * 24 - 12) * 2) / 2, to: (x) => (x + 12) / 24, show: (x) => (x > 0 ? "+" : "") + String(x).replace(".", ",") + " st" },
+};
+let drumSel = 0;
+/* pad scelto per la striscia: l'ultimo cliccato (anche col tasto destro) o suonato dalla tastiera */
+function selectDrum(k) {
+  drumSel = k;
+  $$(".dpad").forEach((p) => p.classList.toggle("sel", +p.dataset.k === k));
+  showDrumEdit();
+}
+function showDrumEdit() {
+  const s = drumState[drumSel];
+  const head = `PAD ${DKEYS[drumSel].toUpperCase()} · ${s?.loaded ? esc(s.name) : "vuoto"}`;
+  const h = $("#deName"); if (h._h !== head) { h._h = head; h.innerHTML = head; }
+  setText($("#deInfo"), s?.reverse ? "◀ al contrario" : s?.gate ? "gate: il rilascio parte quando lasci il pad" : "");
+  $("#drumEdit").classList.toggle("off", !s?.loaded);
+  if (!s?.adsr) return;
+  const vals = { attack: s.adsr[0], decay: s.adsr[1], sustain: s.adsr[2], release: s.adsr[3], gain: s.gain, tune: s.tune };
+  $$("#drumEdit [data-de]").forEach((el) => { const id = el.dataset.de; el._set?.(DE[id].to(vals[id])); setText($(`#drumEdit [data-dv="${id}"]`), DE[id].show(vals[id])); });
 }
 async function loadDrum(k, path) {
   const f = path || (await pickFile());
@@ -2029,12 +2081,13 @@ function updateDrums(s) {
   if (!s.drums) return;
   $$(".dpad").forEach((p) => {
     const k = +p.dataset.k, d = s.drums[k]; drumState[k] = d;
-    p.classList.toggle("loaded", d.loaded); p.classList.toggle("playing", d.playing); p.classList.toggle("learn", s.learn === k);
+    p.classList.toggle("loaded", d.loaded); p.classList.toggle("playing", d.playing); p.classList.toggle("learn", s.learn === k); p.classList.toggle("rev", !!d.reverse);
     const label = s.learn === k ? "colpisci un pad del controller…" : d.loaded ? esc(d.name) : "vuoto";
     const box = $(".dl", p); if (box._h !== label) { box._h = label; box.innerHTML = label; }
     setText($(".dn", p), d.note === 255 ? "—" : String(d.note));
     p.style.setProperty("--at", d.at.toFixed(2));
   });
+  showDrumEdit();
   if (s.learn === null && prevLearn !== null) inv("drum_save");
   prevLearn = s.learn;
   if (s.last_note >= 0 && s.note_seq !== updateDrums.seq) { updateDrums.seq = s.note_seq; $("#midiStat").title = `Ultima nota MIDI ricevuta: ${s.last_note}`; setText($("#midiStat"), midiNames + " · nota " + s.last_note); }
@@ -2047,7 +2100,7 @@ async function pollMidi() {
 document.addEventListener("keydown", (e) => {
   if (e.repeat || e.ctrlKey || e.altKey || e.metaKey || e.target.matches("input,textarea,select") || !$("#pn-drums").classList.contains("on")) return;
   const k = DKEYS.indexOf(e.key.toLowerCase()); if (k < 0) return;
-  e.preventDefault(); $(`.dpad[data-k="${k}"]`)?.classList.add("hit");
+  e.preventDefault(); $(`.dpad[data-k="${k}"]`)?.classList.add("hit"); selectDrum(k);
   inv("drum_cmd", { pad: k, cmd: "trigger", a: e.shiftKey ? 0.5 : 0.95 });
 });
 document.addEventListener("keyup", (e) => {
@@ -2173,6 +2226,67 @@ $("#aApply").onclick = async () => {
   btn.disabled = false; btn.textContent = "Applica";
 };
 async function refreshLatency() { try { const c = await inv("audio_current"); audioLatency = c.latency_ms / 1000; } catch (e) {} }
+
+/* ============================================================ LIBRERIA: COLONNE REGOLABILI
+   Due maniglie sui bordi dell'elenco dei brani: trascinandole si allarga o si stringe la colonna di sinistra (cartelle e playlist) o il
+   pannello di destra, e l'elenco prende lo spazio che resta (almeno 360 px). Le misure si ricordano; doppio clic: misura iniziale.
+   Nei layout compatti e su telefono non ci sono; in ultrawide solo quella di sinistra (l'elenco arriva al bordo della finestra). */
+(() => {
+  const KEY = "spinlab.libcols", MIN_MID = 360, LIM = { L: [140, 460], R: [320, 620] };
+  let cols = {};
+  try { cols = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) {}
+  const apply = () => ["L", "R"].forEach((s) => (cols[s] ? document.documentElement.style.setProperty("--col" + s, cols[s] + "px") : document.documentElement.style.removeProperty("--col" + s)));
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cols)); } catch (e) {} };
+  const app = $("#app"), side = $("#side"), br = $("#browser"), rp = $("#rpanel");
+  const handle = (s) => {
+    const h = document.createElement("div");
+    h.className = "colsplit"; h.dataset.s = s; h.hidden = true;
+    h.title = "Trascina per allargare o stringere · doppio clic: misura iniziale";
+    app.appendChild(h);
+    return h;
+  };
+  const hL = handle("L"), hR = handle("R");
+  // le maniglie stanno nello spazio fra due pannelli, alla loro altezza (coordinate di #app, che e' scalato di uiK)
+  const place = () => {
+    const free = !document.body.matches(".cockpit, .mob"), a = app.getBoundingClientRect(), b = br.getBoundingClientRect();
+    const put = (h, show, x1, x2) => {
+      h.hidden = !show;
+      if (!show) return;
+      h.style.left = (((x1 + x2) / 2 - a.left) / uiK - 5) + "px";
+      h.style.top = (b.top - a.top) / uiK + "px";
+      h.style.height = b.height / uiK + "px";
+    };
+    const sr = side.getBoundingClientRect(), rr = rp.getBoundingClientRect();
+    put(hL, free && sr.width > 0 && b.width > 0 && sr.right <= b.left + 1, sr.right, b.left);
+    put(hR, free && !document.body.classList.contains("ultrawide") && rr.width > 0 && b.width > 0 && b.right <= rr.left + 1, b.right, rr.left);
+  };
+  [[hL, "L", side], [hR, "R", rp]].forEach(([h, s, el]) => {
+    h.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault(); h.setPointerCapture(e.pointerId); h.classList.add("on");
+      const x0 = e.clientX, w0 = el.getBoundingClientRect().width / uiK, mid0 = br.getBoundingClientRect().width / uiK, [lo, hi] = LIM[s];
+      let raf = 0;
+      const move = (ev) => {
+        const d = (ev.clientX - x0) / uiK * (s === "L" ? 1 : -1);
+        let w = Math.max(lo, Math.min(hi, w0 + d));
+        // l'elenco dei brani non scende sotto MIN_MID (se era gia' piu' stretto, la colonna puo' solo stringersi)
+        const room = w0 + mid0 - MIN_MID;
+        if (w > room) w = Math.max(Math.min(w0, w), room);
+        cols[s] = Math.round(w); apply(); place();
+        if (!raf) raf = requestAnimationFrame(() => { raf = 0; resizeCanvases(); });
+      };
+      const up = () => { h.removeEventListener("pointermove", move); h.classList.remove("on"); save(); resizeCanvases(); };
+      h.addEventListener("pointermove", move);
+      h.addEventListener("pointerup", up, { once: true });
+      h.addEventListener("pointercancel", up, { once: true });
+    });
+    h.addEventListener("dblclick", () => { delete cols[s]; apply(); save(); place(); resizeCanvases(); });
+  });
+  apply();
+  const ro = new ResizeObserver(() => place());
+  [side, br, rp, app].forEach((el) => ro.observe(el));
+  window.addEventListener("resize", place);
+})();
 
 /* ================================================================== START */
 buildDecks(); buildPads(); buildDrums(); pollMidi(); decks.forEach((d) => d.sendFx()); resizeCanvases();

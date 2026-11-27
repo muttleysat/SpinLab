@@ -70,8 +70,8 @@ SpinLab is free. If you find it useful you can make a **donation of any amount**
 - Transitions from 4 to 32 bars, **bass swap**, fade or quick cut style; editable queue saved between sessions.
 
 ### Drums and sampler
-- **DRUMS**: 16 sample pads, from the keyboard, the mouse or MIDI pads; gate, aftertouch, tuning, choke groups.
-- **SAMPLER**: 8 pads for long sounds and loops, with **SYNC** to the tempo of the playing deck.
+- **DRUMS**: 16 sample pads, from the keyboard, the mouse or MIDI pads; **ADSR** envelope, **reverse**, gate, aftertouch, tuning, choke groups; a whole kit loads in one drag.
+- **SAMPLER**: a bank of 8 pads for each deck, for long sounds and loops; with **SYNC** each bank follows its deck's tempo and bar, even with two tracks at different BPM.
 
 ### Video
 - **Videos on both decks**, in time with the music: they load, pause, seek and scratch like a track.
@@ -90,6 +90,7 @@ SpinLab is free. If you find it useful you can make a **donation of any amount**
 - Folder browser, playlists, search by title, artist, tag, key and BPM.
 - Tags, star rating and comments; **headphone preview** of tracks with scrub.
 - Panel with the details of the selected track.
+- Adjustable column widths by dragging the edges of the track list.
 
 ### MIDI controllers
 - Works with **any MIDI controller**: mapping with **Learn**, several mappings per command, **SHIFT**, pad layers, jog with calibration, encoders, effects and **LEDs**.

@@ -50,6 +50,7 @@ The graphics adapt to the window: if you make it much smaller, everything shrink
 - **Playlists.** **+** next to PLAYLIST creates one. Drag tracks onto a playlist to add them. Right click on a playlist: rename, delete, **Crea stem di tutta la playlist** (create stems for the whole playlist). Adding a track to a playlist starts its full analysis.
 - **TAG & INFO.** The button with the «i» next to the search opens the panel for title, artist, album, genre, tags, star rating and comment.
 - **Double click on a track** loads it on the first free deck.
+- **Column widths.** Drag the left edge of the track list to widen or narrow the folders and playlists column, and the right edge for the right panel (AUTOMIX, SAMPLER, DRUMS, STEMS). The list takes the space that is left, without going below a minimum width. The sizes are remembered; a double click on the edge goes back to the default ones.
 - **LIBRARY view.** With **LIBRARY** in the top bar the library takes more space. In the right panel the sections (stems, sampler, drums, automix) keep their size and below them appears the **selected track panel**: cover, title, artist, BPM, key, duration, album, genre, tags, rating, whether it is analysed, format, comment and file path. With several tracks selected it shows how many.
 - **Right click on a track.** Load on deck 1 or 2, add to a playlist (existing, or a new one with the selection), analyse (BPM, key, grid), create or delete the prepared stems, remove from the playlist (if one is open).
 
@@ -182,14 +183,32 @@ AUTOMIX plays the library tracks on its own, one after the other, with beat-matc
 
 16 pads with single samples, to play with the mouse, the keyboard (Z X C V · A S D F · Q W E R · 1 2 3 4) or a controller. The drum kit starts empty at every launch; only the pads' MIDI notes are remembered.
 
-- **Load a sample:** click on an empty pad, or drag a file onto the pad. Maximum 30 seconds.
-- **Right click on a pad:** MIDI learn, **gate** mode (plays while you hold it), **aftertouch**, tuning (±12 semitones), **choke group** (for example closed and open hi-hat silencing each other), volume, MIDI note, clear.
+- **Load a sample:** click on an empty pad, or drag a file onto the pad. Maximum 30 seconds. You can drag **several samples at once** (for example a whole kit selected in Finder): the first goes to the pad where you drop them, the others to the empty pads that follow. A file dropped between the pads goes to the first empty pad; whatever you drop in the panel never ends up in the playlist.
+- **The pad's sound.** Below the pads is the strip of the **chosen pad** (the last one you clicked or played from the keyboard, with a lit border). The knobs are described in the table below.
+- **Right click on a pad:** **◀ Reverse** (plays the sample backwards; the pad shows ◀ before its name), MIDI learn, **gate** mode (plays while you hold it), **aftertouch**, **choke group** (for example closed and open hi-hat silencing each other), MIDI note, clear.
 - **Aftertouch.** Pressing the pad after the hit makes the sound grow. The target is per pad: off, volume (up to +60%), pitch (up to +7 semitones) or both. It works with per-pad and channel aftertouch. A coloured bar on the pad shows the pressure.
 - **Default MIDI notes:** the 16 pads respond to notes 36–51.
 
+| Knob | Values | What it does |
+|---|---|---|
+| **ATT** (attack) | 1 ms to 2 s | how long the sound takes to rise |
+| **DEC** (decay) | none to 4 s | how long it takes to fall to the sustain level |
+| **SUS** (sustain) | 0–100% | the level after the decay |
+| **REL** (release) | 4 ms to 4 s | how long it takes to fade when you let go of the pad; you hear it in **gate** mode (in normal mode the hit plays to the end of the sample) |
+| **VOL** | 0–150% | pad volume |
+| **TUNE** | ±12 semitones | tuning, in half steps |
+
+Each knob shows its value below; a double click brings it back to the default. With the default values the hit sounds as it is.
+
 ### Sampler (SAMPLER)
 
-8 pads for longer sounds. Drag a file (or a library track) onto a pad. Click: it starts, another click: it stops. Right click: loop, BPM, replace. Keys **1–8** on the keyboard. With **SYNC** the samples start on the beat of the playing deck and follow tempo and phase.
+Pads for longer sounds and loops. **Each deck has its own bank of 8 pads**: the **DECK 1 / 2** selector at the top of the panel chooses which bank you see and load. Pads that are already playing keep playing when you switch to the other bank; a lit dot on button 1 or 2 shows the bank that is playing.
+
+- **Load:** drag a file (or a library track) onto a pad, or click on an empty pad. Several files dragged together fill the empty pads that follow.
+- **Play:** click to start, another click to stop. Keys **1–8** on the keyboard (bank shown).
+- **Right click:** loop on or off, stop, sample BPM (typed in, ÷2, ×2), replace.
+- **SYNC.** The pads of a bank follow **their deck**: they start on the next beat, stretch or shrink to its tempo (without changing key) and stay locked to the **bar**: if you launch a loop on beat 3 of the track, it comes in on its own beat 3, so kick and snare land in the right place. They also follow a **flexible** grid and line up again straight after a jump in the track (hot cue, beat jump). If the bank's deck is stopped they follow the playing deck. The same loop loaded in deck 1's bank and in deck 2's bank stays in time with two tracks at different BPM.
+- **Sample BPM.** It is read from the file name when there is one (for example `electro-drums_132bpm.wav`), otherwise it is computed; a sample lasting a whole number of beats is a loop and starts from its beginning. The loop follows the deck's grid: if the track's grid doesn't sit on the beats, fix it first (see [Beatgrid and key](#beatgrid-and-key)).
 
 ---
 

@@ -1282,6 +1282,10 @@ struct DVoice {
     releasing: bool,
     env: f32,
     gain: f32,
+    /// campioni d'uscita dall'inizio del colpo (fasi di attacco e decadimento)
+    age: u32,
+    /// discesa dell'inviluppo per campione mentre la voce si spegne
+    fall: f32,
 }
 
 pub struct DrumPad {
@@ -1298,12 +1302,24 @@ pub struct DrumPad {
     pub at_mode: u8,
     pub at: f32,
     at_s: f32,
+    /// inviluppo ADSR: attacco, decadimento e rilascio in secondi, sostegno 0..1 (il rilascio parte quando si lascia il pad in modo
+    /// gate). Con i valori iniziali il colpo suona com'e'.
+    pub attack: f32,
+    pub decay: f32,
+    pub sustain: f32,
+    pub release: f32,
+    /// suona il campione al contrario
+    pub reverse: bool,
     voices: [DVoice; 4],
 }
 
+/// inviluppo iniziale: attacco di 1 ms e rilascio di 4 ms (niente click), nessun decadimento
+pub const DRUM_ADSR: [f32; 4] = [0.001, 0.0, 1.0, 0.004];
+
 impl Default for DrumPad {
     fn default() -> Self {
-        DrumPad { name: String::new(), path: String::new(), data: None, gain: 1.0, tune: 0.0, group: 0, gate: false, at_mode: 1, at: 0.0, at_s: 0.0, voices: [DVoice::default(); 4] }
+        let [attack, decay, sustain, release] = DRUM_ADSR;
+        DrumPad { name: String::new(), path: String::new(), data: None, gain: 1.0, tune: 0.0, group: 0, gate: false, at_mode: 1, at: 0.0, at_s: 0.0, attack, decay, sustain, release, reverse: false, voices: [DVoice::default(); 4] }
     }
 }
 
@@ -1328,27 +1344,44 @@ impl DrumPad {
     pub fn playing(&self) -> bool {
         self.voices.iter().any(|v| v.active && !v.releasing)
     }
-    fn release_all(&mut self) {
+    /// Spegne le voci in pochi ms (nuovo colpo dello stesso pad, gruppo choke): come una drum machine, la ripetizione taglia la coda.
+    fn release_all(&mut self, sr: u32) {
+        let fast = 1.0 / (0.004 * sr as f32);
         for v in self.voices.iter_mut() {
             if v.active {
+                // una voce gia' in rilascio lento viene accelerata, mai rallentata
+                v.fall = if v.releasing { v.fall.max(v.env * fast) } else { v.env.max(1e-4) * fast };
                 v.releasing = true;
             }
         }
     }
+    /// Pad lasciato (modo gate): le voci scendono a zero nel tempo di rilascio.
+    fn release_notes(&mut self, sr: u32) {
+        let n = (self.release.max(0.004) * sr as f32).max(1.0);
+        for v in self.voices.iter_mut() {
+            if v.active && !v.releasing {
+                v.releasing = true;
+                v.fall = v.env.max(1e-4) / n;
+            }
+        }
+    }
     /// Fa partire una voce; le precedenti sfumano in pochi ms (come una drum machine: la ripetizione taglia la coda).
-    fn start(&mut self, vel: f32) {
-        self.release_all();
+    fn start(&mut self, vel: f32, sr: u32) {
+        self.release_all(sr);
         self.at = 0.0;
         self.at_s = 0.0;
         let slot = self.voices.iter().position(|v| !v.active).unwrap_or(0);
-        self.voices[slot] = DVoice { pos: 0.0, active: true, releasing: false, env: 0.0, gain: vel };
+        self.voices[slot] = DVoice { pos: 0.0, active: true, releasing: false, env: 0.0, gain: vel, age: 0, fall: 0.0 };
     }
     fn render(&mut self, out: &mut [f32], sr: u32, vol: f32) {
         let Some(data) = self.data.clone() else { return };
         let total = data.len() / 2;
         let rate0 = 2f64.powf(self.tune as f64 / 12.0);
-        let up = 1.0 / (0.001 * sr as f32);
-        let down = 1.0 / (0.004 * sr as f32);
+        // inviluppo in campioni d'uscita: attacco (almeno 1 ms, niente click), decadimento fino al sostegno
+        let att = (self.attack.max(0.001) * sr as f32).max(1.0);
+        let dec = self.decay.max(0.0) * sr as f32;
+        let sus = self.sustain.clamp(0.0, 1.0);
+        let rev = self.reverse;
         let g0 = self.gain * vol;
         // la pressione cambia in modo graduale (circa 10 ms) per non fare scalini nel suono
         let frames = (out.len() / 2).max(1);
@@ -1363,22 +1396,33 @@ impl DrumPad {
             for (fi, f) in out.chunks_exact_mut(2).enumerate() {
                 let a = a0 + (a1 - a0) * (fi as f32 / frames as f32);
                 let rate = if at_pitch && a > 0.0005 { rate0 * 2f64.powf((a * AT_SEMI) as f64 / 12.0) } else { rate0 };
-                let ip = v.pos as usize;
-                if ip + 1 >= total {
+                if v.pos as usize + 1 >= total {
                     v.active = false;
                     break;
                 }
-                let t = (v.pos - ip as f64) as f32;
+                // al contrario si legge dalla fine verso l'inizio
+                let p = if rev { (total - 2) as f64 - v.pos } else { v.pos };
+                let ip = p.max(0.0) as usize;
+                let t = (p - ip as f64).max(0.0) as f32;
                 let l = data[ip * 2] + (data[ip * 2 + 2] - data[ip * 2]) * t;
                 let r = data[ip * 2 + 1] + (data[ip * 2 + 3] - data[ip * 2 + 1]) * t;
                 if v.releasing {
-                    v.env -= down;
+                    v.env -= v.fall;
                     if v.env <= 0.0 {
                         v.active = false;
                         break;
                     }
                 } else {
-                    v.env = (v.env + up).min(1.0);
+                    let age = v.age as f32;
+                    let target = if age < att {
+                        (age + 1.0) / att
+                    } else if age < att + dec {
+                        1.0 - (1.0 - sus) * (age - att) / dec
+                    } else {
+                        sus
+                    };
+                    v.env = target;
+                    v.age = v.age.saturating_add(1);
                 }
                 let g = g0 * v.gain * v.env * if at_vol { 1.0 + AT_VOL * a } else { 1.0 };
                 f[0] += l * g;
@@ -1571,16 +1615,18 @@ impl Mixer {
     /// Un pad della batteria: `vel` 0..1.
     pub fn drum_trigger(&mut self, i: usize, vel: f32) {
         if i >= NUM_DRUMS || self.drums[i].data.is_none() { return; }
+        let sr = self.sr;
         let g = self.drums[i].group;
         if g > 0 {
             for (j, p) in self.drums.iter_mut().enumerate() {
-                if j != i && p.group == g { p.release_all(); }
+                if j != i && p.group == g { p.release_all(sr); }
             }
         }
-        self.drums[i].start(vel.clamp(0.05, 1.0));
+        self.drums[i].start(vel.clamp(0.05, 1.0), sr);
     }
     pub fn drum_release(&mut self, i: usize) {
-        if i < NUM_DRUMS && self.drums[i].gate { self.drums[i].release_all(); }
+        let sr = self.sr;
+        if i < NUM_DRUMS && self.drums[i].gate { self.drums[i].release_notes(sr); }
     }
     /// Nota MIDI in ingresso: se si sta apprendendo la assegna al pad scelto, altrimenti suona il pad collegato alla nota.
     pub fn midi_note_on(&mut self, note: u8, vel: u8) {
@@ -1827,7 +1873,7 @@ impl Mixer {
             }).collect(),
             pads: self.pads.iter().map(|p| PadState { name: p.name.clone(), loaded: p.data.is_some(), playing: p.playing && !p.stopping, armed: p.armed, looped: p.looped, bpm: p.bpm }).collect(),
             pad_sync: self.pad_sync,
-            drums: self.drums.iter().enumerate().map(|(i, p)| DrumState { name: p.name.clone(), loaded: p.data.is_some(), playing: p.playing(), gain: p.gain, tune: p.tune, group: p.group, gate: p.gate, note: self.drum_notes[i], at_mode: p.at_mode, at: p.at }).collect(),
+            drums: self.drums.iter().enumerate().map(|(i, p)| DrumState { name: p.name.clone(), loaded: p.data.is_some(), playing: p.playing(), gain: p.gain, tune: p.tune, group: p.group, gate: p.gate, note: self.drum_notes[i], at_mode: p.at_mode, at: p.at, adsr: [p.attack, p.decay, p.sustain, p.release], reverse: p.reverse }).collect(),
             drum_vol: self.drum_vol,
             rec_on: self.rec.is_some(),
             rec_secs: self.rec.as_ref().map_or(0.0, |r| r.frames.load(std::sync::atomic::Ordering::Relaxed) as f64 / self.sr.max(1) as f64),
@@ -1975,6 +2021,9 @@ pub struct DrumState {
     pub note: u8,
     pub at_mode: u8,
     pub at: f32,
+    /// inviluppo (attacco, decadimento, sostegno, rilascio) e riproduzione al contrario
+    pub adsr: [f32; 4],
+    pub reverse: bool,
 }
 
 impl Pad {
@@ -2775,6 +2824,45 @@ mod tests {
             if e > 2.0 { e -= 4.0 } else if e < -2.0 { e += 4.0 }
             assert!(e.abs() < 0.05, "pad {k} fuori dal deck {k}: {e}");
         }
+    }
+
+    /// batteria: l'inviluppo ADSR scende al sostegno dopo il decadimento e, in modo gate, si spegne nel tempo di rilascio;
+    /// al contrario il campione parte dalla fine
+    #[test]
+    fn drum_adsr_and_reverse() {
+        let sr = 44100;
+        let mut m = Mixer::new(sr);
+        let rms = |b: &[f32]| (b.iter().map(|v| v * v).sum::<f32>() / b.len() as f32).sqrt();
+        m.drums[0].load("tone".into(), String::new(), tone(sr, 3.0, 220.0));
+        let mut buf = vec![0f32; 1024];
+        m.drum_trigger(0, 1.0);
+        for _ in 0..4 { m.render(&mut buf); }
+        let full = rms(&buf);
+        // decadimento di 0,1 s fino a meta' volume
+        m.drums[0].decay = 0.1;
+        m.drums[0].sustain = 0.5;
+        m.drum_trigger(0, 1.0);
+        for _ in 0..20 { m.render(&mut buf); }
+        assert!((rms(&buf) / full - 0.5).abs() < 0.05, "sostegno {}", rms(&buf) / full);
+        // gate con rilascio di 0,2 s: a meta' del rilascio suona ancora, dopo e' spento
+        m.drums[0].gate = true;
+        m.drums[0].release = 0.2;
+        m.drum_release(0);
+        for _ in 0..4 { m.render(&mut buf); }
+        assert!(rms(&buf) > 0.01, "il rilascio non deve tagliare subito");
+        for _ in 0..16 { m.render(&mut buf); }
+        assert!(!m.drums[0].playing() && rms(&buf) < 1e-6, "dopo il rilascio e' spento");
+        // al contrario: un campione silenzioso con un colpo all'inizio suona il colpo per ultimo
+        let mut data = vec![0f32; sr as usize * 2];
+        for k in 0..2000 { data[k * 2] = 0.8; data[k * 2 + 1] = 0.8; }
+        m.drums[1].load("hit".into(), String::new(), data);
+        m.drums[1].reverse = true;
+        m.drum_trigger(1, 1.0);
+        m.render(&mut buf);
+        assert!(rms(&buf) < 1e-6, "al contrario all'inizio c'e' la coda silenziosa");
+        let mut heard = false;
+        for _ in 0..100 { m.render(&mut buf); heard |= rms(&buf) > 0.1; }
+        assert!(heard, "il colpo arriva alla fine");
     }
 
     /// batteria: un colpo suona per intero, la ripetizione taglia la coda senza click, il gruppo choke zittisce l'altro pad

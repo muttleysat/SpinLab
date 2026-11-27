@@ -571,6 +571,11 @@ fn drum_cmd(app: State<'_, App>, pad: usize, cmd: String, a: f64) {
             "group" => m.drums[pad].group = a.clamp(0.0, 8.0) as u8,
             "gate" => m.drums[pad].gate = a > 0.5,
             "aftertouch" => m.drums[pad].at_mode = (a as u8).min(3),
+            "attack" => m.drums[pad].attack = a.clamp(0.001, 2.0) as f32,
+            "decay" => m.drums[pad].decay = a.clamp(0.0, 4.0) as f32,
+            "sustain" => m.drums[pad].sustain = a.clamp(0.0, 1.0) as f32,
+            "release" => m.drums[pad].release = a.clamp(0.004, 4.0) as f32,
+            "reverse" => m.drums[pad].reverse = a > 0.5,
             "clear" => { m.drums[pad].clear(); m.drum_notes[pad] = 36 + pad as u8; }
             "note" => m.drum_notes[pad] = a.clamp(0.0, 255.0) as u8,
             "learn" => { m.learn = if a > 0.5 { Some(pad) } else { None }; save = false; }

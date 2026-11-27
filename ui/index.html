@@ -135,8 +135,18 @@
     </div>
     <div class="pn" id="pn-drums">
       <div class="sampler-head"><span>VOL</span><input type="range" id="drumVol" min="0" max="1.5" step="0.01" value="0.9"><span class="midi" id="midiStat" title="Controller MIDI collegati">MIDI: —</span></div>
-      <div id="drumPads"></div>
-      <small class="hint">Mouse, tastiera (ZXCV · ASDF · QWER · 1234) o pad MIDI (note 36–51) · trascina un campione su un pad · tasto destro: MIDI learn, gate, intonazione, choke</small>
+      <div id="drumPads" title="Mouse, tastiera (ZXCV · ASDF · QWER · 1234) o pad MIDI (note 36–51) · trascina un campione su un pad · tasto destro: reverse, MIDI learn, gate, choke"></div>
+      <div id="drumEdit" class="drumedit">
+        <div class="de-head"><b id="deName">PAD —</b><span id="deInfo"></span></div>
+        <div class="de-knobs">
+          <div class="knobwrap" title="Attacco: quanto ci mette il suono a salire · doppio clic: immediato"><div class="knob" data-de="attack"></div><span>ATT</span><small data-dv="attack"></small></div>
+          <div class="knobwrap" title="Decadimento: quanto ci mette a scendere fino al sostegno · doppio clic: nessuno"><div class="knob" data-de="decay"></div><span>DEC</span><small data-dv="decay"></small></div>
+          <div class="knobwrap" title="Sostegno: il volume dopo il decadimento · doppio clic: pieno"><div class="knob" data-de="sustain"></div><span>SUS</span><small data-dv="sustain"></small></div>
+          <div class="knobwrap" title="Rilascio: quanto ci mette a spegnersi quando lasci il pad (in modo gate) · doppio clic: subito"><div class="knob" data-de="release"></div><span>REL</span><small data-dv="release"></small></div>
+          <div class="knobwrap" title="Volume del pad · doppio clic: 100%"><div class="knob" data-de="gain"></div><span>VOL</span><small data-dv="gain"></small></div>
+          <div class="knobwrap" title="Intonazione in semitoni · doppio clic: originale"><div class="knob" data-de="tune"></div><span>TUNE</span><small data-dv="tune"></small></div>
+        </div>
+      </div>
     </div>
     <div class="pn on" id="pn-stems">
       <div class="stemrow" id="stemCols"></div>
