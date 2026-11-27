@@ -47,7 +47,7 @@ SpinLab è gratuito. Se ti è utile puoi offrire una **donazione libera** con [P
 - Analisi automatica di **BPM, tonalità (Camelot) e griglia dei battiti**, in sottofondo.
 - Griglia affinata dalla rete neurale **Beat This!**, anche per i brani suonati dal vivo.
 - Modalità per brano: **AUTO**, **FISSA** (tempo costante) e **FLESS.** (segue un batterista vero battuta per battuta).
-- Correzioni rapide: dimezza o raddoppia il BPM, **ANCHOR** per rimettere la griglia sul battito in un punto preciso, ripristino.
+- Correzioni rapide: dimezza o raddoppia il BPM, **ANCHOR** per spostare la griglia sul battito sotto la testina, ripristino.
 
 ### Mixer
 - Due canali con fader, **EQ a tre bande**, **filtro** e meter a LED; **crossfader**.

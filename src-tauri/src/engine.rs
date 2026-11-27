@@ -42,7 +42,9 @@ pub enum Motion {
 }
 /// loudness di riferimento (LUFS) quando nessun altro brano sta suonando
 pub const REFERENCE_LUFS: f64 = -14.0;
-pub const NUM_PADS: usize = 8;
+/// pad del campionatore per ogni deck: ogni deck ha il suo banco, che in sync segue il suo brano
+pub const PADS_PER_DECK: usize = 8;
+pub const NUM_PADS: usize = PADS_PER_DECK * NUM_DECKS;
 /// Velocita' del rientro automatico del pitch, in punti percentuali al secondo: +8% torna a 0 in 16 s, +2% in 4 s.
 pub const TEMPO_RAMP_PCT_PER_S: f64 = 0.5;
 
@@ -146,17 +148,17 @@ pub struct Deck {
     pub cue_point: f64, // sec
     pub hot_cues: [Option<f64>; 8],
     pub quantize: bool,
-    /// griglia analizzata (per il reset) e griglia di lavoro modificabile
-    grid_orig: (Vec<f64>, usize, f64),
-    grid_base: Vec<f64>,
-    grid_down: usize,
-    grid_bpm: f64,
+    /// battiti da cui si adatta la griglia: quelli della rete neurale o, finche' non ha lavorato, del rilevatore DSP
+    grid_src: GridSource,
+    /// griglia del brano come in openDJ (marker con il loro tempo, vedi beats.rs): adattata ai battiti nella modalita' del brano
+    /// oppure modificata a mano. Il brano (Track::beats) ne riceve l'elenco dei battiti.
+    grid: crate::beats::BeatGrid,
     /// modalita' della griglia (0 auto, 1 fisso, 2 flessibile), vedi gridfit.rs
     pub grid_mode: u8,
+    /// griglia modificata a mano (ANCHOR, dimezza, raddoppia): e' del DJ, si salva e una nuova analisi non la tocca
+    grid_edited: bool,
     /// etichette BPM dove il tempo cambia: (secondi, BPM)
     grid_labels: Vec<(f64, f64)>,
-    /// battiti fissati a mano con «anchor_here» (indici in grid_base); non vengono più spostati
-    grid_pins: Vec<usize>,
     pub volume: f32,
     pub xf_assign: u8, // 0=A 1=B 2=thru
     pub eq: Eq3,
@@ -221,7 +223,7 @@ impl Deck {
         Deck {
             sr, track: None, pos: 0.0, playing: false, preview: false, tempo: 0.0, tempo_ramp: None, sync: false, sync_prev_playing: false, armed: false, arm_pos: 0.0, range: 0.08,
             keylock: true, key_shift: 0, cue_point: 0.0, hot_cues: [None; 8], quantize: true,
-            grid_orig: (vec![], 0, 0.0), grid_base: vec![], grid_down: 0, grid_bpm: 0.0, grid_mode: 0, grid_labels: vec![], grid_pins: vec![],
+            grid_src: GridSource::default(), grid: Default::default(), grid_mode: 0, grid_edited: false, grid_labels: vec![],
             volume: 0.85, xf_assign, eq: Eq3::new(sr as f32), eq_knobs: [0.5; 3], fx: Fx::new(sr as f32),
             stretch: Stretch::preset_default(2, sr), stretch_mode: false, need_preroll: true,
             last_transpose: 1e9, in_buf: Vec::new(), lead: 0.0, held: false, pfl: false, pfl_buf: Vec::new(), mod_rate: 1.0, nudge: 0.0, motion: Motion::None, brake_dur: 1.5, slip: true, slip_sec: None, rolling: false, roll_prev: (false, 0.0, 0.0), filter: 0.5, cfilt: crate::fx::ColorFilter::new(), loop_in: 0.0, loop_out: 0.0, loop_on: false, loop_beats: 4.0, view: None, stem_mask: 15, stem_gains: [1.0; 4], prev_view: None, xf: 0.0, loudness: 0.0, peak: 1.0, norm_db: 0.0, scrub_target: None, scrub_v: 0.0, level: 0.0, gain_prev: 0.0, lvl: [0.0; 2],
@@ -244,9 +246,9 @@ impl Deck {
         self.sync_prev_playing = false;
         self.scrub_target = None;
         self.held = false;
-        self.grid_orig = (vec![], 0, 0.0);
-        self.grid_base.clear();
-        self.grid_pins.clear();
+        self.grid_src = GridSource::default();
+        self.grid = Default::default();
+        self.grid_edited = false;
         self.cue_point = 0.0;
         self.hot_cues = [None; 8];
         self.loudness = 0.0;
@@ -259,12 +261,12 @@ impl Deck {
 
     pub fn load(&mut self, t: Arc<Track>) {
         self.tempo_ramp = None;
-        self.grid_orig = (t.beats.clone(), t.downbeat, t.bpm);
-        self.grid_base = t.beats.clone();
-        self.grid_down = t.downbeat;
-        self.grid_bpm = t.bpm;
+        // finche' non arrivano i battiti della rete la griglia si adatta a quelli del rilevatore DSP, con i suoi inizi di battuta
+        let downbeats = t.beats.iter().skip(t.downbeat % 4).step_by(4).copied().collect();
+        self.grid_src = GridSource { beats: t.beats.clone(), downbeats, neural: false, bpm: t.bpm, range: crate::tempo::bpm_range() };
+        self.grid = Default::default();
         self.grid_mode = 0;
-        self.grid_pins.clear();
+        self.grid_edited = false;
         self.sync_prev_playing = false;
         self.loudness = 0.0;
         self.peak = 1.0;
@@ -286,7 +288,7 @@ impl Deck {
         self.lead = 0.0;
         self.stretch_mode = false;
         self.need_preroll = true;
-        self.rebuild_grid();
+        self.refit_grid();
     }
 
     /// Imposta gli stem ascoltati: `view` = audio gia' mescolato (None = brano intero). Il suono entra con una breve rampa.
@@ -707,121 +709,127 @@ impl Deck {
         }
     }
 
-    // ---- griglia: modifica manuale
-    /// ricostruisce la traccia con la griglia della modalita' corrente (Auto / Fisso / Flessibile, vedi gridfit.rs).
-    /// Una griglia con battiti fissati a mano resta com'e' (salvo in modalita' Fisso, che la riduce a un solo tempo).
-    fn rebuild_grid(&mut self) {
+    // ---- griglia (come in openDJ: beats.rs, gridfit.rs, neural::refit)
+    /// La griglia adattata ai battiti nella modalita' del brano: i battiti della rete passano da `refit` di openDJ (ottava nell'intervallo
+    /// di tempo, poi gridfit), quelli del rilevatore DSP direttamente da gridfit.
+    fn fitted(&self) -> Option<crate::gridfit::Fitted> {
+        let src = &self.grid_src;
+        let mode = crate::gridfit::GridMode::from_id(self.grid_mode).unwrap_or_default();
+        if src.neural {
+            crate::neural::refit(&src.beats, &src.downbeats, src.range, mode)
+        } else {
+            let downbeats = (!src.downbeats.is_empty()).then_some(&src.downbeats[..]);
+            crate::gridfit::fit_mode(&src.beats, downbeats, src.bpm, mode)
+        }
+    }
+    /// Adatta di nuovo la griglia ai battiti (lascia com'e' una griglia modificata a mano)
+    fn refit_grid(&mut self) {
+        if self.grid_edited {
+            return;
+        }
+        let before = std::mem::take(&mut self.grid);
+        self.grid = match self.fitted() {
+            Some(f) => f.grid,
+            // senza battiti sufficienti, Fisso tiene almeno il tempo principale (come openDJ)
+            None if self.grid_mode == 1 && before.is_dynamic() => {
+                let dur = self.track.as_ref().map_or(0.0, |t| t.duration());
+                crate::beats::BeatGrid::constant(before.main_bpm(dur), before.first_beat())
+            }
+            None => Default::default(),
+        };
+        self.apply_grid();
+    }
+    /// Il brano riceve i battiti della griglia, dal primo battito prima dell'inizio fino a dopo la fine: la battuta parte dai battiti
+    /// numerati 0, 4, 8... della griglia (in openDJ la battuta 1 e' il battito 0). Senza griglia restano i battiti rilevati.
+    fn apply_grid(&mut self) {
         let Some(t) = self.track.clone() else { return };
-        let mode = crate::gridfit::GridMode::from_id(self.grid_mode);
-        let manual = !self.grid_pins.is_empty() && mode != crate::gridfit::GridMode::Fixed;
-        let fitted = if manual { None } else { crate::gridfit::fit(&self.grid_base, self.grid_down, mode) };
-        match fitted {
-            Some(f) => {
-                self.grid_labels = crate::gridfit::tempo_labels(&f);
-                self.track = Some(Arc::new(t.with_grid(f.beats, f.downbeat, f.bpm)));
+        let dur = t.duration();
+        if self.grid.is_empty() {
+            self.grid_labels.clear();
+            let src = &self.grid_src;
+            let down = src.downbeats.first().and_then(|&d| src.beats.iter().position(|&b| (b - d).abs() < 1e-9)).unwrap_or(0) % 4;
+            self.track = Some(Arc::new(t.with_grid(src.beats.clone(), down, src.bpm)));
+            return;
+        }
+        let g = &self.grid;
+        let (n0, n1) = (g.beat_at(0.0).floor() as i64, g.beat_at(dur).ceil() as i64);
+        let beats: Vec<f64> = (n0..=n1.max(n0 + 1)).map(|n| g.seconds_at(n as f64)).collect();
+        let downbeat = (-n0).rem_euclid(4) as usize;
+        self.grid_labels = g.tempo_labels(dur, false);
+        self.track = Some(Arc::new(t.with_grid(beats, downbeat, g.main_bpm(dur))));
+    }
+    /// battiti da cui adattare la griglia: quelli della rete (`neural`, con gli inizi di battuta e l'intervallo di tempo del genere)
+    /// o del rilevatore DSP. La griglia si adatta di nuovo, salvo se e' stata modificata a mano.
+    pub fn grid_set_source(&mut self, beats: Vec<f64>, downbeats: Vec<f64>, neural: bool, bpm: f64, range: (f64, f64)) {
+        if self.track.is_none() {
+            return;
+        }
+        self.grid_src = GridSource { beats, downbeats, neural, bpm, range };
+        self.refit_grid();
+    }
+    /// griglia salvata per il brano: la modalita' e, se modificata a mano, la griglia stessa
+    pub fn grid_apply_saved(&mut self, mode: u8, edited: Option<crate::beats::BeatGrid>) {
+        self.grid_mode = mode.min(2);
+        match edited.filter(|g| !g.is_empty()) {
+            Some(g) => {
+                self.grid = g;
+                self.grid_edited = true;
+                self.apply_grid();
             }
             None => {
-                self.grid_labels.clear();
-                self.track = Some(Arc::new(t.with_grid(self.grid_base.clone(), self.grid_down, self.grid_bpm)));
+                self.grid_edited = false;
+                self.refit_grid();
             }
         }
     }
-    pub fn grid_pins(&self) -> &[usize] {
-        &self.grid_pins
-    }
-    /// griglia calcolata automaticamente al caricamento (prima delle correzioni manuali)
-    pub fn grid_auto(&self) -> &[f64] {
-        &self.grid_orig.0
+    /// griglia modificata a mano, come testo di openDJ (`secondi:bpm` separati da spazi), da salvare
+    pub fn grid_edited_text(&self) -> Option<String> {
+        self.grid_edited.then(|| self.grid.to_text())
     }
     pub fn grid_info(&self) -> Option<GridInfo> {
         let t = self.track.as_ref()?;
-        Some(GridInfo { beats: t.beats.clone(), base: self.grid_base.clone(), base_downbeat: self.grid_down, downbeat: t.downbeat, bpm: t.bpm, mode: self.grid_mode, labels: self.grid_labels.clone() })
+        Some(GridInfo { beats: t.beats.clone(), downbeat: t.downbeat, bpm: t.bpm, mode: self.grid_mode, labels: self.grid_labels.clone(), edited: self.grid_edited })
     }
-    pub fn grid_apply_saved(&mut self, beats: Vec<f64>, downbeat: usize, bpm: f64, mode: u8, pins: Vec<usize>) {
-        if beats.len() < 2 {
-            return;
-        }
-        self.grid_base = beats;
-        self.grid_down = downbeat % 4;
-        self.grid_bpm = bpm;
-        self.grid_mode = mode.min(2);
-        self.grid_pins = pins.into_iter().filter(|&p| p < self.grid_base.len()).collect();
-        self.rebuild_grid();
-    }
-    /// battiti nuovi (rete neurale) per un brano la cui griglia non e' stata toccata a mano: sostituiscono quelli di lavoro e
-    /// quelli del reset, mantenendo la modalita'
-    pub fn grid_refine(&mut self, beats: Vec<f64>, downbeat: usize, bpm: f64) {
-        if beats.len() < 2 || self.track.is_none() {
-            return;
-        }
-        self.grid_orig = (beats.clone(), downbeat % 4, bpm);
-        self.grid_base = beats;
-        self.grid_down = downbeat % 4;
-        self.grid_bpm = bpm;
-        self.grid_pins.clear();
-        self.rebuild_grid();
-    }
-    /// comandi di modifica della griglia; ritorna true se la griglia e' cambiata
+    /// Modifiche della griglia (le stesse di openDJ, alla testina): «anchor_here» porta il battito piu' vicino sulla testina spostando
+    /// tutta la griglia (GridEdit::BeatHere), «halve»/«double» dimezzano o raddoppiano il tempo (GridEdit::Scale), «mode» adatta di nuovo
+    /// la griglia ai battiti nella modalita' scelta, «reset» torna alla griglia dell'analisi. Ritorna true se la griglia e' cambiata.
     pub fn grid_cmd(&mut self, cmd: &str, a: f64) -> bool {
-        if self.track.is_none() || self.grid_base.len() < 2 {
+        use crate::beats::GridEdit;
+        if self.track.is_none() {
             return false;
         }
+        let before = self.grid.clone();
+        let was_edited = self.grid_edited;
         match cmd {
-            "halve" => {
-                self.grid_base = self.grid_base.iter().step_by(2).copied().collect();
-                self.grid_down = (self.grid_down / 2) % 4;
-                self.grid_bpm /= 2.0;
-                self.grid_pins.clear();
+            "mode" => {
+                self.grid_mode = (a as i64).clamp(0, 2) as u8;
+                self.grid_edited = false;
+                self.refit_grid();
+                return true;
             }
-            "double" => {
-                let mut v = Vec::with_capacity(self.grid_base.len() * 2);
-                for w in self.grid_base.windows(2) {
-                    v.push(w[0]);
-                    v.push(0.5 * (w[0] + w[1]));
-                }
-                v.push(*self.grid_base.last().unwrap());
-                self.grid_base = v;
-                self.grid_down = (self.grid_down * 2) % 4;
-                self.grid_bpm *= 2.0;
-                self.grid_pins.clear();
-            }
-            "mode" => self.grid_mode = (a as i64).clamp(0, 2) as u8,
             "reset" => {
-                self.grid_base = self.grid_orig.0.clone();
-                self.grid_down = self.grid_orig.1;
-                self.grid_bpm = self.grid_orig.2;
-                self.grid_mode = 0;
-                self.grid_pins.clear();
+                self.grid_edited = false;
+                self.refit_grid();
+                return was_edited || self.grid != before;
             }
-            // il battito piu' vicino alla testina viene portato esattamente sulla testina
-            "anchor_here" => {
-                let t = self.pos_sec();
-                let n = self.grid_base.len();
-                let i = self.grid_base.partition_point(|&b| b <= t).saturating_sub(1);
-                let j = if i + 1 < n && (self.grid_base[i + 1] - t).abs() < (t - self.grid_base[i]).abs() { i + 1 } else { i };
-                let d = t - self.grid_base[j];
-                let prev = self.grid_pins.iter().copied().filter(|&p| p < j).max();
-                let next = self.grid_pins.iter().copied().filter(|&p| p > j).min();
-                // prima: la correzione svanisce verso il vincolo precedente (o dopo 3 battiti); dopo: verso il successivo (o resta)
-                let back = prev.map_or(3, |p| j - p);
-                for k in j.saturating_sub(back)..j {
-                    self.grid_base[k] += d * (k + back - j) as f64 / back as f64;
-                }
-                for k in j..n {
-                    let w = match next {
-                        Some(q) if k >= q => 0.0,
-                        Some(q) => (q - k) as f64 / (q - j) as f64,
-                        None => 1.0,
-                    };
-                    self.grid_base[k] += d * w;
-                }
-                if !self.grid_pins.contains(&j) {
-                    self.grid_pins.push(j);
-                }
-            }
-            _ => return false,
+            _ => {}
         }
-        self.rebuild_grid();
+        let edit = match cmd {
+            "anchor_here" => GridEdit::BeatHere,
+            "halve" => GridEdit::Scale(0.5),
+            "double" => GridEdit::Scale(2.0),
+            _ => return false,
+        };
+        if before.is_empty() {
+            return false;
+        }
+        let after = before.edited(edit, self.pos_sec());
+        if after == before {
+            return false;
+        }
+        self.grid = after;
+        self.grid_edited = true;
+        self.apply_grid();
         true
     }
 
@@ -1087,7 +1095,21 @@ pub struct Pad {
     tmp: Vec<f32>,
 }
 
+/// Tempo del campione riportato all'ottava del deck guida: un campione a 70 bpm su un brano a 128 suona a 64 (un suo battito = due
+/// battiti del brano). Ritorna (tempo di destinazione, battiti del brano per ogni battito del campione: 1, 2, 0.5...).
+fn octave_target(lead_bpm: f64, own_bpm: f64) -> (f64, f64) {
+    let mut target = lead_bpm;
+    while target / own_bpm > 1.5 { target /= 2.0; }
+    while target / own_bpm < 0.67 { target *= 2.0; }
+    (target, lead_bpm / target)
+}
+
 impl Pad {
+    /// battiti del brano su cui allineare un loop: la battuta (4) se il loop dura battute intere, altrimenti la sua durata
+    fn bar_span(&self, total: usize, spb: f64, q: f64) -> f64 {
+        let beats = total as f64 / spb * q;
+        if beats >= 4.0 && ((beats / 4.0).round() - beats / 4.0).abs() < 0.05 { 4.0 } else { beats.max(1e-6) }
+    }
     fn spb(&self, sr: u32) -> f64 {
         if self.bpm > 0.0 { 60.0 / self.bpm * sr as f64 } else { 0.0 }
     }
@@ -1122,12 +1144,20 @@ impl Pad {
         let have_ref = sync_on && lead_ref.map_or(false, |(b, _)| b > 0.0);
         if self.armed {
             match lead_ref {
-                Some((_, ph)) if have_ref => {
+                Some((b, bar)) if have_ref => {
+                    let ph = bar.fract();
                     let wrapped = self.prev_phase.map_or(false, |pp| ph < pp - 0.5);
                     self.prev_phase = Some(ph);
                     if wrapped {
-                        // il battito e' appena scattato: parte dal suo primo battito, avanzato della fase gia' trascorsa
-                        let start = if spb > 0.0 { self.first_beat + ph * spb } else { 0.0 };
+                        // il battito e' appena scattato. Un loop entra al punto della battuta in cui si trova il brano (sul 3 del brano
+                        // suona il suo 3), un campione singolo parte dall'inizio; in tutti e due i casi avanzato della fase gia' trascorsa
+                        let start = if spb > 0.0 && self.bpm > 0.0 {
+                            let q = octave_target(b, self.bpm).1;
+                            let into = if self.looped { bar.rem_euclid(self.bar_span(total, spb, q)) } else { ph };
+                            self.first_beat + into / q * spb
+                        } else {
+                            0.0
+                        };
                         self.begin(start.rem_euclid(total as f64));
                     }
                 }
@@ -1140,18 +1170,23 @@ impl Pad {
         let synced = have_ref && self.bpm > 0.0;
         let mut r = 1.0f64;
         if synced {
-            let (mbpm, mph) = lead_ref.unwrap();
-            let (mut target, mine) = (mbpm, self.bpm);
-            let mut octave = false;
-            while target / mine > 1.5 { target /= 2.0; octave = true; }
-            while target / mine < 0.67 { target *= 2.0; octave = true; }
-            r = target / mine;
-            if !octave && spb > 0.0 {
+            let (mbpm, bar) = lead_ref.unwrap();
+            let (target, q) = octave_target(mbpm, self.bpm);
+            r = target / self.bpm;
+            if spb > 0.0 && !self.need_preroll {
+                // posizione del campione e del brano nella stessa unita' (battiti del brano; un battito del campione ne vale q),
+                // confrontate entro la battuta per un loop (resta allineato a cassa e rullante) o entro il battito per un campione singolo
+                let span = if self.looped { self.bar_span(total, spb, q) } else { q.min(1.0) };
                 let heard = self.pos - self.lead - self.first_beat;
-                let pph = (heard / spb).rem_euclid(1.0);
-                let mut e = pph - mph;
-                if e > 0.5 { e -= 1.0 } else if e < -0.5 { e += 1.0 }
-                if e.abs() > 0.002 {
+                let mut e = (heard / spb * q).rem_euclid(span) - bar.rem_euclid(span);
+                if e > span / 2.0 { e -= span } else if e < -span / 2.0 { e += span }
+                if e.abs() > 0.2 {
+                    // fuori di molto (salto del brano, cambio di battuta): si riposiziona subito invece di rincorrere piano piano
+                    let lead = self.lead;
+                    let h = (self.pos - lead - e / q * spb).rem_euclid(total as f64);
+                    self.pos = h + lead;
+                    self.need_preroll = true;
+                } else if e.abs() > 0.002 {
                     r *= 1.0 - (0.5 * e).clamp(-0.04, 0.04);
                 }
             }
@@ -1453,11 +1488,13 @@ impl Mixer {
             }
         }
         // riferimento per il sync dei campioni: tempo e fase del deck che suona (la guida, se c'e')
-        let pad_ref = if self.pad_sync { self.beat_reference() } else { None };
+        // ogni banco di pad segue il suo deck (se e' fermo, quello che suona): lo stesso campione sui banchi di due deck
+        // resta a tempo con due brani a BPM diversi
+        let refs: [Option<(f64, f64)>; NUM_DECKS] = if self.pad_sync { std::array::from_fn(|d| self.pad_reference(d)) } else { [None; NUM_DECKS] };
         let (sr, vol, sync_on) = (self.sr, self.sampler_vol, self.pad_sync);
-        for p in self.pads.iter_mut() {
+        for (i, p) in self.pads.iter_mut().enumerate() {
             if !p.playing && !p.armed { continue; }
-            p.render(out, sr, vol, sync_on, pad_ref);
+            p.render(out, sr, vol, sync_on, refs[i / PADS_PER_DECK]);
         }
         let dv = self.drum_vol;
         for p in self.drums.iter_mut() {
@@ -1582,17 +1619,27 @@ impl Mixer {
         }
     }
 
-    /// (bpm effettivo, fase del battito) del deck guida o, in mancanza, del primo deck in riproduzione
+    /// (bpm effettivo, posizione nella battuta 0..4 in battiti) del deck guida o, in mancanza, del primo deck in riproduzione
     fn beat_reference(&self) -> Option<(f64, f64)> {
         let playing = |i: usize| self.decks[i].playing && self.decks[i].track.is_some();
         let m = self.leader.filter(|&l| playing(l)).or_else(|| (0..NUM_DECKS).find(|&i| playing(i)))?;
-        let d = &self.decks[m];
-        let ph = d.track.as_ref().and_then(|t| t.beat_phase(d.pos_sec()))?;
-        Some((d.bpm_now(), ph))
+        self.deck_reference(m)
+    }
+    /// riferimento del banco di pad di un deck: il deck stesso se suona, altrimenti la guida
+    fn pad_reference(&self, deck: usize) -> Option<(f64, f64)> {
+        self.deck_reference(deck).or_else(|| self.beat_reference())
+    }
+    /// (bpm effettivo, posizione nella battuta 0..4) di un deck, se sta suonando
+    fn deck_reference(&self, i: usize) -> Option<(f64, f64)> {
+        let d = &self.decks[i];
+        if !d.playing { return None; }
+        let t = d.track.as_ref()?;
+        let bp = t.beat_pos(d.pos_sec())?;
+        Some((d.bpm_now(), (bp - t.downbeat as f64).rem_euclid(4.0)))
     }
     /// Un clic fa partire il campione e un altro clic lo ferma. In modo sync parte sul prossimo battito del deck che suona.
     pub fn pad_trigger(&mut self, i: usize) {
-        let sync = self.pad_sync && self.beat_reference().is_some();
+        let sync = self.pad_sync && self.pad_reference(i / PADS_PER_DECK).is_some();
         if let Some(p) = self.pads.get_mut(i) {
             if p.data.is_none() { return; }
             if p.armed { p.armed = false; return; }
@@ -1856,16 +1903,28 @@ pub struct DeckState {
 
 #[derive(Serialize)]
 pub struct GridInfo {
-    /// battiti mostrati (dopo l'adattamento della modalita')
+    /// battiti della griglia
     pub beats: Vec<f64>,
-    /// battiti di lavoro (rilevati o corretti a mano), da cui la modalita' ricalcola la griglia: e' questa che si salva
-    pub base: Vec<f64>,
-    /// indice in `base` del battito che apre la battuta
-    pub base_downbeat: usize,
     pub downbeat: usize,
     pub bpm: f64,
     pub mode: u8,
     pub labels: Vec<(f64, f64)>,
+    /// griglia modificata a mano
+    pub edited: bool,
+}
+
+/// Battiti da cui si adatta la griglia di un deck
+#[derive(Clone, Default)]
+pub struct GridSource {
+    pub beats: Vec<f64>,
+    /// inizi di battuta (secondi)
+    pub downbeats: Vec<f64>,
+    /// battiti della rete neurale (passano da neural::refit) o del rilevatore DSP
+    pub neural: bool,
+    /// tempo del rilevatore DSP (per gridfit con i suoi battiti)
+    pub bpm: f64,
+    /// intervallo di tempo in cui si legge il tempo dei battiti della rete (genere del brano o 60-180 BPM)
+    pub range: (f64, f64),
 }
 
 #[derive(Serialize)]
@@ -2065,38 +2124,32 @@ mod tests {
         t.bpm = 120.0;
         t.downbeat = 1;
         d.load(Arc::new(t));
-        d.grid_cmd("double", 0.0);
-        let t = d.track.as_ref().unwrap();
-        assert_eq!(t.beats.len(), 99);
-        assert!((t.bpm - 240.0).abs() < 1e-9);
-        d.grid_cmd("halve", 0.0);
-        assert_eq!(d.track.as_ref().unwrap().beats.len(), 50);
+        // la griglia copre tutto il brano, con la battuta sugli inizi di battuta rilevati (battito 1: 0,6 s)
+        let bar_at = |d: &Deck| { let t = d.track.as_ref().unwrap(); t.beats[t.downbeat].rem_euclid(2.0) };
+        assert!((bar_at(&d) - 0.6).abs() < 0.01, "battuta {}", bar_at(&d));
+        assert!((d.track.as_ref().unwrap().bpm - 120.0).abs() < 0.01);
+        assert!(d.grid_cmd("double", 0.0));
+        assert!((d.track.as_ref().unwrap().bpm - 240.0).abs() < 0.02);
+        assert!(d.grid_cmd("halve", 0.0));
+        assert!((d.track.as_ref().unwrap().bpm - 120.0).abs() < 0.01);
         // griglia FISSA: intervalli perfettamente uguali, bpm 120
         d.grid_cmd("mode", 1.0);
         let t = d.track.as_ref().unwrap();
         let iv: Vec<f64> = t.beats.windows(2).map(|w| w[1] - w[0]).collect();
         assert!(iv.iter().all(|v| (v - iv[0]).abs() < 1e-9), "intervalli non uniformi");
         assert!((t.bpm - 120.0).abs() < 0.01, "bpm {}", t.bpm);
-        d.grid_cmd("mode", 0.0);
-        // ancora: il battito piu' vicino alla testina va esattamente sulla testina, i vincoli gia' dati restano
-        // l'ancora agisce sulla base della griglia (i battiti prima dell'adattamento di gridfit): si verifica li'
-        let before: Vec<f64> = d.grid_base.clone();
-        let j = (0..before.len()).min_by(|&a, &b| (before[a] - 10.43).abs().partial_cmp(&(before[b] - 10.43).abs()).unwrap()).unwrap();
+        // ancora: tutta la griglia si sposta e un battito cade esattamente sulla testina; la griglia diventa «modificata a mano»
         d.set_pos_sec(10.43);
         assert!(d.grid_cmd("anchor_here", 0.0));
-        let b = &d.grid_base;
-        assert!((b[j] - 10.43).abs() < 1e-9, "ancora {}", b[j]);
-        assert!((b[0] - before[0]).abs() < 1e-9 && (b[j - 4] - before[j - 4]).abs() < 1e-9);
-        assert!((b[j + 10] - before[j + 10] - (10.43 - before[j])).abs() < 1e-9);
-        d.set_pos_sec(7.0);
-        d.grid_cmd("anchor_here", 0.0);
-        d.set_pos_sec(10.43);
-        d.grid_cmd("anchor_here", 0.0);
         let b = &d.track.as_ref().unwrap().beats;
-        assert!(b.windows(2).all(|w| w[1] > w[0]));
-        d.grid_cmd("reset", 0.0);
-        let t = d.track.as_ref().unwrap();
-        assert!((t.beats[0] - 0.104).abs() < 0.01 && t.downbeat == 1 && d.grid_mode == 0);
+        assert!(b.iter().any(|&x| (x - 10.43).abs() < 1e-9), "nessun battito sulla testina");
+        assert!(b.windows(2).all(|w| (w[1] - w[0] - 0.5).abs() < 1e-4));
+        assert!(d.grid_edited_text().is_some());
+        // il ripristino torna alla griglia adattata ai battiti, nella modalita' del brano
+        assert!(d.grid_cmd("reset", 0.0));
+        assert!(d.grid_edited_text().is_none() && d.grid_mode == 1);
+        assert!((bar_at(&d) - 0.6).abs() < 0.01);
+        assert!(!d.grid_cmd("reset", 0.0), "un secondo ripristino non cambia niente");
     }
 
     /// lo stato espone il fader del volume di ogni canale (serve alla miscela video che segue i fader dei canali)
@@ -2624,6 +2677,106 @@ mod tests {
         assert!(m.pads[0].playing);
     }
 
+    /// campionatore in sync con un campione a un'ottava diversa (70 bpm su un brano a 128): resta sul battito anche dopo un cambio di tempo
+    #[test]
+    fn pad_sync_holds_phase_at_another_octave() {
+        let sr = 44100;
+        let mut m = Mixer::new(sr);
+        let bpm = 128.0;
+        let track = Track { name: "t".into(), path: String::new(), data: Arc::new(tone(sr, 60.0, 220.0)), sr, beats: (0..128).map(|k| k as f64 * 60.0 / bpm).collect(), bpm, key: None, downbeat: 0 };
+        m.decks[0].load(Arc::new(track));
+        m.decks[0].playing = true;
+        // loop di 4 battiti a 70 bpm
+        m.pads[0].load("p".into(), tone(sr, 4.0 * 60.0 / 70.0, 330.0), 70.0, 0.0, true);
+        m.pads[0].looped = true;
+        m.pad_sync = true;
+        m.pad_trigger(0);
+        let mut buf = vec![0f32; 1024];
+        let err = |m: &Mixer| -> f64 {
+            let p = &m.pads[0];
+            let spb = 60.0 / p.bpm * sr as f64;
+            let pph = ((p.pos - p.lead - p.first_beat) / spb * 2.0).rem_euclid(1.0); // un battito del campione = 2 del brano
+            let d = &m.decks[0];
+            let mut e = pph - d.track.as_ref().unwrap().beat_phase(d.pos_sec()).unwrap();
+            if e > 0.5 { e -= 1.0 } else if e < -0.5 { e += 1.0 }
+            e
+        };
+        for _ in 0..600 { m.render(&mut buf); }
+        assert!(m.pads[0].playing);
+        assert!(err(&m).abs() < 0.05, "fase all'ottava: {}", err(&m));
+        m.decks[0].tempo = 0.05;
+        for _ in 0..900 { m.render(&mut buf); }
+        assert!(err(&m).abs() < 0.06, "dopo il cambio di tempo: {}", err(&m));
+    }
+
+    /// loop in sync lanciato a meta' battuta: entra al punto della battuta in cui si trova il brano (la sua cassa sull'1 del brano)
+    /// e se il brano salta si riallinea subito
+    #[test]
+    fn pad_sync_loop_follows_the_bar() {
+        let sr = 44100;
+        let mut m = Mixer::new(sr);
+        let bpm = 128.0;
+        let track = Track { name: "t".into(), path: String::new(), data: Arc::new(tone(sr, 60.0, 220.0)), sr, beats: (0..128).map(|k| k as f64 * 60.0 / bpm).collect(), bpm, key: None, downbeat: 1 };
+        m.decks[0].load(Arc::new(track));
+        m.decks[0].set_pos_sec(2.2 * 60.0 / bpm);
+        m.decks[0].playing = true;
+        // loop di 8 battiti a 132 bpm
+        m.pads[0].load("p".into(), tone(sr, 8.0 * 60.0 / 132.0, 330.0), 132.0, 0.0, true);
+        m.pad_sync = true;
+        m.pad_trigger(0);
+        let mut buf = vec![0f32; 1024];
+        let err = |m: &Mixer| -> f64 {
+            let p = &m.pads[0];
+            let spb = 60.0 / p.bpm * sr as f64;
+            let pb = ((p.pos - p.lead - p.first_beat) / spb).rem_euclid(4.0);
+            let d = &m.decks[0];
+            let t = d.track.as_ref().unwrap();
+            let mut e = pb - (t.beat_pos(d.pos_sec()).unwrap() - t.downbeat as f64).rem_euclid(4.0);
+            if e > 2.0 { e -= 4.0 } else if e < -2.0 { e += 4.0 }
+            e
+        };
+        for _ in 0..400 { m.render(&mut buf); }
+        assert!(m.pads[0].playing);
+        assert!(err(&m).abs() < 0.05, "posizione nella battuta: {}", err(&m));
+        // salto del brano di un battito e mezzo: il loop si riallinea in fretta
+        let t = m.decks[0].pos_sec();
+        m.decks[0].set_pos_sec(t + 1.5 * 60.0 / bpm);
+        for _ in 0..30 { m.render(&mut buf); }
+        assert!(err(&m).abs() < 0.05, "dopo il salto: {}", err(&m));
+    }
+
+    /// lo stesso campione nei banchi di due deck: ognuno resta a tempo con il suo brano anche se i deck hanno BPM diversi
+    #[test]
+    fn pads_follow_their_own_deck() {
+        let sr = 44100;
+        let mut m = Mixer::new(sr);
+        for (d, bpm) in [(0usize, 117.0), (1usize, 137.0)] {
+            let beats = (0..200).map(|k| 0.1 + k as f64 * 60.0 / bpm).collect();
+            m.decks[d].load(Arc::new(Track { name: "t".into(), path: String::new(), data: Arc::new(tone(sr, 60.0, 220.0)), sr, beats, bpm, key: None, downbeat: 0 }));
+            m.decks[d].playing = true;
+        }
+        m.decks[1].set_pos_sec(3.3);
+        // stesso campione sul pad 1 del banco del deck 1 e sul pad 1 del banco del deck 2
+        for k in 0..2 {
+            m.pads[k * PADS_PER_DECK].load("p".into(), tone(sr, 16.0 * 60.0 / 132.0, 330.0), 132.0, 0.0, true);
+        }
+        m.pad_sync = true;
+        m.pad_trigger(0);
+        m.pad_trigger(PADS_PER_DECK);
+        let mut buf = vec![0f32; 1024];
+        for _ in 0..500 { m.render(&mut buf); }
+        for k in 0..2 {
+            let p = &m.pads[k * PADS_PER_DECK];
+            assert!(p.playing);
+            let spb = 60.0 / p.bpm * sr as f64;
+            let d = &m.decks[k];
+            let t = d.track.as_ref().unwrap();
+            let mut e = ((p.pos - p.lead) / spb).rem_euclid(4.0) - (t.beat_pos(d.pos_sec()).unwrap() - t.downbeat as f64).rem_euclid(4.0);
+            if e > 2.0 { e -= 4.0 } else if e < -2.0 { e += 4.0 }
+            assert!(e.abs() < 0.05, "pad {k} fuori dal deck {k}: {e}");
+        }
+    }
+
     /// batteria: un colpo suona per intero, la ripetizione taglia la coda senza click, il gruppo choke zittisce l'altro pad
     #[test]
     fn drums_trigger_retrigger_choke_and_gate() {
@@ -3125,3 +3278,6 @@ mod tests {
         }
     }
 }
+
+
+

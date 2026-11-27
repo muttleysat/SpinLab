@@ -78,9 +78,9 @@ Hold the mouse on the large waveform and drag: the track follows like a record (
 
 The beatgrid is computed by the analysis and, when possible, refined by a neural network (Beat This!) that recognises the beats even in live-played tracks.
 
-- **⚓ (anchor)**, on the deck above **GRID**: moves the nearest marker exactly onto the playhead. Use it to fix a point where the grid has drifted; the correction fades out towards the neighbouring anchors, so you can place more than one in the same track.
+- **⚓ (anchor)**, on the deck above **GRID**: moves the whole grid so that the nearest beat falls exactly on the playhead. Stop on a kick drum and press it when the lines sit a little before or after the beats.
 - **GRID** opens the grid window, saved for that track:
-  - **½** halves the BPM (one marker every two), **×2** doubles it, **↺** returns to the automatically computed grid.
+  - **½** halves the BPM (one marker every two), **×2** doubles it, **↺** returns to the grid from the analysis (it undoes ⚓, ½ and ×2).
   - **AUTO** uses a single tempo until the beats drift away from it for a long time, then starts a new section: fine for almost everything. **FISSA** (fixed) uses a constant tempo and phase for the whole track (electronic music, tracks made on a computer). **FLESS.** (flexible) follows a real drummer bar by bar (rock, funk, 70s disco, live recordings).
   - **QUANTIZE** like the QUANT button.
 - **QUANT** snaps cues, loops, rolls and hot cues to the beats of the grid.

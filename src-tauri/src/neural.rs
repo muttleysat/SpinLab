@@ -7,6 +7,9 @@
 //!
 //! I modelli (mel 270 KB + beat "small" 10 MB) viaggiano nell'installer (models/beat-this); se mancano si scaricano al primo uso nella
 //! cartella dei dati, con verifica SHA-256.
+//!
+//! `in_range` e `refit` sono copiati da openDJ senza modifiche: dai battiti e dagli inizi di battuta della rete si ottiene la stessa
+//! griglia di openDJ (scelta dell'ottava nell'intervallo di tempo, poi gridfit.rs).
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -17,19 +20,13 @@ const BASE_URL: &str = "https://raw.githubusercontent.com/danigb/beat-this-rs/ma
 const MEL_SHA: &str = "fdd59e65c515331308e4c8841edf99972deca646bdf6197744c2a5b7755e3de9";
 const BEAT_SHA: &str = "a5f8d39d989f31859454ba27afe61c5317ca95e4d9373e6853e5361b8937172f";
 
-/// intervallo di tempo accettato (BPM): fuori si dimezza o si raddoppia
-const BPM_LO: f64 = 70.0;
-const BPM_HI: f64 = 200.0;
-
 /// un modello che non si scarica o non si carica non va riprovato a ogni brano
 static UNAVAILABLE: AtomicBool = AtomicBool::new(false);
 
-/// battiti neurali di un brano
+/// battiti e inizi di battuta (secondi) trovati dalla rete in un brano, come li tiene openDJ
 pub struct Beats {
     pub beats: Vec<f64>,
-    /// indice (0..3) del battito che apre la battuta
-    pub downbeat: usize,
-    pub bpm: f64,
+    pub downbeats: Vec<f64>,
 }
 
 pub fn models_dir(dir: &Path) -> PathBuf {
@@ -125,8 +122,8 @@ mod imp {
         };
         eprintln!("[{:.0}] beat this: {} battiti in {:.1} s", crate::engine::now_ms(), an.beats.len(), t.elapsed().as_secs_f32());
         let beats: Vec<f64> = an.beats.iter().map(|&x| x as f64).collect();
-        let downs: Vec<f64> = an.downbeats.iter().map(|&x| x as f64).collect();
-        finish(beats, &downs)
+        let downbeats: Vec<f64> = an.downbeats.iter().map(|&x| x as f64).collect();
+        Some(Beats { beats, downbeats })
     }
 }
 
@@ -138,72 +135,57 @@ mod imp {
     }
 }
 
-/// Analizza `stereo` (interleaved, `sr` Hz). `_dsp_bpm` non serve piu' (l'ottava del tempo la sceglie la rete).
-pub fn refine(dir: &Path, stereo: &[f32], sr: u32, _dsp_bpm: f64) -> Option<Beats> {
+/// Analizza `stereo` (interleaved, `sr` Hz): battiti e inizi di battuta della rete.
+pub fn refine(dir: &Path, stereo: &[f32], sr: u32) -> Option<Beats> {
     imp::run(dir, stereo, sr)
 }
 
-fn median(v: &mut [f64]) -> f64 {
-    if v.is_empty() {
-        return 0.0;
-    }
-    v.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    v[v.len() / 2]
+/// La griglia dai battiti della rete, come `beatthis::refit` di openDJ: tempo dei battiti riportato nell'intervallo `range`
+/// (quello del genere del brano o 60-180 BPM), poi gridfit nella modalita' del brano.
+pub fn refit(beats: &[f64], downbeats: &[f64], range: (f64, f64), mode: crate::gridfit::GridMode) -> Option<crate::gridfit::Fitted> {
+    let (beats, bpm) = in_range(beats.to_vec(), downbeats, range);
+    crate::gridfit::fit_mode(&beats, Some(downbeats), bpm, mode)
 }
 
-fn bpm_of(beats: &[f64]) -> f64 {
-    let mut g: Vec<f64> = beats.windows(2).map(|w| w[1] - w[0]).filter(|x| *x > 0.0).collect();
-    let m = median(&mut g);
-    if m > 0.0 { 60.0 / m } else { 0.0 }
-}
-
-/// Tempo entro 70..200 BPM: l'ottava la sceglie la rete (un brano a 82 BPM puo' uscire a 165, come in opendj); solo fuori da questo
-/// intervallo si tiene un battito su due (con la parita' che ha piu'
-/// battute) o aggiunge un battito a meta' fra due. Poi ricava l'indice del battito che apre la battuta.
-fn finish(mut beats: Vec<f64>, downs: &[f64]) -> Option<Beats> {
-    if beats.len() < 16 {
-        return None;
-    }
-    let near = |b: &[f64], t: f64| -> Option<usize> {
-        let i = b.partition_point(|&x| x < t);
-        let c = [i.checked_sub(1), (i < b.len()).then_some(i)];
-        c.into_iter().flatten().min_by(|&a, &c| (b[a] - t).abs().partial_cmp(&(b[c] - t).abs()).unwrap_or(std::cmp::Ordering::Equal)).filter(|&k| (b[k] - t).abs() < 0.07)
+/// The tempo of `beats` (from the median gap) and the beats at that tempo,
+/// halved or doubled into `range`: halving keeps the beats that fall on
+/// more downbeats, doubling adds one between each two.
+fn in_range(mut beats: Vec<f64>, downbeats: &[f64], (lo, hi): (f64, f64)) -> (Vec<f64>, f64) {
+    let tempo = |beats: &[f64]| {
+        let mut gaps: Vec<f64> = beats.windows(2).map(|w| w[1] - w[0]).collect();
+        if gaps.is_empty() {
+            return 0.0;
+        }
+        let mid = gaps.len() / 2;
+        60.0 / *gaps.select_nth_unstable_by(mid, f64::total_cmp).1
     };
-    {
-        for _ in 0..2 {
-            let bpm = bpm_of(&beats);
-            if bpm > BPM_HI {
-                // un battito su due, dalla parita' con piu' inizi di battuta
-                let odd = downs.iter().filter_map(|&d| near(&beats, d)).filter(|k| k % 2 == 1).count();
-                let even = downs.iter().filter_map(|&d| near(&beats, d)).filter(|k| k % 2 == 0).count();
-                let start = usize::from(odd > even);
-                beats = beats.iter().skip(start).step_by(2).copied().collect();
-            } else if bpm > 0.0 && bpm < BPM_LO {
-                let mut v = Vec::with_capacity(beats.len() * 2);
-                for w in beats.windows(2) {
-                    v.push(w[0]);
-                    v.push(0.5 * (w[0] + w[1]));
-                }
-                v.push(*beats.last()?);
-                beats = v;
-            } else {
-                break;
-            }
+    let mut bpm = tempo(&beats);
+    // Twice is enough for any range at least an octave wide.
+    for _ in 0..2 {
+        if bpm > hi {
+            let on_downbeat = |&b: &f64| downbeats.iter().any(|d| (d - b).abs() < 0.07);
+            let odd = beats
+                .iter()
+                .skip(1)
+                .step_by(2)
+                .filter(|b| on_downbeat(b))
+                .count();
+            let even = beats.iter().step_by(2).filter(|b| on_downbeat(b)).count();
+            beats = beats
+                .into_iter()
+                .skip(usize::from(odd > even))
+                .step_by(2)
+                .collect();
+        } else if bpm > 0.0 && bpm < lo {
+            let mids: Vec<f64> = beats.windows(2).map(|w| (w[0] + w[1]) / 2.0).collect();
+            beats.extend(mids);
+            beats.sort_by(f64::total_cmp);
+        } else {
+            break;
         }
+        bpm = tempo(&beats);
     }
-    let bpm = bpm_of(&beats);
-    if bpm <= 0.0 || beats.len() < 16 {
-        return None;
-    }
-    // indice della battuta: la fase (0..3) piu' votata dagli inizi di battuta
-    let mut votes = [0usize; 4];
-    for &d in downs {
-        if let Some(k) = near(&beats, d) {
-            votes[k % 4] += 1;
-        }
-    }
-    let downbeat = (0..4).max_by_key(|&k| votes[k]).unwrap_or(0);
-    Some(Beats { beats, downbeat, bpm })
+    (beats, bpm)
 }
 
 #[cfg(test)]
@@ -211,27 +193,24 @@ mod tests {
     use super::*;
 
     #[test]
-    fn halves_a_double_time_track_and_keeps_bar_phase() {
-        // 240 BPM rilevati, riferimento 120: un battito su due, la parita' e' quella degli inizi di battuta
-        let b: Vec<f64> = (0..80).map(|i| 0.1 + i as f64 * 0.25).collect();
-        let downs: Vec<f64> = (0..10).map(|k| b[1 + k * 8]).collect(); // sui battiti dispari
-        let r = finish(b, &downs).unwrap();
-        assert!((r.bpm - 120.0).abs() < 0.5, "bpm {}", r.bpm);
-        assert!((r.beats[0] - 0.35).abs() < 1e-9, "primo {}", r.beats[0]);
-    }
-
-    #[test]
-    fn doubles_a_half_time_track() {
-        let b: Vec<f64> = (0..40).map(|i| 0.1 + i as f64 * 1.0).collect(); // 60 BPM, riferimento 120
-        let r = finish(b, &[]).unwrap();
-        assert!((r.bpm - 120.0).abs() < 0.5, "bpm {}", r.bpm);
-    }
-
-    #[test]
-    fn leaves_a_matching_tempo_alone() {
-        let b: Vec<f64> = (0..40).map(|i| 0.1 + i as f64 * 0.5).collect();
-        let r = finish(b.clone(), &[b[3], b[7]]).unwrap();
-        assert_eq!(r.beats.len(), 40);
-        assert_eq!(r.downbeat, 3);
+    fn folds_the_beats_tempo_into_the_range() {
+        let at = |bpm: f64, n: usize| {
+            (0..n)
+                .map(|k| 0.3 + k as f64 * 60.0 / bpm)
+                .collect::<Vec<_>>()
+        };
+        let (beats, bpm) = in_range(at(67.2, 100), &[], (60.0, 180.0));
+        assert_eq!(beats.len(), 100);
+        assert!((bpm - 67.2).abs() < 0.01, "{bpm}");
+        // Too fast: every other beat, the ones on downbeats.
+        let fast = at(200.0, 100);
+        let downbeats: Vec<f64> = fast.iter().skip(1).step_by(8).copied().collect();
+        let (beats, bpm) = in_range(fast.clone(), &downbeats, (60.0, 180.0));
+        assert!((bpm - 100.0).abs() < 0.01, "{bpm}");
+        assert_eq!(beats[0], fast[1]);
+        // Too slow: a beat between each two.
+        let (beats, bpm) = in_range(at(62.0, 50), &[], (70.0, 180.0));
+        assert!((bpm - 124.0).abs() < 0.01, "{bpm}");
+        assert_eq!(beats.len(), 99);
     }
 }

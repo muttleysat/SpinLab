@@ -24,6 +24,8 @@ pub struct CachedAnalysis {
     pub peak: f32,
     /// i battiti vengono dalla rete neurale (neural.rs) e non dal solo rilevatore DSP
     pub neural: bool,
+    /// inizi di battuta trovati dalla rete (secondi)
+    pub downbeats: Vec<f64>,
 }
 
 pub struct Library {
@@ -115,10 +117,11 @@ impl Library {
         .map_err(|e| e.to_string())?;
         // ancoraggi manuali (indici e tempi dei marker verificati) e griglia automatica originale: fanno da riferimento
         // per tarare l'algoritmo; le colonne mancano nei database creati con versioni precedenti
-        for col in ["pins TEXT", "anchors TEXT", "auto_beats TEXT"] {
+        // grid: griglia modificata a mano nel formato di openDJ («secondi:bpm» separati da spazi); NULL = solo la modalita' (fixed)
+        for col in ["pins TEXT", "anchors TEXT", "auto_beats TEXT", "grid TEXT"] {
             let _ = db.execute(&format!("ALTER TABLE grids ADD COLUMN {col}"), []);
         }
-        for col in ["loudness REAL", "peak REAL", "neural INTEGER DEFAULT 0"] {
+        for col in ["loudness REAL", "peak REAL", "neural INTEGER DEFAULT 0", "downbeats TEXT"] {
             let _ = db.execute(&format!("ALTER TABLE analysis ADD COLUMN {col}"), []);
         }
         Ok(Library { db: Mutex::new(db) })
@@ -129,7 +132,7 @@ impl Library {
         let (size, mtime) = file_stamp(path)?;
         let db = self.db.lock();
         db.query_row(
-            "SELECT bpm,key_pc,key_minor,downbeat,beats,wave_rate,lo,mid,hi,loudness,peak,COALESCE(neural,0) FROM analysis WHERE path=? AND size=? AND mtime=? AND version=?",
+            "SELECT bpm,key_pc,key_minor,downbeat,beats,wave_rate,lo,mid,hi,loudness,peak,COALESCE(neural,0),downbeats FROM analysis WHERE path=? AND size=? AND mtime=? AND version=?",
             params![path, size, mtime, ANALYSIS_VERSION],
             |r| {
                 let pc: Option<i64> = r.get(1)?;
@@ -142,7 +145,9 @@ impl Library {
                     wave: crate::analysis::Wave { rate: r.get::<_, i64>(5)? as usize, lo: r.get(6)?, mid: r.get(7)?, hi: r.get(8)? },
                     loudness: r.get::<_, Option<f64>>(9)?.unwrap_or(-70.0),
                     peak: r.get::<_, Option<f32>>(10)?.unwrap_or(1.0),
-                    neural: r.get::<_, i64>(11)? != 0,
+                    // i battiti della rete salvati senza i loro inizi di battuta (versioni precedenti) vanno ricalcolati
+                    neural: r.get::<_, i64>(11)? != 0 && r.get::<_, Option<String>>(12)?.is_some(),
+                    downbeats: r.get::<_, Option<String>>(12)?.and_then(|d| serde_json::from_str(&d).ok()).unwrap_or_default(),
                 })
             },
         )
@@ -153,11 +158,13 @@ impl Library {
         let _ = self.db.lock().execute("DELETE FROM analysis WHERE path=?", params![path]);
     }
 
-    /// Sostituisce i battiti salvati con quelli della rete neurale (resta tutto il resto dell'analisi).
-    pub fn analysis_put_neural(&self, path: &str, beats: &[f64], downbeat: usize, bpm: f64) {
+    /// Sostituisce i battiti salvati con quelli della rete neurale e i suoi inizi di battuta (resta tutto il resto dell'analisi).
+    /// `bpm` e' il tempo principale della griglia che ne risulta.
+    pub fn analysis_put_neural(&self, path: &str, beats: &[f64], downbeats: &[f64], bpm: f64) {
         let js = serde_json::to_string(beats).unwrap_or_default();
+        let dj = serde_json::to_string(downbeats).unwrap_or_default();
         let db = self.db.lock();
-        let _ = db.execute("UPDATE analysis SET beats=?, downbeat=?, bpm=?, neural=1 WHERE path=?", params![js, downbeat as i64, bpm, path]);
+        let _ = db.execute("UPDATE analysis SET beats=?, downbeats=?, downbeat=0, bpm=?, neural=1 WHERE path=?", params![js, dj, bpm, path]);
         let _ = db.execute("UPDATE tracks SET bpm=? WHERE path=?", params![bpm, path]);
     }
 
@@ -342,34 +349,26 @@ impl Library {
         Ok(())
     }
 
-    /// Griglia corretta a mano per un file (sovrascrive l'analisi automatica al prossimo caricamento).
-    pub fn save_grid(&self, path: &str, beats: &[f64], downbeat: usize, bpm: f64, mode: u8, pins: &[usize], auto: &[f64]) {
-        let js = serde_json::to_string(beats).unwrap_or_default();
-        let pins_js = serde_json::to_string(pins).unwrap_or_default();
-        let anchors: Vec<f64> = pins.iter().filter_map(|&i| beats.get(i).copied()).collect();
-        let anchors_js = serde_json::to_string(&anchors).unwrap_or_default();
-        let auto_js = serde_json::to_string(auto).unwrap_or_default();
+    /// Griglia di un file: la modalita' (0 auto, 1 fisso, 2 flessibile) e, se modificata a mano, la griglia nel formato di openDJ.
+    /// Le griglie salvate dalle versioni precedenti (battiti con ancore) non si usano piu': ne resta la modalita'.
+    pub fn save_grid(&self, path: &str, mode: u8, edited: Option<&str>) {
         let _ = self.db.lock().execute(
-            "INSERT INTO grids(path,beats,downbeat,bpm,fixed,pins,anchors,auto_beats) VALUES(?,?,?,?,?,?,?,?)
-             ON CONFLICT(path) DO UPDATE SET beats=excluded.beats, downbeat=excluded.downbeat, bpm=excluded.bpm, fixed=excluded.fixed,
-               pins=excluded.pins, anchors=excluded.anchors, auto_beats=excluded.auto_beats",
-            params![path, js, downbeat as i64, bpm, mode as i64, pins_js, anchors_js, auto_js],
+            "INSERT INTO grids(path,beats,fixed,grid) VALUES(?,'[]',?,?)
+             ON CONFLICT(path) DO UPDATE SET beats='[]', downbeat=NULL, bpm=NULL, fixed=excluded.fixed, pins=NULL, anchors=NULL,
+               auto_beats=NULL, grid=excluded.grid",
+            params![path, mode as i64, edited],
         );
     }
-    pub fn load_grid(&self, path: &str) -> Option<(Vec<f64>, usize, f64, u8, Vec<usize>)> {
+    pub fn load_grid(&self, path: &str) -> Option<(u8, Option<String>)> {
         let db = self.db.lock();
-        db.query_row("SELECT beats,downbeat,bpm,fixed,pins FROM grids WHERE path=?", [path], |r| {
-            let js: String = r.get(0)?;
-            let pins: Option<String> = r.get(4)?;
-            Ok((
-                serde_json::from_str::<Vec<f64>>(&js).unwrap_or_default(),
-                r.get::<_, i64>(1)? as usize,
-                r.get(2)?,
-                r.get::<_, i64>(3)?.clamp(0, 2) as u8,
-                pins.and_then(|p| serde_json::from_str::<Vec<usize>>(&p).ok()).unwrap_or_default(),
-            ))
+        db.query_row("SELECT COALESCE(fixed,0),grid FROM grids WHERE path=?", [path], |r| {
+            Ok((r.get::<_, i64>(0)?.clamp(0, 2) as u8, r.get::<_, Option<String>>(1)?))
         })
         .ok()
+    }
+    /// genere del brano in libreria (sceglie l'intervallo di tempo in cui si legge il BPM, come in openDJ)
+    pub fn track_genre(&self, path: &str) -> String {
+        self.db.lock().query_row("SELECT genre FROM tracks WHERE path=?", [path], |r| r.get::<_, Option<String>>(0)).ok().flatten().unwrap_or_default()
     }
     pub fn delete_grid(&self, path: &str) {
         let _ = self.db.lock().execute("DELETE FROM grids WHERE path=?", [path]);

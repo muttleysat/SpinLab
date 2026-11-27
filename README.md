@@ -49,7 +49,7 @@ SpinLab is free. If you find it useful you can make a **donation of any amount**
 - Automatic analysis of **BPM, key (Camelot) and beatgrid**, in the background.
 - Beatgrid refined by the **Beat This!** neural network, also for live-played tracks.
 - Per-track modes: **AUTO**, **FIXED** (constant tempo) and **FLEX** (follows a real drummer bar by bar).
-- Quick fixes: halve or double the BPM, **ANCHOR** to put the grid back on the beat at a precise point, reset.
+- Quick fixes: halve or double the BPM, **ANCHOR** to move the grid onto the beat under the playhead, reset.
 
 ### Mixer
 - Two channels with faders, **3-band EQ**, **filter** and LED meters; **crossfader**.

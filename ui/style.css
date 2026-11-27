@@ -1429,3 +1429,11 @@ dialog.sldlg input:focus { outline: none; border-color: #c8d2e4; }
 .sldlg-btns button:hover { border-color: #c8d2e4; }
 .sldlg-btns button.primary { color: #fff; background: #3a4560; border-color: #8fa0c4; }
 .sldlg-btns button.danger { color: #fff; background: #6a1f2a; border-color: #ff5a6e; }
+
+/* campionatore: un banco di pad per deck. Sul selettore DECK un punto acceso indica i banchi che stanno suonando */
+#tgt button { position: relative; }
+#tgt button.padsOn::after { content: ""; position: absolute; top: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: var(--sl-purple-highlight, #fff); box-shadow: 0 0 5px var(--sl-purple-bright, #fff); }
+/* pad del campionatore: le scritte in alto (1×/∞ e BPM) hanno la loro fascia; il nome sta sotto, al massimo su due righe */
+.pad.loaded { padding: 17px 6px 5px; }
+.pad .nm { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; line-height: 1.15; }
+.pad .lp, .pad .pb { line-height: 1.2; z-index: 1; }

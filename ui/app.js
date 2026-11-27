@@ -292,8 +292,8 @@ function deckHTML(i) {
       <div class="transport"><button class="rbtn cue" data-r="cue">CUE</button><button class="rbtn play" data-r="play">${IC.play}</button></div>
     </div>
     <div class="platter"><canvas class="plat"></canvas>
-      <button class="pbtn bl an" data-r="anchor" title="ANCHOR: porta il marker della griglia più vicino esattamente sulla testina (per correggere la griglia dove si sposta)">&#9875;</button>
-      <button class="pbtn bl" data-r="grid" title="Griglia: correzioni, anchor, FLUIDA/FISSA">GRID</button>
+      <button class="pbtn bl an" data-r="anchor" title="ANCHOR: sposta la griglia in modo che il battito più vicino cada esattamente sulla testina">&#9875;</button>
+      <button class="pbtn bl" data-r="grid" title="Griglia: AUTO / FISSA / FLESS., dimezza, raddoppia, ripristina">GRID</button>
       <button class="pbtn qb" data-r="qpill" title="QUANTIZE: cue, loop, roll e hot cue si agganciano ai battiti della griglia">QUANT</button>
       <button class="pbtn br" data-r="pfl" title="Preascolto in cuffia (PFL)">${IC.head}</button></div>
     <div class="rcol">
@@ -542,7 +542,7 @@ function openPop(i, kind, anchor) {
   if (kind === "grid") {
     pop.innerHTML = `<small>GRIGLIA (salvata per questo brano)</small>
       <div class="row"><button data-grid="halve" title="Dimezza il BPM (un marker ogni due)">&frac12;</button><button data-grid="double" title="Raddoppia il BPM (aggiunge i marker intermedi)">&times;2</button>
-      <button data-grid="reset" title="Ripristina la griglia calcolata automaticamente">&#8634;</button></div>
+      <button data-grid="reset" title="Ripristina la griglia calcolata dall'analisi (annulla ANCHOR, ½ e ×2)">&#8634;</button></div>
       <div class="row"><button data-gmode="0" title="AUTO: un solo tempo finché i battiti non si scostano di oltre 30 ms per almeno 32 battiti, poi un nuovo tratto">AUTO</button><button data-gmode="1" title="FISSA: un solo tempo e una sola fase per tutto il brano (brani a tempo costante)">FISSA</button><button data-gmode="2" title="FLESSIBILE: segue un batterista vero battuta per battuta">FLESS.</button></div>
       <div class="row">
       <button data-r="quant" title="Quantizza cue e loop sui battiti">QUANTIZE</button></div>`;
@@ -1410,7 +1410,7 @@ function setTarget(i) {
   target = i;
   $$("#tgt button").forEach((b) => b.classList.toggle("on", +b.dataset.t === i));
   $("#rpanel").style.setProperty("--c", PAL[i].c);
-  syncFxUi(i); updateStemsUI(true);
+  syncFxUi(i); updateStemsUI(true); updatePads(padState, padSyncOn);
   $("#stemStatus").textContent = decks[i].stText || "";
 }
 function setPanel(name) {
@@ -1923,7 +1923,9 @@ document.addEventListener("pointerup", async (e) => {
 /* drop di file dal sistema operativo sui deck / sulla libreria */
 T.event.listen("tauri://drag-drop", async (e) => {
   const { paths, position } = e.payload, dpr = window.devicePixelRatio || 1;
-  const el = document.elementFromPoint(position.x / dpr, position.y / dpr);
+  // la posizione arriva in pixel fisici su Windows (si divide per la densita' dello schermo) e gia' in pixel logici su macOS
+  const k = /Mac/i.test(navigator.platform || navigator.userAgent) ? 1 : dpr;
+  const el = document.elementFromPoint(position.x / k, position.y / k);
   const dpEl = el?.closest(".dpad");
   if (dpEl && paths.length) { loadDrum(+dpEl.dataset.k, paths[0]); return; }
   const padEl = el?.closest(".pad");
@@ -1945,35 +1947,42 @@ function buildPads() {
     const k = +p.dataset.p;
     p.addEventListener("pointerdown", async (e) => {
       if (e.button !== 0) return;
-      if (e.target.closest(".lp")) { inv("pad_cmd", { pad: k, cmd: "loop", a: padState[k]?.looped ? 0 : 1 }); return; }
+      const g = padIdx(k);
+      if (e.target.closest(".lp")) { inv("pad_cmd", { pad: g, cmd: "loop", a: padState[g]?.looped ? 0 : 1 }); return; }
       if (!p.classList.contains("loaded")) return loadPad(k);
       // clic: parte; un altro clic lo ferma (in modo sync parte sul prossimo battito)
-      inv("pad_cmd", { pad: k, cmd: "trigger", a: 0 });
+      inv("pad_cmd", { pad: g, cmd: "trigger", a: 0 });
     });
     p.addEventListener("contextmenu", (e) => {
       e.preventDefault();
-      const s = padState[k];
-      menu(e, [["Carica un altro suono…", () => loadPad(k)], [s?.looped ? "Loop: spegni (suona una volta)" : "Loop: accendi (ripete)", () => inv("pad_cmd", { pad: k, cmd: "loop", a: s?.looped ? 0 : 1 })], ["Stop", () => inv("pad_cmd", { pad: k, cmd: "stop", a: 0 })], "-",
-        [`BPM del campione${s?.bpm ? ` (${s.bpm.toFixed(1)})` : ""}…`, async () => { const v = await askText("BPM del campione", s?.bpm ? s.bpm.toFixed(1) : "0", { text: "0 = nessuno: partirà sul battito ma senza adeguare il tempo." }); if (v !== null) inv("pad_cmd", { pad: k, cmd: "bpm", a: parseFloat(v.replace(",", ".")) || 0 }); }],
-        ["BPM ÷2", () => inv("pad_cmd", { pad: k, cmd: "bpm_half", a: 0 })], ["BPM ×2", () => inv("pad_cmd", { pad: k, cmd: "bpm_double", a: 0 })]]);
+      const g = padIdx(k), s = padState[g];
+      menu(e, [["Carica un altro suono…", () => loadPad(k)], [s?.looped ? "Loop: spegni (suona una volta)" : "Loop: accendi (ripete)", () => inv("pad_cmd", { pad: g, cmd: "loop", a: s?.looped ? 0 : 1 })], ["Stop", () => inv("pad_cmd", { pad: g, cmd: "stop", a: 0 })], "-",
+        [`BPM del campione${s?.bpm ? ` (${s.bpm.toFixed(1)})` : ""}…`, async () => { const v = await askText("BPM del campione", s?.bpm ? s.bpm.toFixed(1) : "0", { text: "0 = nessuno: partirà sul battito ma senza adeguare il tempo." }); if (v !== null) inv("pad_cmd", { pad: g, cmd: "bpm", a: parseFloat(v.replace(",", ".")) || 0 }); }],
+        ["BPM ÷2", () => inv("pad_cmd", { pad: g, cmd: "bpm_half", a: 0 })], ["BPM ×2", () => inv("pad_cmd", { pad: g, cmd: "bpm_double", a: 0 })]]);
     });
   });
   $("#padSync").onclick = () => inv("mixer_cmd", { cmd: "pad_sync", a: $("#padSync").classList.contains("on") ? 0 : 1 });
 }
-const padState = [];
+/* ogni deck ha il suo banco di 8 pad (in sync segue il suo brano): la griglia mostra quello del deck selezionato nel pannello */
+var PADS_PER_DECK = 8;
+const padIdx = (k) => target * PADS_PER_DECK + k;
+var padState = [], padSyncOn = false; // var: setTarget puo' chiamare updatePads prima che il codice arrivi qui
 async function loadPad(k, path) {
   const f = path || (await pickFile());
   if (!f) return;
   const el = $(`.pad[data-p="${k}"]`); el?.classList.add("busy");
-  try { await inv("pad_load", { pad: k, path: f }); } catch (e) { toast(String(e)); }
+  try { await inv("pad_load", { pad: padIdx(k), path: f }); } catch (e) { toast(String(e)); }
   el?.classList.remove("busy");
 }
 function updatePads(ps, sync) {
-  $("#padSync").classList.toggle("on", !!sync);
+  ps = ps || []; padState = ps; padSyncOn = !!sync;
+  $("#padSync").classList.toggle("on", padSyncOn);
+  // sul selettore del deck un punto indica i banchi che stanno suonando (anche quando la griglia mostra un altro deck)
+  $$("#tgt button").forEach((b) => b.classList.toggle("padsOn", ps.slice(+b.dataset.t * PADS_PER_DECK, (+b.dataset.t + 1) * PADS_PER_DECK).some((s) => s?.playing || s?.armed)));
   $$(".pad").forEach((p, k) => {
-    const s = ps[k]; padState[k] = s;
+    const s = ps[padIdx(k)]; if (!s) return;
     p.classList.toggle("loaded", s.loaded); p.classList.toggle("playing", s.playing); p.classList.toggle("armed", s.armed);
-    const label = s.loaded ? `${esc(s.name)}<small>${s.armed ? "in attesa del battito…" : "pad " + (k + 1)}</small>` : `Pad ${k + 1}<small>vuoto — clic o trascina un file</small>`;
+    const label = s.loaded ? `<span class="nm" title="${esc(s.name)}">${esc(s.name)}</span><small>${s.armed ? "in attesa del battito…" : "pad " + (k + 1)}</small>` : `Pad ${k + 1}<small>vuoto — clic o trascina un file</small>`;
     const box = $("div", p); if (box._h !== label) { box._h = label; box.innerHTML = label; }
     $(".pb", p).textContent = s.loaded && s.bpm ? Math.round(s.bpm) + " BPM" : "";
     const lp = $(".lp", p); lp.textContent = s.loaded ? (s.looped ? "∞" : "1×") : ""; lp.title = s.looped ? "Loop: ripete all'infinito finché non lo fermi con un altro clic (clic qui per suonarlo una volta sola)" : "Suona una volta sola (clic qui per metterlo in loop)";
@@ -2049,7 +2058,7 @@ document.addEventListener("keyup", (e) => {
 const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8"];
 document.addEventListener("keydown", (e) => {
   if (e.target.matches("input,textarea,select") || e.repeat || !$("#pn-sampler").classList.contains("on")) return;
-  const k = PAD_KEYS.indexOf(e.key); if (k >= 0) inv("pad_cmd", { pad: k, cmd: "trigger", a: 0 });
+  const k = PAD_KEYS.indexOf(e.key); if (k >= 0) inv("pad_cmd", { pad: padIdx(k), cmd: "trigger", a: 0 });
 });
 
 /* ======================================================= IMPOSTAZIONI AUDIO */

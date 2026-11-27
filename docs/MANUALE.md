@@ -78,9 +78,9 @@ Tieni premuto il mouse sulla waveform grande e trascina: il brano segue come un 
 
 La griglia dei battiti viene calcolata dall'analisi e, quando possibile, affinata da una rete neurale (Beat This!) che riconosce i battiti anche nei brani suonati dal vivo.
 
-- **⚓ (ancora)**, sul deck sopra **GRID**: porta esattamente sulla testina il marker più vicino. Serve per correggere un punto dove la griglia si è spostata; la correzione si attenua verso le ancore vicine, quindi se ne possono mettere più d'una nello stesso brano.
+- **⚓ (ancora)**, sul deck sopra **GRID**: sposta tutta la griglia in modo che il battito più vicino cada esattamente sulla testina. Fermati su una cassa e premilo quando le linee cadono un po' prima o dopo i colpi.
 - **GRID** apre la finestra della griglia, salvata per quel brano:
-  - **½** dimezza il BPM (un marker ogni due), **×2** lo raddoppia, **↺** torna alla griglia calcolata automaticamente.
+  - **½** dimezza il BPM (un marker ogni due), **×2** lo raddoppia, **↺** torna alla griglia dell'analisi (annulla ⚓, ½ e ×2).
   - **AUTO** usa un solo tempo finché i battiti non se ne allontanano a lungo, poi apre un nuovo tratto: va bene per quasi tutto. **FISSA** usa un tempo e una fase costanti per tutto il brano (musica elettronica, brani fatti al computer). **FLESS.** segue un batterista vero battuta per battuta (rock, funk, disco anni '70, dal vivo).
   - **QUANTIZE** come il pulsante QUANT.
 - **QUANT** fa agganciare cue, loop, roll e hot cue ai battiti della griglia.

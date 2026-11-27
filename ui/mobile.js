@@ -308,7 +308,7 @@
     S("library", typeof lib !== "undefined" ? `${lib.rows.length} brani` : "");
     S("fx", `${decks.slice(0, 2).filter((d) => d.fx?.on).length} attivi`);
     S("stem", $("#stemStatus")?.textContent.trim() || "4 tracce");
-    S("sampler", typeof padState !== "undefined" ? `${Object.values(padState).filter((p) => p?.name).length} di 8 slot` : "8 slot");
+    S("sampler", typeof padState !== "undefined" ? `${Object.values(padState).filter((p) => p?.name).length} di ${padState.length || 8} slot` : "8 slot");
   }, 500);
   // pizzico: dita che si chiudono in uno spazio = panoramica; dita che si aprono su un riquadro = entra.
   // tre dita ←/→ = spazio precedente o successivo; tre dita ↑ = panoramica

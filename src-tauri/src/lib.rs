@@ -1,5 +1,6 @@
 
 mod analysis;
+mod beats;
 mod audio;
 mod cue;
 mod camelot;
@@ -18,6 +19,7 @@ mod midi;
 mod recorder;
 mod preview;
 mod stems;
+mod tempo;
 mod video;
 
 use engine::{Mixer, Snapshot, Track, NUM_DECKS, NUM_DRUMS, NUM_PADS};
@@ -99,31 +101,38 @@ impl Drop for LoadGuard {
 /// brani per cui e' in corso l'affinamento dei battiti con la rete neurale
 static NEURAL_BUSY: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
-/// Battiti con la rete neurale (neural.rs), salvati al posto di quelli del rilevatore DSP. Se la griglia del brano non e' stata
-/// toccata a mano si aggiorna anche sul deck che lo sta suonando (evento "grid-refined" per l'interfaccia).
-fn neural_job(app: &tauri::AppHandle, lib: &Library, path: &str, data: &[f32], sr: u32, dsp_bpm: f64) -> bool {
+/// Intervallo di tempo in cui si legge il BPM di un brano: quello del suo genere o 60-180 BPM (come in openDJ)
+fn tempo_range(lib: &Library, path: &str) -> (f64, f64) {
+    tempo::genre_range(&lib.track_genre(path)).unwrap_or_else(tempo::bpm_range)
+}
+
+/// Battiti e inizi di battuta con la rete neurale (neural.rs), salvati al posto di quelli del rilevatore DSP. La griglia si adatta
+/// come in openDJ; sul deck che sta suonando il brano si aggiorna, salvo se modificata a mano (evento "grid-refined" per l'interfaccia).
+fn neural_job(app: &tauri::AppHandle, lib: &Library, path: &str, data: &[f32], sr: u32) -> bool {
     use tauri::Manager;
     while LOADING.load(std::sync::atomic::Ordering::SeqCst) > 0 {
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
     let st = app.state::<App>();
-    let Some(n) = neural::refine(&st.dir, data, sr, dsp_bpm) else { return false };
-    lib.analysis_put_neural(path, &n.beats, n.downbeat, n.bpm);
-    if lib.load_grid(path).is_none() {
-        let mut m = st.mixer.lock();
-        for d in 0..NUM_DECKS {
-            if m.decks[d].track.as_ref().is_some_and(|t| t.path == path) {
-                m.decks[d].grid_refine(n.beats.clone(), n.downbeat, n.bpm);
-                if let Some(g) = m.decks[d].grid_info() {
-                    let _ = app.emit("grid-refined", (d, path.to_string(), g.beats, g.labels, g.downbeat, g.bpm));
-                }
+    let Some(n) = neural::refine(&st.dir, data, sr) else { return false };
+    let range = tempo_range(lib, path);
+    let mode = lib.load_grid(path).map_or(0, |g| g.0);
+    let dur = data.len() as f64 / 2.0 / sr.max(1) as f64;
+    let bpm = neural::refit(&n.beats, &n.downbeats, range, gridfit::GridMode::from_id(mode).unwrap_or_default()).map_or(0.0, |f| f.grid.main_bpm(dur));
+    lib.analysis_put_neural(path, &n.beats, &n.downbeats, bpm);
+    let mut m = st.mixer.lock();
+    for d in 0..NUM_DECKS {
+        if m.decks[d].track.as_ref().is_some_and(|t| t.path == path) {
+            m.decks[d].grid_set_source(n.beats.clone(), n.downbeats.clone(), true, bpm, range);
+            if let Some(g) = m.decks[d].grid_info() {
+                let _ = app.emit("grid-refined", (d, path.to_string(), g.beats, g.labels, g.downbeat, g.bpm));
             }
         }
     }
     true
 }
 
-fn spawn_neural(app: tauri::AppHandle, lib: Arc<Library>, path: String, data: Arc<Vec<f32>>, sr: u32, dsp_bpm: f64) {
+fn spawn_neural(app: tauri::AppHandle, lib: Arc<Library>, path: String, data: Arc<Vec<f32>>, sr: u32) {
     {
         let mut b = NEURAL_BUSY.lock();
         if b.contains(&path) {
@@ -133,7 +142,7 @@ fn spawn_neural(app: tauri::AppHandle, lib: Arc<Library>, path: String, data: Ar
     }
     std::thread::spawn(move || {
         stems::background_priority();
-        neural_job(&app, &lib, &path, &data, sr, dsp_bpm);
+        neural_job(&app, &lib, &path, &data, sr);
         NEURAL_BUSY.lock().retain(|p| *p != path);
     });
 }
@@ -155,7 +164,7 @@ fn run_analysis(app: &tauri::AppHandle, lib: &Library, path: &str, data: &[f32],
     lib.analysis_put(path, &a);
     // l'analisi in background (coda, "Analizza") affina subito i battiti; quella sul deck lo fa dopo, a brano gia' caricato
     if background {
-        neural_job(app, lib, path, data, sr, a.bpm);
+        neural_job(app, lib, path, data, sr);
     }
     emit_progress(app, path, 100);
     a
@@ -181,10 +190,11 @@ async fn load_track(
     let l = lib.inner().clone();
     // un brano gia' analizzato (in playlist) ha tutto in cache: resta solo la decodifica. Altrimenti si analizza ora.
     let handle_for_neural = handle.clone();
-    let (track, wave, loud, cache_hit, decode_ms, neural_done) = tauri::async_runtime::spawn_blocking(move || -> Result<(Track, analysis::Wave, (f64, f32), bool, u128, bool), String> {
+    let (track, wave, loud, cache_hit, decode_ms, neural) = tauri::async_runtime::spawn_blocking(move || -> Result<(Track, analysis::Wave, (f64, f32), bool, u128, Option<(Vec<f64>, Vec<f64>, f64)>), String> {
         let cached = l.analysis_get(&p);
         let hit = cached.is_some();
-        let neural_done = cached.as_ref().is_some_and(|c| c.neural);
+        // battiti della rete gia' calcolati: la griglia si adatta a quelli
+        let neural = cached.as_ref().filter(|c| c.neural).map(|c| (c.beats.clone(), c.downbeats.clone(), c.bpm));
         if cached.is_none() {
             emit_progress(&handle, &p, 0);
         }
@@ -201,7 +211,7 @@ async fn load_track(
             (a.loudness, a.peak),
             hit,
             decode_ms,
-            neural_done,
+            neural,
         ))
     })
     .await
@@ -211,16 +221,21 @@ async fn load_track(
     }
     let saved = lib.load_grid(&path);
     let (key, key_name, name, duration) = (track.key.map(camelot::camelot_code), track.key.map(camelot::key_name), track.name.clone(), track.duration());
-    let (t_data, t_sr, t_bpm) = (track.data.clone(), track.sr, track.bpm);
+    let (t_data, t_sr) = (track.data.clone(), track.sr);
+    let neural_done = neural.is_some();
+    let range = tempo_range(&lib, &path);
     let (beats, downbeat, bpm, mode, labels, norm_db) = {
         let mut m = app.mixer.lock();
         let d = &mut m.decks[deck];
         d.load(Arc::new(track));
         d.loudness = loud.0;
         d.peak = loud.1;
-        // una griglia corretta a mano ha la precedenza sull'analisi automatica
-        if let Some((b, dn, bp, md, pins)) = saved {
-            d.grid_apply_saved(b, dn, bp, md, pins);
+        if let Some((beats, downbeats, bpm)) = neural {
+            d.grid_set_source(beats, downbeats, true, bpm, range);
+        }
+        // modalita' del brano e griglia modificata a mano: hanno la precedenza sull'analisi automatica
+        if let Some((mode, edited)) = saved {
+            d.grid_apply_saved(mode, edited.map(|g| beats::BeatGrid::from_text(&g)));
         }
         let g = d.grid_info().unwrap();
         // volume: allineato a quello del brano che sta suonando su un altro deck
@@ -229,7 +244,7 @@ async fn load_track(
     };
     // battiti con la rete neurale: in sottofondo, a brano gia' suonabile (se non gia' fatti)
     if !neural_done {
-        spawn_neural(handle_for_neural, lib.inner().clone(), path.clone(), t_data, t_sr, t_bpm);
+        spawn_neural(handle_for_neural, lib.inner().clone(), path.clone(), t_data, t_sr);
     }
     // stem: la sessione del brano precedente si chiude e, se attivo, parte la separazione del nuovo
     stems_attach(app.mixer.clone(), hub.inner().clone(), app.dir.clone(), deck, path.clone());
@@ -265,17 +280,11 @@ fn grid_cmd(app: State<'_, App>, lib: State<'_, Arc<Library>>, deck: usize, cmd:
     if !d.grid_cmd(&cmd, a) {
         return None;
     }
-    if cmd == "reset" {
-        // il ripristino torna ai battiti calcolati piu' di recente: se la rete neurale ha lavorato dopo il caricamento sono i suoi
-        if let Some(c) = lib.analysis_get(&path).filter(|c| c.neural) {
-            d.grid_refine(c.beats, c.downbeat, c.bpm);
-        }
-    }
     let g = d.grid_info()?;
-    if cmd == "reset" {
-        lib.delete_grid(&path);
-    } else {
-        lib.save_grid(&path, &g.base, g.base_downbeat, g.bpm, g.mode, d.grid_pins(), d.grid_auto());
+    // si salvano la modalita' e la griglia modificata a mano; in AUTO senza modifiche non resta niente da ricordare
+    match d.grid_edited_text() {
+        None if g.mode == 0 => lib.delete_grid(&path),
+        edited => lib.save_grid(&path, g.mode, edited.as_deref()),
     }
     Some(g)
 }
@@ -410,25 +419,57 @@ async fn pad_load(app: State<'_, App>, pad: usize, path: String) -> Result<Strin
         .await
         .map_err(|e| e.to_string())??;
     let name = file_title(&path);
-    // tempo del campione (per il modo sync): analisi dei campioni non troppo lunghi; un loop ha una durata di battiti interi
-    let mut is_loop = false;
-    let (bpm, first_beat) = if data.len() as f64 / 2.0 / sr as f64 <= 90.0 && data.len() as f64 / 2.0 / sr as f64 >= 1.2 {
-        let secs = data.len() as f64 / 2.0 / sr as f64;
-        let a = analysis::analyze(&data, sr);
-        if a.bpm > 0.0 && a.beats.len() >= 3 {
-            let n = (secs * a.bpm / 60.0).round();
-            // durata = numero intero di battiti: e' un loop (drumloop), quindi ripete da solo finche' non lo fermi
-            is_loop = n >= 2.0 && (n * 60.0 / secs - a.bpm).abs() / a.bpm < 0.04;
-            let bpm = if n >= 1.0 && (n * 60.0 / secs - a.bpm).abs() / a.bpm < 0.04 { n * 60.0 / secs } else { a.bpm };
-            (bpm, a.beats[0] * sr as f64)
-        } else {
-            (0.0, 0.0)
-        }
-    } else {
-        (0.0, 0.0)
+    let (d, n) = (Arc::new(data), name.clone());
+    let (bpm, first_beat, is_loop) = {
+        let d = d.clone();
+        tauri::async_runtime::spawn_blocking(move || sample_tempo(&d, sr, &n)).await.map_err(|e| e.to_string())?
     };
+    let data = Arc::try_unwrap(d).unwrap_or_else(|d| (*d).clone());
     app.mixer.lock().pads[pad].load(name.clone(), data, bpm, first_beat, is_loop);
     Ok(name)
+}
+
+/// BPM del nome del file ("electro-drums_132bpm", "Loop 128 BPM"): i campioni dei pacchetti lo riportano quasi sempre
+fn bpm_from_name(name: &str) -> Option<f64> {
+    let l = name.to_lowercase();
+    let i = l.find("bpm")?;
+    let head = l[..i].trim_end_matches(|c: char| c == ' ' || c == '_' || c == '-');
+    let digits: String = head.chars().rev().take_while(|c| c.is_ascii_digit() || *c == '.').collect::<Vec<_>>().into_iter().rev().collect();
+    digits.parse::<f64>().ok().filter(|b| (40.0..=250.0).contains(b))
+}
+
+/// Tempo di un campione del sampler per il modo sync: (bpm, primo battito in frame, e' un loop).
+/// Un loop dura un numero intero di battiti; il rilevatore dei battiti vuole almeno qualche secondo di audio,
+/// quindi un campione corto viene ripetuto prima dell'analisi (un loop ripetuto resta continuo).
+fn sample_tempo(data: &[f32], sr: u32, name: &str) -> (f64, f64, bool) {
+    let secs = data.len() as f64 / 2.0 / sr as f64;
+    if !(1.2..=90.0).contains(&secs) {
+        return (0.0, 0.0, false);
+    }
+    let whole = |bpm: f64| -> Option<f64> {
+        let n = (secs * bpm / 60.0).round();
+        (n >= 1.0 && (n * 60.0 / secs - bpm).abs() / bpm < 0.04).then(|| n)
+    };
+    // il nome del file e' la fonte piu' sicura, se la durata torna con un numero intero di battiti
+    if let Some(b) = bpm_from_name(name) {
+        if let Some(n) = whole(b) {
+            return (n * 60.0 / secs, 0.0, n >= 2.0);
+        }
+    }
+    let reps = (16.0 / secs).ceil().max(1.0) as usize;
+    let tiled: Vec<f32> = if reps > 1 { data.iter().copied().cycle().take(data.len() * reps).collect() } else { data.to_vec() };
+    let a = analysis::analyze(&tiled, sr);
+    if a.bpm <= 0.0 || a.beats.len() < 3 {
+        return (0.0, 0.0, false);
+    }
+    match whole(a.bpm) {
+        Some(n) => {
+            // un loop comincia sul suo primo battito: il rilevatore a volte mette i battiti in levare (sugli hi-hat), quindi vale l'inizio
+            (n * 60.0 / secs, 0.0, n >= 2.0)
+        }
+        None if reps == 1 => (a.bpm, a.beats[0] * sr as f64, false),
+        None => (0.0, 0.0, false),
+    }
 }
 
 #[tauri::command]
@@ -1476,4 +1517,38 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("errore avvio SpinLab");
+}
+
+#[cfg(test)]
+mod pad_tempo_tests {
+    use super::*;
+
+    #[test]
+    fn bpm_from_file_name() {
+        assert_eq!(bpm_from_name("electro-drums_132bpm"), Some(132.0));
+        assert_eq!(bpm_from_name("Loop 128 BPM"), Some(128.0));
+        assert_eq!(bpm_from_name("break-87.5bpm-Am"), Some(87.5));
+        assert_eq!(bpm_from_name("kick"), None);
+        assert_eq!(bpm_from_name("bpm"), None);
+    }
+
+    /// un loop corto (meno del minimo del rilevatore dei battiti) e' riconosciuto con il suo tempo anche senza BPM nel nome
+    #[test]
+    fn short_loop_tempo_is_detected() {
+        let sr = 44100;
+        let bpm = 132.0;
+        let spb = (60.0 / bpm * sr as f64) as usize;
+        let frames = spb * 16;
+        let mut data = vec![0f32; frames * 2];
+        for b in 0..16 {
+            for k in 0..2000 {
+                let v = (-(k as f32) / 300.0).exp() * (k as f32 * 0.03).sin();
+                data[(b * spb + k) * 2] = v;
+                data[(b * spb + k) * 2 + 1] = v;
+            }
+        }
+        let (b, fb, looped) = sample_tempo(&data, sr, "loop");
+        assert!((b - bpm).abs() < 0.5, "bpm {b}");
+        assert!(fb == 0.0 && looped);
+    }
 }
