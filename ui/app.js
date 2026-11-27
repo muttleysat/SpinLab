@@ -2038,7 +2038,7 @@ function buildDrums() {
     makeKnob(el, { value: m.to(m.def), def: m.to(m.def), onChange: (v) => {
       const x = m.from(v);
       setText($(`#drumEdit [data-dv="${id}"]`), m.show(x));
-      inv("drum_cmd", { pad: drumSel, cmd: id, a: x });
+      inv("drum_cmd", { pad: drumSel, cmd: id === "release" ? "release_time" : id, a: x });
     } });
   });
   selectDrum(0);

@@ -555,10 +555,12 @@ async fn drum_load(app: State<'_, App>, pad: usize, path: String) -> Result<Stri
     Ok(name)
 }
 
+/// Asincrono: gira su un thread del pool e non sul thread principale (un comando sincrono aspetterebbe che il thread principale
+/// sia libero, e il colpo del pad arriverebbe in ritardo).
 #[tauri::command]
-fn drum_cmd(app: State<'_, App>, pad: usize, cmd: String, a: f64) {
+async fn drum_cmd(app: State<'_, App>, pad: usize, cmd: String, a: f64) -> Result<(), String> {
     if pad >= NUM_DRUMS {
-        return;
+        return Ok(());
     }
     let mut save = true;
     {
@@ -574,7 +576,8 @@ fn drum_cmd(app: State<'_, App>, pad: usize, cmd: String, a: f64) {
             "attack" => m.drums[pad].attack = a.clamp(0.001, 2.0) as f32,
             "decay" => m.drums[pad].decay = a.clamp(0.0, 4.0) as f32,
             "sustain" => m.drums[pad].sustain = a.clamp(0.0, 1.0) as f32,
-            "release" => m.drums[pad].release = a.clamp(0.004, 4.0) as f32,
+            // tempo di rilascio dell'ADSR: "release" e' gia' il pad lasciato, quindi la manopola usa "release_time"
+            "release_time" => m.drums[pad].release = a.clamp(0.004, 4.0) as f32,
             "reverse" => m.drums[pad].reverse = a > 0.5,
             "clear" => { m.drums[pad].clear(); m.drum_notes[pad] = 36 + pad as u8; }
             "note" => m.drum_notes[pad] = a.clamp(0.0, 255.0) as u8,
@@ -585,6 +588,7 @@ fn drum_cmd(app: State<'_, App>, pad: usize, cmd: String, a: f64) {
     if save {
         save_kit(&app.mixer, &app.dir);
     }
+    Ok(())
 }
 
 /// salva note MIDI e impostazioni dopo un apprendimento
