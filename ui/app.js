@@ -1775,6 +1775,8 @@ $("#tracks tbody").addEventListener("contextmenu", async (e) => {
   lib.pls.forEach((p) => items.push([`Aggiungi a «${p.name}»`, async () => { await inv("playlist_add", { id: p.id, tracks: ids }); refreshPlaylists(); }]));
   items.push(["Nuova playlist con selezione…", async () => { const n = await askText("Nuova playlist con la selezione", "", { placeholder: "Nome della playlist", ok: "Crea" }); if (n?.trim()) { const pid = await inv("playlist_create", { name: n.trim() }); await inv("playlist_add", { id: pid, tracks: ids }); refreshPlaylists(); } }]);
   items.push("-");
+  // riquadro TAG & INFO a destra della libreria: titolo, artista, album, genere, tag, valutazione e commento del brano
+  items.push(["Modifica tag e informazioni…", () => { showInspector(); $("#inspector").hidden = false; $("#insp [name=title]")?.focus(); }]);
   items.push(["Analizza (bpm, chiave, beatgrid)", () => inv("analyze_tracks", { ids })]);
   items.push(["Crea stem (salvati nella cartella «stems»)", () => inv("stems_queue", { ids, front: false })]);
   // l'eliminazione compare solo se almeno un brano selezionato ha gli stem pronti

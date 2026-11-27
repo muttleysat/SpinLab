@@ -65,6 +65,7 @@ window.SL_I18N_EN = {
     "Crea": "Create",
     "Nuova playlist con selezione…": "New playlist with selection…",
     "Nuova playlist con la selezione": "New playlist with the selection",
+    "Modifica tag e informazioni…": "Edit tags and info…",
     "Analizza (bpm, chiave, beatgrid)": "Analyse (BPM, key, beatgrid)",
     "Crea stem (salvati nella cartella «stems»)": "Create stems (saved in the «stems» folder)",
     "Elimina gli stem preparati": "Delete the prepared stems",
